@@ -1,0 +1,312 @@
+/* ==========================================================================
+   Player (workstream E) — additions to components.css §17 for the real
+   <video>, the PGS canvas, our text-cue layer, the gesture stage, the portrait
+   layout and the pickers' phone details. Design classes (.player, .pbtn,
+   .scrubber, .pchip, .panel, .option, .upnext, .pcard, .pload, .lockpill,
+   .pport__*, .rotatehint) come from components.css unchanged.
+   ========================================================================== */
+
+/* ---- stage: the box the video, canvas, cues and overlays share ---------- */
+.vr-player { overscroll-behavior: none; }
+/* PLY-01: fading out / dismissing — the page under it takes touches again */
+.player.vr-player.vr-player--closing { pointer-events: none; }   /* outranks app.css .playerhost > .player */
+/* the page under a portrait swipe-down, dimmed (opacity written by the drag) */
+.vr-dim { position: absolute; inset: 0; background: rgba(0, 0, 0, 0.5); opacity: 0; pointer-events: none; }
+.vr-stage {
+  position: absolute; inset: 0; overflow: hidden; background: #000;
+  touch-action: none;                 /* our taps/pinch/swipe, no browser zoom or scroll */
+  -webkit-touch-callout: none;
+  isolation: isolate;                 /* its overlays' z-indexes stay inside it */
+  /* the swipe-down transform is written inline during the gesture only
+     (Player.svelte dragStyle) — no transform over the video otherwise */
+}
+
+.vr-video { width: 100%; height: 100%; object-fit: contain; background: #000; }
+.vr-video--fill { object-fit: cover; }
+.player__video.vr-video { transition: opacity var(--dur-fast) linear; }
+
+/* PGS: libpgs draws the subtitle bitmap at its own resolution; the canvas is
+   ours (#pgs, handed over by setPgsCanvas) and libpgs only sets object-fit on a
+   canvas it creates itself — so `contain` here, or the bitmap is stretched on a
+   wider-than-16:9 screen. Fill mode crops like the video. */
+.vr-pgs { position: absolute; inset: 0; width: 100%; height: 100%; display: none; pointer-events: none; object-fit: contain; }
+.vr-pgs--fill { object-fit: cover !important; }
+
+/* Text cues (see Player.svelte adoptTrack): bottom band, lifted over the
+   controls while they are up; `line`-placed cues at the top. */
+.vr-subs, .vr-subs-top {
+  position: absolute; left: 6%; right: 6%; pointer-events: none;
+  display: flex; flex-direction: column; align-items: center; gap: 2px;
+  text-align: center;
+}
+.vr-subs { bottom: 5%; transition: transform var(--dur-base) var(--ease-out); }
+.vr-subs--raised { transform: translateY(calc(-1 * (var(--skip-raise) - 4%))); }
+.vr-subs-top { top: 5%; }
+/* over the controls' scrim (the cue stays white); the transport sits clear of
+   a raised cue (see refinements below), the cues fade while scrubbing, and the
+   skip chip / Up Next card come later in the DOM at the same z, so they win */
+.vr-subs, .vr-subs-top { z-index: 3; }
+.vr-cue {
+  font: 600 calc(19px * var(--sub-scale, 1))/1.25 var(--font-ui);
+  color: #fff; white-space: pre-line;
+  text-shadow: 0 0 3px #000, 0 0 3px #000, 0 2px 6px rgba(0, 0, 0, 0.8);
+}
+.vr-player--portrait .vr-cue { font-size: calc(14px * var(--sub-scale, 1)); }
+.vr-player--portrait .vr-subs--raised { transform: translateY(-34px); }
+
+/* ---- controls ------------------------------------------------------------ */
+.player__controls, .vr-pport-ctl { z-index: 2; }
+.player__top { z-index: 1; }
+.player__bottom { padding: 0 var(--s-3) var(--s-1); }
+.player__top { padding: 0 var(--s-3); }
+/* while a finger scrubs, only the bottom bar stays */
+.vr-player--scrubbing .vr-fadeable { opacity: 0; pointer-events: none; transition: opacity var(--dur-fast) linear; }
+.vr-fadeable { transition: opacity var(--dur-fast) linear; }
+
+/* the scrubber row owns a 44-high hit area around the 4-px track */
+.vr-scrub__hit { flex: 1; min-width: 0; height: var(--tap); display: flex; align-items: center; touch-action: none; cursor: pointer; }
+.vr-scrub__hit .scrubber__track { flex: 1; }
+.vr-scrub--compact { gap: var(--s-2); }
+.vr-scrub--compact .scrubber__time { font-size: 11px; min-width: 36px; }
+.vr-trick { z-index: 3; }
+.vr-trick--compact { bottom: calc(100% + var(--s-2)); }
+.vr-trick .trick__frame { background-color: #111; background-repeat: no-repeat; }
+
+/* busy (loading / error): only the close button of the chrome stays */
+.vr-busytop { z-index: 6; }
+
+/* seek feedback sits above the video, under the controls */
+.seekflash { z-index: 1; }
+.vr-flip { transform: scaleX(-1); }
+
+/* status cards over everything but the close button */
+.pcard { z-index: 4; }
+.pcard--bare { padding: 0; width: auto; }
+.pcard__text { white-space: pre-line; }
+.skipchip, .upnext { z-index: 3; }
+.lockpill { z-index: 5; }
+
+/* loading card: stays mounted and fades, like the TV's #play-loading; hidden
+   (not just transparent) once faded so its spinner doesn't keep the
+   compositor busy for the whole film */
+.vr-pload { z-index: 4; background: #000; opacity: 0; visibility: hidden; pointer-events: none;
+  transition: opacity var(--dur-base) var(--ease-out), visibility 0s linear var(--dur-base); }
+.vr-pload--show { opacity: 1; visibility: visible; transition: opacity var(--dur-base) var(--ease-out); }
+.pload__art > img { width: 100%; height: 100%; object-fit: cover; }
+.pload__body { width: min(80%, 520px); }
+.pload__title { overflow: hidden; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; }
+.vr-still { animation: none; }
+
+/* ---- landscape panels ---------------------------------------------------- */
+.vr-player .panel { top: calc(var(--safe-top) + var(--s-3)); right: calc(var(--safe-right) + var(--s-2)); max-width: calc(100% - var(--safe-left) - var(--safe-right) - var(--s-4)); z-index: 7; }
+.vr-empty { padding: var(--s-3); font: var(--t-caption); color: var(--text-faint); }
+.vr-more .i { color: var(--text-faint); }
+.vr-adjust { display: flex; align-items: center; gap: var(--s-2); min-height: var(--tap); padding: 0 var(--s-3); }
+.vr-adjust__l { flex: 1; font: var(--t-caption); color: var(--text-faint); text-transform: uppercase; letter-spacing: var(--t-micro-ls); }
+.vr-adjust__v { min-width: 64px; text-align: center; font: var(--t-num); font-variant-numeric: tabular-nums; color: var(--text-dim); }
+.vr-adjust__v--on { color: var(--gold); }
+.vr-adjust .closebtn { position: relative; }
+.vr-chthumb { background-color: var(--surface-2); background-repeat: no-repeat; }
+/* Quality under the audio column: the stack scrolls as one column */
+.vr-colstack { min-height: 0; overflow-y: auto; }
+.vr-colstack > .panel__col { overflow: visible; box-shadow: none; }
+.vr-colstack + .panel__col { box-shadow: inset 1px 0 0 var(--line); }
+.vr-colstack > .vr-quality { padding-top: var(--s-2); }
+.vr-quality-line { margin-top: 2px; font: var(--t-caption); color: var(--text-faint); }
+.vr-quality-line--on { color: var(--gold); }
+
+/* ---- portrait ------------------------------------------------------------ */
+.vr-player--portrait { overflow-y: auto; background: var(--bg); padding-bottom: calc(var(--safe-bottom) + var(--s-6)); }
+.vr-player--portrait .vr-stage { position: relative; inset: auto; margin-top: var(--safe-top); width: 100%; aspect-ratio: var(--ratio-thumb); }
+.vr-pport-ctl.player__controls--hidden { opacity: 0; pointer-events: none; }
+.vr-pport-ctl .pport__close { z-index: 1; }
+.vr-player--portrait .skipchip { right: var(--s-2); height: 36px; padding: 0 var(--s-4) 0 var(--s-3); }
+.vr-player--portrait .pcard { width: min(88%, var(--pcard-w)); padding: var(--s-3) var(--s-4); gap: var(--s-2); }
+.vr-player--portrait .pcard__text { font: var(--t-caption); }
+.vr-player--portrait .pcard__actions { margin-top: 0; }
+.vr-player--portrait .pload__title { font-size: 22px; }
+.vr-player--portrait .pload__sub { font: var(--t-caption); }
+.vr-player--portrait .vr-busytop { top: var(--s-2); left: var(--s-2); right: auto; }
+.vr-player--portrait .lockpill { top: var(--s-2); }
+.pport__info .pchip { cursor: pointer; }
+.vr-pport-next { margin-top: var(--s-6); }
+.vr-pport-next .episode { width: 100%; text-align: left; }
+.vr-pport-upnext { padding: 0 var(--gutter); }
+.upnext.vr-upnext--inline { position: relative; right: auto; bottom: auto; width: 100%; }
+
+/* portrait sheets (track / chapter pickers, PLY-07) — a full-screen fixed
+   layer holding the scrim and a host for the <Sheet>, like App's sheet host
+   (Sheet.svelte finds the scrim as its parent's previous sibling). The scrim
+   takes no pan: a drag on it scrolled the info column behind. */
+.vr-picker { position: fixed; inset: 0; z-index: 8; }
+.vr-sheetscrim { touch-action: none; }
+.vr-sheethost { position: absolute; inset: 0; pointer-events: none; }
+.vr-sheethost > .sheet { pointer-events: auto; }
+.vr-sheet { max-height: 72%; }
+.vr-sheet__seg { flex: none; padding: 0 var(--gutter) var(--s-2); }
+.vr-sheet .sheet__body { padding: 0 var(--s-2) var(--s-4); }
+.vr-sheet .panel__col { padding: 0; overflow: visible; }
+
+/* Reduce Motion: nothing moves; the fades (loading card, fadeables, portrait
+   controls) stay, as iOS keeps its cross-fades (Wave 3) */
+@media (prefers-reduced-motion: reduce) {
+  .vr-stage, .vr-subs { transition: none; }
+}
+
+/* lock: nothing but the pill takes a touch — in portrait that includes the
+   info column below the video (Player.svelte onLockedDown raises the pill) */
+.vr-player--locked .pport__info,
+.vr-player--locked .rotatehint,
+.vr-player--locked .vr-pport-next,
+.vr-player--locked .upnext { pointer-events: none; }
+.vr-player--locked .pport__info,
+.vr-player--locked .rotatehint,
+.vr-player--locked .vr-pport-next { opacity: .45; transition: opacity var(--dur-fast) linear; }
+
+/* ---- refinements: collisions, legibility, small screens ------------------ */
+/* Landscape transport: centred in the free band between the top bar and the
+   bottom bar (scrubber + chip row), not on the screen's middle — that leaves
+   room for a raised two/three-line cue above the scrubber. */
+.vr-player:not(.vr-player--portrait) .player__center {
+  top: calc(50% + (var(--player-pad) + var(--tap) - var(--safe-bottom) - var(--tap) - var(--pchip-h) - var(--s-3)) / 2);
+  transform: translate(-50%, -50%);
+}
+/* Up Next with the controls up: the card rises above the bottom bar (it used
+   to cover the scrubber's end and the Audio/Subtitles chips) and the
+   transport re-centres in the space left of it. */
+.vr-player .upnext { transition: transform var(--dur-base) var(--ease-out); }
+.vr-player--ctl:not(.vr-player--portrait) .upnext:not(.vr-upnext--inline) {
+  transform: translateY(calc(-1 * (var(--skip-raise) - var(--s-4))));
+}
+.vr-player--ctl.vr-player--upnext .player__center {
+  left: calc(var(--safe-left) + (100% - var(--safe-left) - var(--safe-right) - var(--upnext-w) - var(--s-2)) / 2);
+}
+/* a finger on the scrubber: the cues belong to the old position and ran
+   through the trickplay preview — out of the way until it lifts */
+.vr-subs, .vr-subs-top, .vr-pgs { transition: transform var(--dur-base) var(--ease-out), opacity var(--dur-fast) linear; }
+.vr-player--scrubbing .vr-subs,
+.vr-player--scrubbing .vr-subs-top,
+.vr-player--scrubbing .vr-pgs { opacity: 0; }
+/* a double-tap run: the ±10 transport would sit on the feedback's amount */
+.vr-player--seeking .player__center { opacity: 0; pointer-events: none; }
+.vr-player .seekflash { background: rgba(255, 255, 255, 0.14); text-shadow: 0 1px 4px rgba(0, 0, 0, 0.6); }
+.vr-player .seekflash__chev .i { filter: drop-shadow(0 1px 3px rgba(0, 0, 0, 0.5)); }
+
+/* Legibility over bright scenes: times, titles and the track carry a soft
+   shadow, the bottom scrim holds its darkness up to the scrubber. */
+.vr-player { --vr-scrim-bottom: linear-gradient(0deg, rgba(0, 0, 0, 0.74) 0%, rgba(0, 0, 0, 0.5) 45%, rgba(0, 0, 0, 0)); }
+.vr-player .player__scrim--bottom { height: 196px; background: var(--vr-scrim-bottom); }
+.vr-player .scrubber__time,
+.vr-player .player__titles,
+.vr-player .trick__time,
+.vr-player .trick__chapter { text-shadow: 0 1px 4px rgba(0, 0, 0, 0.6); }
+.vr-player .scrubber__time--end { color: var(--text); opacity: 0.8; }
+.vr-player .scrubber__track { box-shadow: 0 1px 3px rgba(0, 0, 0, 0.35); }
+.vr-player .player__row .pchip__dim { color: var(--text-dim); }
+
+/* SE landscape (667 × 375), per the spec: the chips drop their dim detail,
+   the transport tightens */
+@media (orientation: landscape) and (max-width: 700px) {
+  .vr-player .player__row .pchip__dim { display: none; }
+  .vr-player .player__center { gap: var(--s-8); }
+}
+
+/* Portrait: a picker sheet stops under the 16:9 video, so the picture keeps
+   playing in view while choosing (the "peek" layout) */
+.vr-player--portrait .vr-sheet { max-height: calc(100% - var(--safe-top) - 100vw * 9 / 16 - var(--s-2)); }
+/* The Audio | Subtitles | Quality sheet keeps one height (its peek height):
+   sized by content, it jumped a few hundred px on every segment tap. */
+.vr-sheet--fixed { height: 72%; }
+.vr-player--portrait .vr-sheet--fixed { height: calc(100% - var(--safe-top) - 100vw * 9 / 16 - var(--s-2)); }
+
+@media (prefers-reduced-motion: reduce) {
+  .vr-player .upnext { transition: none; }
+  .vr-subs, .vr-subs-top, .vr-pgs { transition: opacity var(--dur-fast) linear; }   /* no lift, the fade stays */
+}
+/* "More languages" folded over the playing subtitle: the row names it */
+.vr-more .option__main { flex: 1 0 auto; }
+.vr-more__sel { flex: 0 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--gold); font: var(--t-caption); }
+/* fine-scrubbing speed / tip under the preview's time */
+.vr-trick__rate { color: var(--gold); font-weight: 600; white-space: nowrap; }
+/* portrait overview: 3 lines, a tap opens it all */
+.vr-pport-overview {
+  display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 3; overflow: hidden;
+  text-align: left; font: var(--t-callout); color: var(--text-dim);
+}
+.vr-pport-overview--open { display: block; }
+
+/* ==========================================================================
+   Polish round (docs/ios/polish/player.md, lane E)
+   ========================================================================== */
+
+/* PLY-04: the portrait video stays pinned while the info column scrolls under
+   it (the stage paints #000, so the column slides out of sight beneath). It
+   sticks at --safe-top with no padding on the scroller (engines disagree on
+   whether sticky insets start inside a scroller's padding); a --bg shadow the
+   size of the stage, shifted up by --safe-top, covers the strip above it. */
+.vr-player--portrait .vr-stage {
+  position: sticky; top: var(--safe-top); z-index: 3;
+  box-shadow: 0 calc(-1 * var(--safe-top)) 0 0 var(--bg);
+}
+
+/* PLY-06: the Skip chip always sits at its raised spot; the wrapper (the
+   stage's box) lowers it with a transform, so it glides with the controls
+   and the raised cues (.vr-subs--raised: same duration and curve). */
+.vr-skipwrap { position: absolute; inset: 0; z-index: 3; pointer-events: none; transition: transform var(--dur-base) var(--ease-out); }
+.vr-skipwrap > .skipchip { pointer-events: auto; }
+.vr-skipwrap .skipchip { bottom: calc(var(--safe-bottom) + var(--skip-raise)); }
+/* lowered = components.css's resting spot, just above the PGS band (a
+   translate % is of the wrapper's own height = the stage's) */
+.vr-skipwrap--low { transform: translateY(calc(var(--safe-bottom) + var(--skip-raise) - var(--subs-band) - var(--s-2))); }
+.vr-player--portrait .vr-skipwrap .skipchip { bottom: 44px; }
+.vr-player--portrait .vr-skipwrap--low { transform: translateY(32px); }   /* 44 → 12 */
+
+/* PLY-09: the controls snap in and drift out, then leave compositing —
+   visibility: hidden guarantees no blurred glass layers over a playing film
+   (the .vr-pload / TV #play-loading pattern). */
+.vr-player { --vr-ctl-in: var(--dur-fast); --vr-ctl-out: var(--dur-spring-quick); }
+.vr-player .player__controls,
+.vr-player .vr-pport-ctl { transition: opacity var(--vr-ctl-in) var(--ease-out), visibility 0s; }
+.vr-player .player__controls.player__controls--hidden,
+.vr-player .vr-pport-ctl.player__controls--hidden {
+  opacity: 0; visibility: hidden; pointer-events: none;
+  transition: opacity var(--vr-ctl-out) var(--ease-inout), visibility 0s linear var(--vr-ctl-out);
+}
+/* a double tap right after a tap raised them: the seek feedback replaces
+   the controls quickly instead of drifting out over them */
+.vr-player--seeking .player__controls.player__controls--hidden,
+.vr-player--seeking .vr-pport-ctl.player__controls--hidden { transition-duration: var(--vr-ctl-in), 0s; transition-delay: 0s, var(--vr-ctl-in); }
+/* PLY-03: controls raised by a tap aren't hittable for one double-tap window,
+   so a quick second tap near the centre can't land on a just-shown ±10 */
+.vr-player--justshown .player__controls *,
+.vr-player--justshown .vr-pport-ctl * { pointer-events: none; }
+
+/* PLY-10: double-tap feedback — one-shot per tap, transform/opacity only */
+.vr-seekflash { overflow: hidden; }
+.vr-ripple {
+  position: absolute; width: 120px; height: 120px; margin: -60px 0 0 -60px;
+  border-radius: 50%; background: #fff; opacity: 0; pointer-events: none;
+  animation: vr-ripple calc(var(--dur-base) + var(--dur-fast)) var(--ease-out) both;
+}
+@keyframes vr-ripple { from { transform: scale(0); opacity: 0.28; } to { transform: scale(2.4); opacity: 0; } }
+/* a wave in the seek direction (the left half is mirrored, so child 1 leads
+   either way); the stagger is a fraction of the wave */
+.vr-chevwave .i { animation: vr-chev calc(2 * var(--dur-fast)) linear both; }
+.vr-chevwave .i:nth-child(2) { animation-delay: 80ms; }
+.vr-chevwave .i:nth-child(3) { animation-delay: 160ms; }
+@keyframes vr-chev { 0% { opacity: 0.35; } 40% { opacity: 1; } 100% { opacity: 0.35; } }
+.vr-seekamt { display: inline-block; }
+
+/* PLY-11: the Up Next countdown ring sweeps — each 1 s tick of the countdown
+   runs over the full second (the global ring eases over --dur-base and then
+   stands, which read as 10 jumps) */
+.vr-player .upnext__ring .ring__value { transition: stroke-dashoffset 1s linear; }
+
+@media (prefers-reduced-motion: reduce) {
+  .vr-skipwrap { transition: none; }
+  /* the controls keep their fade in / fade out (opacity only; Wave 3) */
+  .vr-ripple { display: none; }
+  .vr-chevwave .i { animation: none; }
+  /* the countdown keeps its steps (information), no sweep */
+  .vr-player .upnext__ring .ring__value { transition: stroke-dashoffset var(--dur-base) linear; }
+}

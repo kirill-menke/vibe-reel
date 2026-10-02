@@ -1,0 +1,1196 @@
+/* Reel — Netflix-style 10-foot Jellyfin UI for webOS. Gold on near-black,
+   poster-forward, D-pad spatial nav. Recreated from the design handoff. */
+:root {
+  --bg: #0b0b0d;
+  --canvas: #050506;
+  --accent: #e6b450;
+  --accent-rgb: 230, 180, 80;   /* the same gold, for rgba(var(--accent-rgb), a) */
+  --accent-ink: #131109;
+  --err: #e08079;               /* failures / warnings — text, rings, the Add-failed badge */
+  --fring: 4px solid var(--accent);
+  --fscale: 1.07;
+  --fshadow: 0 20px 60px rgba(0, 0, 0, .65);
+  --t1: rgba(255, 255, 255, .85);
+  --t2: rgba(255, 255, 255, .65);
+  --t3: rgba(255, 255, 255, .55);
+  /* --t4 was .3 (~2.6:1 on --bg — unreadable as text). Its original users are
+     decorative dots/icons, which don't mind the bump; at .42 it is also the
+     token for the quietest *text* (placeholders, hold hints, time separators). */
+  --t4: rgba(255, 255, 255, .42);
+  --surface: rgba(255, 255, 255, .1);
+  --surface2: rgba(255, 255, 255, .14);
+  --row-hi: rgba(255, 255, 255, .08);
+  --mono: ui-monospace, Menlo, Consolas, monospace;
+}
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html, body { width: 100%; height: 100%; overflow: hidden; background: var(--canvas); color: #fff;
+  font-family: 'Helvetica Neue', Helvetica, system-ui, sans-serif; cursor: default; }
+#app { width: 100%; height: 100%; background: var(--bg); }
+img { display: block; }
+::-webkit-scrollbar { width: 0; height: 0; }
+button { font: inherit; color: inherit; background: none; border: none; text-align: left; }
+.hidden, [hidden] { display: none !important; }
+
+/* focus: compositor-only transform + outline */
+.focus { outline: none; }
+.focus:focus { outline: var(--fring); outline-offset: 4px; }
+
+.screen { width: 100%; height: 100%; }
+.page { width: 100%; height: 100%; overflow-y: auto; overflow-x: hidden; background: var(--bg); }
+.loading { color: var(--t3); font-size: 26px; padding: 200px 64px; }
+
+/* ---------- loading indicator (Loading.svelte) ----------
+   The opening beat of the splash — five gold bars breathing — reused wherever a
+   screen waits on data, so a tab switch never flashes a text placeholder.
+   Geometry matches Splash.svelte: 16.5px bars on a 36px pitch, heights sweeping
+   48…108px (scaleY .444…1), one period ≈ .87s, neighbours 1.7rad ≈ .235s apart.
+   Animated with transform only — compositor-driven, no per-frame layout. */
+.vload { position: fixed; inset: 0; z-index: 4; display: flex; align-items: center; justify-content: center;
+  pointer-events: none; }
+.vload.inline { position: static; padding: 80px 0; }
+.vload-bars { display: flex; align-items: center; gap: 19.5px; height: 108px; }
+.vload-bars i { display: block; width: 16.5px; height: 108px; border-radius: 8.25px; background: var(--accent);
+  transform: scaleY(.444); will-change: transform;
+  animation: vload-pulse .435s ease-in-out infinite alternate; }
+@keyframes vload-pulse { from { transform: scaleY(.444); } to { transform: scaleY(1); } }
+
+/* eyebrow (CONTINUE WATCHING / VIDEO / AUDIO …) */
+.eyebrow { font: 600 22px var(--mono); color: var(--accent); letter-spacing: .18em; }
+.eyebrow.sm { font-size: 20px; letter-spacing: .1em; }
+.eyebrow.ep { font-size: 24px; letter-spacing: .1em; margin-bottom: -8px; }
+.eyebrow.ep .dot { color: var(--t4); margin: 0 2px; }
+
+/* ---------- top nav ---------- */
+.top { position: absolute; top: 0; left: 0; right: 0; display: flex; align-items: center; gap: 48px;
+  padding: 36px 64px; z-index: 5; }
+.wordmark { font-weight: 800; font-size: 34px; letter-spacing: .06em; color: var(--accent); }
+/* The tab row is one pill-shaped bar of pills: a translucent, blurred track with
+   a rounded button per tab. No underlines any more — state is carried entirely
+   by the pill's fill, which has to read from three metres away:
+     selected            → gold at .30 (unmistakably "you are here")
+     D-pad focus         → gold at .13 + a gold hairline (deliberately fainter)
+     selected + focused  → gold at .40, so moving onto the current tab still
+                           reads as a move without losing the selection.
+   This is the one place a backdrop-filter is worth its cost on this compositor:
+   the bar is small, static and never animated, and the tabs sit on top of the
+   hero artwork where a flat scrim would either wash out or go muddy. */
+.tabs { display: flex; align-items: center; gap: 6px; font-size: 25px; padding: 6px;
+  border-radius: 999px; background: rgba(5,5,6,.45); border: 1px solid rgba(255,255,255,.09);
+  backdrop-filter: blur(14px) saturate(1.1); -webkit-backdrop-filter: blur(14px) saturate(1.1); }
+.tabs .tab { display: flex; align-items: center; gap: 11px; color: var(--t2);
+  padding: 9px 22px; border-radius: 999px; border: 1px solid transparent; white-space: nowrap;
+  transition: background-color .14s ease, color .14s ease; }
+.tabs .tab svg { width: 25px; height: 25px; display: block; flex: none; }
+.tabs .tab.active { color: #fff; font-weight: 700; background: rgba(var(--accent-rgb), .3); }
+.tabs .tab.focus:focus { outline: none; color: #fff; background: rgba(var(--accent-rgb), .13);
+  border-color: rgba(var(--accent-rgb), .5); }
+.tabs .tab.active.focus:focus { background: rgba(var(--accent-rgb), .4); border-color: rgba(var(--accent-rgb), .8); }
+/* The wordmark sits at the right edge of the Search bar; the tabs lead at the left 64px gutter, so
+   they line up with the rail headings and hero copy below them. Scoped to .top —
+   the login screen renders the same wordmark centred in its own block.
+
+   It carries a permanent contrast chip because the hero .scrim-l is a left-to-right
+   fade that is fully transparent by ~62-70%, i.e. the right gutter is raw artwork and
+   a bright frame swallowed the logo. Always on, never computed per image. Flat rgba
+   only — no backdrop-filter, blur is expensive on this compositor. The fill is
+   --canvas (#050506), a step darker than --bg, so on the plain background (Library)
+   the chip still reads as a deliberate chip instead of vanishing, and the hairline
+   gives it an edge there. margin-right cancels padding + border (20 + 1) so the
+   wordmark's right edge stays exactly on the 64px gutter, mirroring the tabs, and
+   the chip bleeds into the outer margin rather than pushing the logo inward. */
+.top .wordmark { margin-left: auto; padding: 9px 20px; margin-right: -21px; border-radius: 999px;
+  background: rgba(5,5,6,.82); border: 1px solid rgba(255,255,255,.1); }
+.clock { font-size: 24px; color: var(--t3); font-variant-numeric: tabular-nums; }
+
+/* ---------- library bar (Movies / Shows sort & filter, LibraryBar.svelte) ----------
+   A second capsule on the tab row, pushed right against the bell + avatar, built from
+   the same glass as .tabs so the row reads as one piece of chrome. Pill states
+   reuse the tab vocabulary: gold .13 + hairline = focus; a warmer gold fill = "this
+   narrows the grid" (a genre picked, Unwatched on). Sort is never "on" — some
+   order is always in force, so tinting it would mean nothing. */
+.top-extra { margin-left: auto; }
+/* Positioned above .menuscrim (z 1 inside .top), so the capsule whose menu is down —
+   and the menu itself — stay bright while the tabs and the screen dim. */
+.top-extra, .hbar { position: relative; z-index: 2; }
+/* The dim behind an open .lvmenu (TopNav.svelte renders it while HM.open / LV.open).
+   Fixed, so it covers the whole screen from inside .top; opacity is the only thing
+   that animates, and pointer-events: none keeps it out of the pointer's way (the
+   D-pad never sees it — it isn't .focus). The menu itself stays solid #0e0e11. */
+.menuscrim { position: fixed; inset: 0; z-index: 1; pointer-events: none; background: rgba(0,0,0,.5);
+  animation: menuscrim .16s ease-out; }
+@keyframes menuscrim { from { opacity: 0; } to { opacity: 1; } }
+
+/* Inline hint vs. error text, for any screen: a quiet one-liner under a control. */
+.msg { font-size: 21px; line-height: 1.4; color: var(--t3); }
+.msg.err { color: var(--err); }
+.lvbar { display: flex; align-items: center; gap: 6px; font-size: 23px; padding: 6px; border-radius: 999px;
+  background: rgba(5,5,6,.45); border: 1px solid rgba(255,255,255,.09);
+  backdrop-filter: blur(14px) saturate(1.1); -webkit-backdrop-filter: blur(14px) saturate(1.1); }
+.lvwrap { position: relative; }
+.lvbtn { display: flex; align-items: center; gap: 10px; padding: 10px 18px 10px 20px; border-radius: 999px;
+  border: 1px solid transparent; color: var(--t2); white-space: nowrap;
+  transition: background-color .14s ease, color .14s ease, border-color .14s ease; }
+.lvbtn > svg { width: 23px; height: 23px; display: block; flex: none; }
+.lvbtn .chev { display: flex; margin-left: -2px; opacity: .55; transition: transform .16s ease; }
+.lvbtn .chev svg { width: 20px; height: 20px; display: block; }
+.lvbtn.open .chev { transform: rotate(180deg); }
+.lvbtn.on { color: #fff; font-weight: 600; background: rgba(var(--accent-rgb), .24); }
+.lvbtn.focus:focus, .lvbtn.open { outline: none; color: #fff; background: rgba(var(--accent-rgb), .13); border-color: rgba(var(--accent-rgb), .5); }
+.lvbtn.on.focus:focus, .lvbtn.on.open { background: rgba(var(--accent-rgb), .36); border-color: rgba(var(--accent-rgb), .8); }
+/* the Unwatched switch: a small track whose knob slides over and turns gold */
+.lvbtn .sw { position: relative; width: 40px; height: 22px; margin-left: 4px; border-radius: 11px; flex: none;
+  background: rgba(255,255,255,.18); transition: background-color .16s ease; }
+.lvbtn .sw b { position: absolute; top: 3px; left: 3px; width: 16px; height: 16px; border-radius: 50%;
+  background: rgba(255,255,255,.85); transition: transform .16s ease, background-color .16s ease; }
+.lvbtn.on .sw { background: var(--accent); }
+.lvbtn.on .sw b { transform: translateX(18px); background: var(--accent-ink); }
+/* The dropdown hangs from its pill. Solid, not glass and not even rgba(…,.97):
+   on this TV's graphics plane a 97%-alpha panel still let a bright poster show
+   through at what looked like ~25% (measured with a screen capture), and a
+   poster behind small text is exactly where legibility suffers. */
+.lvmenu { position: absolute; top: calc(100% + 16px); left: -6px; min-width: calc(100% + 12px); width: 380px;
+  max-height: 780px; overflow-y: auto; padding: 10px; border-radius: 16px; z-index: 20;
+  background: #0e0e11; border: 1px solid rgba(255,255,255,.1); box-shadow: 0 30px 80px rgba(0,0,0,.7);
+  display: flex; flex-direction: column; gap: 2px; animation: lvdrop .16s ease-out; }
+@keyframes lvdrop { from { opacity: 0; transform: translateY(-8px); } to { opacity: 1; transform: none; } }
+.lvmenu .lvcap { padding: 10px 18px 10px; font: 600 16px var(--mono); letter-spacing: .16em; text-transform: uppercase; color: var(--accent); }
+.lvmenu .opt { display: flex; align-items: center; justify-content: space-between; gap: 16px; width: 100%; flex: none;
+  padding: 13px 18px; border-radius: 10px; font-size: 23px; color: var(--t2); text-align: left; }
+.lvmenu .opt svg { width: 26px; height: 26px; display: block; color: var(--accent); flex: none; }
+.lvmenu .opt.sel { color: #fff; font-weight: 700; }
+.lvmenu .opt.focus:focus { outline: none; color: #fff; background: rgba(var(--accent-rgb), .14); box-shadow: inset 0 0 0 2px rgba(var(--accent-rgb), .75); }
+
+/* ---------- tab-row bell + avatar (TopNav.svelte) ----------
+   The right end of every tab row: one more glass capsule holding the new-seasons
+   bell and the account avatar, pinned to the 64px gutter like the tabs are on the
+   left. Both open an .lvmenu (so focus.js treats them as modal), hung from the
+   right edge instead of the left. */
+.hbar { display: flex; align-items: center; gap: 6px; padding: 6px; margin-left: auto; border-radius: 999px;
+  background: rgba(5,5,6,.45); border: 1px solid rgba(255,255,255,.09);
+  backdrop-filter: blur(14px) saturate(1.1); -webkit-backdrop-filter: blur(14px) saturate(1.1); }
+.top-extra + .hbar { margin-left: -24px; }
+.hbtn { position: relative; display: flex; align-items: center; justify-content: center; width: 52px; height: 52px;
+  border-radius: 50%; border: 1px solid transparent; color: var(--t2);
+  transition: background-color .14s ease, color .14s ease, border-color .14s ease; }
+.hbtn > svg { width: 27px; height: 27px; display: block; }
+.hbtn.focus:focus, .hbtn.open { outline: none; color: #fff; background: rgba(var(--accent-rgb), .13); border-color: rgba(var(--accent-rgb), .5); }
+/* unread count: a gold coin on the bell's shoulder */
+.hcount { position: absolute; top: 3px; right: 1px; min-width: 22px; height: 22px; padding: 0 6px; border-radius: 11px;
+  background: var(--accent); color: var(--accent-ink); font: 800 14px/22px var(--mono); text-align: center; }
+.hbtn.avatar img, .hbtn.avatar span { width: 42px; height: 42px; border-radius: 50%; display: block; }
+.hbtn.avatar img { object-fit: cover; }
+.hbtn.avatar span { display: flex; align-items: center; justify-content: center; font-size: 22px; font-weight: 800;
+  background: rgba(var(--accent-rgb), .24); color: var(--accent); }
+.hbtn.avatar.focus:focus, .hbtn.avatar.open { background: rgba(var(--accent-rgb), .3); }
+
+.lvmenu.hmenu { left: auto; right: -6px; min-width: 0; max-height: 700px; }
+.lvmenu.news { width: 700px; }
+.lvmenu.account { width: 460px; }
+.nwrow { display: flex; align-items: stretch; gap: 6px; flex: none; }
+.lvmenu .opt.nwmain { flex: 1; width: auto; min-width: 0; justify-content: flex-start; gap: 18px; padding: 10px 14px; }
+.nwposter { width: 60px; height: 90px; flex: none; border-radius: 6px; overflow: hidden; background: #1a1a20; }
+.nwposter img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.nwtext { display: flex; flex-direction: column; gap: 5px; min-width: 0; }
+.nwtitle { font-size: 24px; font-weight: 700; color: #fff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.nwrow.fresh .nwtitle::before { content: ''; display: inline-block; width: 11px; height: 11px; margin: 0 10px 2px 0;
+  border-radius: 50%; background: var(--accent); vertical-align: middle; }
+.nwseason { font-size: 21px; color: var(--t1); display: flex; align-items: center; gap: 12px; }
+.nwkind { font: 600 16px var(--mono); font-style: normal; letter-spacing: .12em; text-transform: uppercase;
+  color: var(--accent); border: 1px solid rgba(var(--accent-rgb), .5); border-radius: 6px; padding: 2px 7px; }
+/* up to two lines, then an ellipsis — "Out since Jul 9 · 6 of 10 episodes" used to be cut mid-word */
+.nwline { font-size: 20px; line-height: 1.3; color: var(--t3); overflow: hidden;
+  display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; }
+.nwline.found { color: var(--accent); }
+.nwline.none { color: var(--err); }
+.lvmenu .opt.nwget { width: auto; flex: none; flex-direction: column; justify-content: center; gap: 6px;
+  padding: 0 20px; font-size: 20px; font-weight: 600; color: var(--accent); }
+.lvmenu .opt.nwget.done { color: var(--t3); }
+.lvmenu .opt.nwget.done svg { color: var(--t3); }
+.nwempty { padding: 16px 18px 20px; font-size: 22px; color: var(--t3); }
+.lvmenu .opt.acrow { justify-content: flex-start; gap: 16px; }
+.acpic { width: 44px; height: 44px; flex: none; border-radius: 50%; overflow: hidden; display: flex; align-items: center;
+  justify-content: center; background: rgba(var(--accent-rgb), .2); color: var(--accent); font-size: 21px; font-weight: 800; }
+.acpic img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.acpic.ic { background: rgba(255,255,255,.08); }
+.lvmenu .opt .acpic.ic svg { width: 24px; height: 24px; color: var(--t1); }
+.acname { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.acsep { height: 1px; flex: none; margin: 6px 10px; background: rgba(255,255,255,.08); }
+
+/* Settings (SettingsMenu.svelte): a wider .hmenu hung from the avatar. A choice row
+   is "label ··· ‹ value ›" — OK / ▶ step forward, ◀ back; a switch row flips on OK. */
+.lvmenu.settings { width: 680px; max-height: 920px; }
+.lvmenu .opt.setrow { gap: 20px; }
+.setrow .setlab { flex: 1; min-width: 0; }
+.setrow .setval { display: flex; align-items: center; gap: 6px; color: #fff; font-weight: 600; white-space: nowrap; }
+.lvmenu .opt .setval svg { width: 22px; height: 22px; color: var(--t4); }
+.lvmenu .opt.focus:focus .setval svg { color: var(--accent); }
+.setval i { display: flex; font-style: normal; }
+.setval .l { transform: rotate(90deg); }
+.setval .r { transform: rotate(-90deg); }
+.setrow .sw { position: relative; width: 48px; height: 26px; border-radius: 13px; flex: none;
+  background: rgba(255,255,255,.18); transition: background-color .16s ease; }
+.setrow .sw b { position: absolute; top: 3px; left: 3px; width: 20px; height: 20px; border-radius: 50%;
+  background: rgba(255,255,255,.85); transition: transform .16s ease, background-color .16s ease; }
+.setrow.on .sw { background: var(--accent); }
+.setrow.on .sw b { transform: translateX(22px); background: var(--accent-ink); }
+.lvmenu .msg.sethint { flex: none; padding: 0 18px 8px; font-size: 20px; }
+.setabout { flex: none; display: grid; grid-template-columns: 150px 1fr; gap: 8px 16px; padding: 4px 18px 12px;
+  font-size: 20px; color: var(--t1); }
+.setabout dt { color: var(--t3); }
+.setabout dd { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* Under the bar: what the grid is showing right now ("3 movies · Drama · Unwatched"). */
+.libhead { margin: -22px 0 44px; font-size: 22px; color: var(--t3); font-variant-numeric: tabular-nums; }
+/* a re-sort in flight: the old grid stays, dimmed, until the new order lands */
+.grid.dim, .libempty.dim { opacity: .4; transition: opacity .15s ease; }
+.gridmore { display: flex; justify-content: center; padding: 48px 0 16px; }
+.libempty { display: flex; flex-direction: column; align-items: center; text-align: center; gap: 14px; padding: 150px 0 60px; }
+.libempty .icon svg { width: 88px; height: 88px; display: block; color: var(--t4); }
+.libempty .t { margin-top: 10px; font-size: 38px; font-weight: 700; }
+.libempty .s { font-size: 23px; color: var(--t3); }
+.libempty .btn { margin-top: 22px; }
+/* Search's "Nothing found" / lookup failure: the same card, closer under the bar */
+.libempty.compact { padding: 60px 0 40px; }
+/* --- robust: failure cards ---
+   A failed load says so and offers Retry (Home: "Can't reach Jellyfin at …",
+   Library: a first page that didn't load), instead of a blank screen or a bare
+   "Failed: HTTP …" line. .gridfail is the tile-row stand-in for a next page
+   that didn't load; paging stops until it is retried. */
+/* (Home's and Library's error cards are LoadError now — see .loaderr.under;
+   .failcard remains as Home's "Nothing to continue yet" empty card.) */
+.failcard { display: flex; flex-direction: column; align-items: center; text-align: center; gap: 14px; padding: 180px 0 60px; }
+.failcard .t { font-size: 38px; font-weight: 700; }
+.failcard .s { font-size: 23px; color: var(--t3); max-width: 1200px; }
+.failcard .row { display: flex; gap: 18px; margin-top: 22px; }
+.loaderr .btn.busy, .gridfail .btn.busy { opacity: .6; }
+.failcard.homeempty { padding: 220px 0 120px; }
+.gridfail { display: flex; justify-content: center; padding: 40px 0 16px; }
+
+/* ---------- hero billboard ---------- */
+.hero { position: relative; overflow: hidden; }
+.hero.home { height: 880px; }
+/* Both detail heroes grew when the button row got its 60px of breathing room
+   above (and, on a series, the season pills + the tech-badge row moved in):
+   .info is bottom-anchored, so extra content pushes the title up towards the
+   top of the (overflow:hidden) billboard. Taller backdrop = the buttons stay
+   comfortably inside the artwork. The detail screens render no TopNav, so the
+   hero's own clip is the whole constraint.
+   The series hero now holds only Next-up (the season pills moved down into
+   .body), which makes its height season-count-independent: measured, the info
+   column is 456px tall and the title starts 208px inside the 700px hero, for
+   any show. It used to lose 70px of that per wrapped row of pills — a 14-season
+   show sat at 68px and a 21-season one clipped the title outright. */
+/* 700px like the series hero since the overview moved up into it and the tech
+   grid down into .body: Play sits at y≈602 for a typical movie. */
+.hero.movie { height: 700px; }
+.hero.series { height: 700px; }
+.hero .backdrop { position: absolute; inset: 0; z-index: 0; background: #14141c; }
+.hero .backdrop img { width: 100%; height: 100%; object-fit: cover; }
+.hero .scrim-l, .hero .scrim-b { position: absolute; inset: 0; z-index: 1; pointer-events: none; }
+.hero.home .scrim-l { background: linear-gradient(90deg, rgba(11,11,13,.96) 0%, rgba(11,11,13,.75) 34%, rgba(11,11,13,0) 62%); }
+.hero.home .scrim-b { background: linear-gradient(0deg, #0b0b0d 0%, rgba(11,11,13,0) 32%); }
+.hero.movie .scrim-l, .hero.series .scrim-l { background: linear-gradient(90deg, rgba(11,11,13,.97) 0%, rgba(11,11,13,.8) 38%, rgba(11,11,13,.1) 70%); }
+.hero.movie .scrim-b, .hero.series .scrim-b { background: linear-gradient(0deg, #0b0b0d 4%, rgba(11,11,13,0) 40%); }
+
+.hero .info { position: absolute; left: 64px; z-index: 3; display: flex; flex-direction: column; }
+.hero.home .info { bottom: 120px; width: 760px; gap: 22px; }
+/* Wider + tighter than the home hero (the tech grid used to live in the movie
+   column; it is in .body under the buttons now, compact), and the wide
+   series column keeps a long "Next up · S1:E1 “…”" label on one line.
+   bottom: 36px is the first half of the 60px rhythm under the button row —
+   .body contributes the other 24px as padding-top, and the hero/body seam is
+   invisible (same background), so the eye reads one 60px gap. Keep them in sync. */
+.hero.movie .info { bottom: 36px; width: 1080px; gap: 18px; }
+.hero.series .info { bottom: 36px; width: 1180px; gap: 18px; }
+/* 42px + the 18px column gap = the same 60px that sits below the button row. */
+.hero.movie .actions, .hero.series .actions { margin-top: 42px; }
+.hero .title { font-weight: 800; line-height: .98; letter-spacing: -.02em; }
+.hero.home .title { font-size: 92px; }
+.hero.movie .title { font-size: 84px; }
+.hero.series .title { font-size: 80px; }
+.hero .tagline { font-size: 27px; font-style: italic; color: var(--t2); }
+.metarow { display: flex; align-items: center; gap: 16px; font-size: 25px; color: var(--t1); flex-wrap: wrap; }
+.hero.home .metarow { font-size: 26px; gap: 18px; }
+.metarow .dot { color: var(--t4); }
+.metarow .star { color: var(--accent); font-weight: 700; }
+.metarow .votes { color: var(--t3); }
+.metarow .genres { color: var(--t2); }
+/* Tech badges never trail the metadata text: flex-basis 100% in a wrapping flex
+   row forces a break, so 1080p / DD+ / … always get a dedicated row. */
+.metarow .badgerow { flex: 0 0 100%; display: flex; gap: 12px; flex-wrap: wrap; }
+.fsk { border: 2px solid rgba(255,255,255,.45); border-radius: 6px; padding: 1px 10px; font-size: 21px; }
+.chip { background: var(--surface); border-radius: 6px; padding: 5px 14px; font-size: 21px; font-weight: 600; }
+.chip.sm { padding: 3px 12px; font-size: 20px; }
+.chip.watched { color: var(--accent); }
+.techbadges { display: flex; gap: 12px; flex-wrap: wrap; }
+.overview { line-height: 1.45; color: rgba(255,255,255,.8); text-wrap: pretty; }
+/* The home hero's info block is bottom-anchored, so an unclamped synopsis grows
+   it upwards until it crowds the top nav. Clamp it — 4 lines keeps the block
+   clear of the header for any item. */
+.hero.home .overview { font-size: 26px; max-width: 700px;
+  display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 4; overflow: hidden; }
+/* Same story for the series hero, and more acute now that it also carries the
+   badge row and the season pills: a 10-line synopsis would shove the title off
+   the top of the (overflow:hidden) billboard. */
+.hero.series .overview, .hero.movie .overview { font-size: 25px; max-width: 860px;
+  display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 4; overflow: hidden; }
+.hero .actions, .actions { display: flex; gap: 16px; align-items: center; flex-wrap: wrap; }
+.hero.home .actions { gap: 18px; margin-top: 6px; }
+/* Home hero CTA group — the watch-progress bar must span exactly the Resume +
+   More info row, gap included, and stay right if the labels change. So: shrink-wrap
+   the column to max-content (the bar is an empty div, it contributes 0 to that, so
+   the width is the button row's) and let the bar stretch back out to it. The 22px
+   gap and the 6px above .actions reproduce what .info's own gap used to give these
+   two when they were siblings. max-width caps the group at the info column if a
+   very long "Resume · h:mm:ss" ever outgrows it. */
+.hero.home .hero-cta {
+  display: flex; flex-direction: column; align-items: stretch;
+  gap: 22px; width: max-content; max-width: 100%; align-self: flex-start;
+}
+.hero.home .hero-cta .resume-bar { width: auto; }
+
+/* --- browse: the Home hero follows the focused rail tile (Home.svelte) ---
+   Picks crossfade: each new backdrop / info block fades in over the old one,
+   so both are stacked absolutely for the length of the fade.
+   While focus is in the rails the hero compacts into a sticky 500px billboard
+   (COMPACT_H in Home.svelte — keep the two in step): smaller title, two lines
+   of synopsis, no badges or buttons. The focused rail is scrolled to sit right
+   under it, and the rails above slide away beneath its opaque backdrop. */
+/* will-change: both backdrop <img>s and .info are permanent compositor layers
+   (ON — the TV runs the stock 60 Hz UI). A crossfade otherwise promotes/demotes
+   them around every swap and re-rasters the sticky 1920×500 hero (~55 tiles in
+   a frame); the hero swaps on every D-pad rest. At 60 Hz, with preload()'s
+   own-task resolve in Home.svelte, 40 presses in the rails (2026-09-29, deployed
+   build vs an override): 130 ms 2.2–3.6% → 0.4–0.5% dropped, 70 ms 2.1–3.1% →
+   0.5–1.3%, raster halved. Idle Home stays 60 fps / 0% dropped either way (GPU
+   3.4 → ~5 ms a frame, 43 → 113 quads).
+   ⚠️ Take this off again if the TV's UI is ever made to run at 120 Hz:
+   a full-size layer is overdraw on every frame (48 → 118 quads), an idle Home
+   with any animation then dropped 6–10% of frames instead of 0, and D-pad runs
+   gained nothing (7.3–10.7% vs 7.4–10.2%). Tile layers (.strip/.grid .tile,
+   .catcard) are small and pay off either way — see those rules. */
+.hero.home .backdrop img, .hero.home .info { will-change: opacity; }
+.hero.home .backdrop img { position: absolute; inset: 0; opacity: 0; transition: opacity .4s linear; }
+/* the incoming layer is on top, as the appended <img> of the old {#key} fade was */
+.hero.home .backdrop img.on { opacity: 1; z-index: 1; }
+.hero.home.compact { position: sticky; top: 0; z-index: 4; height: 500px; }
+.hero.home.compact .backdrop img { object-position: center 30%; }
+.hero.home.compact .scrim-b { background: linear-gradient(0deg, #0b0b0d 0%, rgba(11,11,13,.6) 16%, rgba(11,11,13,0) 45%); }
+.hero.home.compact .info { bottom: 36px; gap: 14px; }
+.hero.home.compact .title { font-size: 60px; }
+.hero.home.compact .metarow { font-size: 23px; gap: 14px; }
+.hero.home.compact .overview { font-size: 23px; -webkit-line-clamp: 2; }
+.hero.home.compact .techbadges, .hero.home.compact .hero-cta { display: none; }
+/* compact hero over Continue Watching / Next Up: how to play / remove a tile */
+.hero.home .railhint { font-size: 20px; color: var(--t3); }
+
+/* buttons */
+.btn { display: inline-flex; align-items: center; gap: 14px; border-radius: 10px; font-weight: 600; white-space: nowrap; }
+.btn.big { padding: 15px 32px; font-size: 27px; }
+.hero.home .btn.big { padding: 16px 34px; font-size: 28px; }
+.btn.primary { background: var(--accent); color: var(--accent-ink); font-weight: 700; }
+.btn.ghost { background: var(--surface2); }
+/* The greyed stand-in where Play would be on a title that is still coming in
+   (PendingDetail): shaped exactly like .primary but visibly not playable, and
+   tabular-nums so the live "43% · 7.4 MB/s · 1:11:24 left" doesn't wobble. */
+.btn.stat { background: var(--surface2); color: var(--t2); font-weight: 700; font-variant-numeric: tabular-nums; }
+.btn.focus:focus { outline: var(--fring); outline-offset: 4px; box-shadow: var(--fshadow); }
+/* MovieDetail's watched toggle: a dim tick when unwatched, a gold one when watched */
+.watchbtn .gi { opacity: .45; }
+.watchbtn.on .gi { opacity: 1; color: var(--accent); }
+.resume-bar { width: 420px; height: 8px; border-radius: 4px; background: rgba(255,255,255,.18); overflow: hidden; }
+.resume-bar > i { display: block; height: 100%; background: var(--accent); }
+
+/* ---------- rails ---------- */
+.rails { display: flex; flex-direction: column; gap: 44px; padding: 8px 0 64px; position: relative; z-index: 2; }
+.rail { display: flex; flex-direction: column; gap: 18px; }
+.rail h2 { font-size: 30px; font-weight: 700; padding: 0 64px; }
+/* "4 films · 2 in your library" after a collection rail's title */
+.rail h2 .railsub { font-size: 22px; font-weight: 500; color: var(--t3); margin-left: 18px; }
+/* generous top padding so the focused tile's upward scale + ring isn't clipped
+   (a horizontal scroller forces overflow-y to clip, so we make room instead). */
+/* Instant (not smooth) scroll — on the TV the smooth animation lagged behind
+   D-pad focus, leaving the focused tile briefly off-screen. */
+.strip { display: flex; gap: 20px; padding: 40px 64px 20px; align-items: flex-start; overflow-x: auto; overflow-y: hidden; scroll-behavior: auto; }
+
+/* tiles */
+/* min-width:0 stops a nowrap caption from growing the flex tile (webOS gives the
+   item a min-content floor = full text width), so the title actually clips. */
+.tile { flex: none; display: flex; flex-direction: column; gap: 10px; min-width: 0; }
+/* width:100% (not stretch) — the webOS webview floors an auto-width flex item
+   at its content's min-content size, so a nowrap caption inflated .cap/.t to
+   the full text width and painted over the neighbouring tile. An explicit
+   percentage is definite on any engine and cannot be floored. */
+.tile .cap { min-width: 0; overflow: hidden; width: 100%; }
+.tile .cap .s { width: 100%; }
+.tile .poster { border-radius: 8px; position: relative; overflow: hidden; background: #14141c; }
+.tile.v { width: 236px; }
+.tile.v .poster { width: 236px; height: 354px; }
+.tile.h { width: 236px; }           /* continue watching = portrait too, per design */
+.tile.h .poster { width: 236px; height: 354px; }
+.tile .poster img { width: 100%; height: 100%; object-fit: cover; }
+.tile .ph { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; color: var(--t4); font: 400 18px var(--mono); }
+.tile .progress { position: absolute; left: 0; right: 0; bottom: 0; height: 7px; background: rgba(255,255,255,.25); }
+.tile .progress > i { display: block; height: 100%; background: var(--accent); }
+.tile .runbadge { position: absolute; right: 10px; top: 10px; background: rgba(0,0,0,.65); border-radius: 6px; padding: 3px 10px; font-size: 20px; font-weight: 600; }
+/* a chart position (Search → Browse): the reason the grid is in this order, so
+   bigger, bolder and gold on a near-opaque chip that holds up on bright posters */
+.tile .runbadge.rank { background: rgba(8,8,10,.86); color: var(--accent); font-size: 23px; font-weight: 800;
+  padding: 2px 11px; font-variant-numeric: tabular-nums; }
+.tile .techbadge { position: absolute; left: 10px; top: 10px; background: rgba(0,0,0,.65); border-radius: 6px; padding: 3px 10px; font-size: 20px; font-weight: 600; letter-spacing: .04em; }
+.tile .watched-dot { position: absolute; right: 10px; top: 10px; width: 26px; height: 26px; border-radius: 50%; background: var(--accent); color: var(--accent-ink); display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 16px; }
+.tile .cap { display: flex; flex-direction: column; gap: 3px; }
+.tile .cap .t { font-size: 22px; font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tile .cap .s { font-size: 19px; color: var(--t3); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tile.focus:focus { outline: none; }
+.tile.focus:focus .poster { outline: var(--fring); box-shadow: var(--fshadow); }
+.tile.focus:focus { transform: scale(var(--fscale)); transform-origin: center bottom; z-index: 3; transition: transform .15s ease-out; }
+
+/* --- browse: tile badges + wide rail tiles ---
+   Top-right of a library poster: the unwatched-episode count of a series, or
+   a gold tick on anything fully watched (the half-watched movie gets the
+   bottom .progress bar instead). Next Up is a 16:9 rail — the episode still
+   is the informative artwork there — so its tiles get a fixed width. */
+.tile .cntbadge { position: absolute; right: 10px; top: 10px; min-width: 34px; height: 34px; padding: 0 9px; border-radius: 17px;
+  background: var(--accent); color: var(--accent-ink); font: 800 19px/34px var(--mono); text-align: center; font-variant-numeric: tabular-nums; }
+.tile .watched-dot { width: 34px; height: 34px; }
+.tile .watched-dot .gi svg { width: 20px; height: 20px; }
+/* Rail tiles are permanent layers for the same reason as .grid .tile (see there):
+   otherwise every focus move re-rasters a strip of the page under the scaling
+   tile. Home at 60 Hz (2026-09-29, 40 presses, 3 runs each at 130 ms): 5.4–10.6%
+   → 3.3–4.8% dropped frames, ~1100 → ~550 GPU raster flushes; at 70 ms 5.8–6.3%
+   → 3.6–4.4%, p90 press-to-frame 38–47 → 22–32 ms. */
+.strip .tile { will-change: transform; }
+.strip .tile.w { width: 420px; }
+/* hold OK → removed from Continue Watching / Next Up (Home.svelte removeTile):
+   fade and collapse, the -20px eating the strip's gap, before it leaves the DOM */
+.strip .tile.gone { width: 0; margin-right: -20px; opacity: 0; transform: scale(.9); overflow: hidden;
+  transition: width .2s ease-out, margin .2s ease-out, opacity .15s linear, transform .15s ease-out; }
+/* LookupTile: a grab in flight shows its live % where "In library" would be */
+.techbadge.lk.dl { color: var(--accent); font-variant-numeric: tabular-nums; }
+
+/* ---------- Search overlay (Search.svelte) ----------
+   There is no Search tab: ▲ past the tab bar (or a wheel-up at the top of the
+   page) raises this over the mounted tab. Its bar drops into the tab bar's slot
+   — same .top geometry, same pill shape — while the whole browse screen fades
+   out underneath, leaving the canvas to the results. Opacity +
+   transform only, so the swap stays on the compositor; visibility follows the
+   fade so the faded screen can't be hit or focused, and flips back instantly on
+   the way in. The overlay's own .page is transparent so the two crossfade
+   rather than the overlay painting a slab over the screen. */
+.screen { transition: opacity .28s ease, visibility 0s; }
+body.search-on .screen { opacity: 0; visibility: hidden; pointer-events: none;
+  transition: opacity .28s ease, visibility 0s linear .28s; }
+#search { position: fixed; inset: 0; z-index: 50; opacity: 0; visibility: hidden; pointer-events: none;
+  transition: opacity .28s ease, visibility 0s linear .28s; }
+#search.on { opacity: 1; visibility: visible; pointer-events: auto; transition: opacity .28s ease, visibility 0s; }
+/* `.top` is position:absolute; making the overlay's `.page` its containing block
+   lets the bar scroll away with the results instead of pinning over them. */
+#search .page { position: relative; background: transparent; }
+/* Slides down into place from above — you reached it by going up. */
+#search .sbar { display: flex; align-items: center; gap: 14px; width: 900px; height: 63px; padding: 0 26px;
+  border-radius: 999px; background: rgba(255,255,255,.07); border: 1px solid rgba(255,255,255,.09);
+  color: var(--t2); cursor: text; transform: translateY(-28px);
+  transition: transform .34s cubic-bezier(.2,.8,.3,1), background-color .14s ease, border-color .14s ease; }
+#search.on .sbar { transform: none; }
+#search .sbar svg { width: 25px; height: 25px; display: block; flex: none; }
+#search .sbar.focus:focus { outline: none; }
+#search .sbar:focus, #search .sbar.typing { color: #fff; background: rgba(var(--accent-rgb), .13); border-color: rgba(var(--accent-rgb), .5); }
+#search .sq { flex: 1; min-width: 0; font-size: 25px; color: #fff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  display: flex; align-items: center; }
+#search .sq.ph { color: var(--t3); }
+/* A still caret, not a blinking one: an always-running animation keeps the
+   compositor busy (~16% of a core measured for the marquee; see MQ_LOOPS in focus.js). */
+#search .sq .caret { display: inline-block; width: 2px; height: 30px; margin-left: 3px; background: var(--accent); flex: none; }
+#search .skhint { flex: none; font-size: 20px; color: var(--t3); opacity: 0; }
+#search .sbar:focus .skhint { opacity: 1; }
+/* Search's own keyboard (Keyboard.svelte), under the bar */
+#search .skb { display: flex; flex-direction: column; gap: 12px; margin: -48px 0 44px; }
+#search .skrow { display: flex; gap: 12px; }
+#search .skey { width: 126px; height: 66px; border-radius: 14px; border: 1px solid rgba(255,255,255,.09);
+  background: rgba(255,255,255,.07); color: var(--t1); font-family: inherit; font-size: 28px; font-weight: 500;
+  display: inline-flex; align-items: center; justify-content: center; }
+#search .skey.wide { width: 957px; font-size: 24px; }
+#search .skey.mid { width: 263px; font-size: 24px; }
+#search .skey svg { width: 32px; height: 32px; }
+#search .skey.done { color: var(--accent); }
+#search .skey.focus:focus { outline: none; background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+#search .skb + .recents { margin-top: 0; }
+#search .shint { color: var(--t3); font-size: 24px; }
+/* --- browse: Search's empty state (Search.svelte) ---
+   Recent queries as chips, then the Trending rails (full-bleed like Home's:
+   the .rail/.strip gutters replace .grid-wrap's own), then Browse's cards. */
+#search .recents { margin: -40px 0 36px; display: flex; flex-direction: column; gap: 16px; }
+#search .rhead { font-size: 22px; color: var(--t3); }
+#search .rchips { display: flex; flex-wrap: wrap; gap: 14px; }
+#search .rchip { display: inline-flex; align-items: center; gap: 10px; height: 52px; padding: 0 24px; border-radius: 26px;
+  background: var(--surface); border: 1px solid transparent; color: var(--t1); font-size: 23px; white-space: nowrap; }
+#search .rchip .gi { color: var(--t3); }
+#search .rchip.focus:focus { outline: none; color: #fff; background: rgba(var(--accent-rgb), .13); border-color: rgba(var(--accent-rgb), .5); }
+#search .rail.strend { margin: -40px -64px 24px; }
+#search .rail.strend + .rail.strend, #search .recents + .rail.strend { margin-top: 0; }
+/* Lookup results are ordinary library tiles in the ordinary 7-across .grid
+   (LookupTile.svelte). The top-left .techbadge slot carries the add state
+   instead of a resolution; the pulsing .dlring marks downloads in flight. */
+.techbadge.lk { display: inline-flex; align-items: center; gap: 6px; }
+.techbadge.lk .gi, .techbadge.lk .gi svg { display: block; width: 19px; height: 19px; }
+.techbadge.lk.ok { background: var(--accent); color: var(--accent-ink); }
+.techbadge.lk.err { color: var(--err); }
+
+/* ---------- browse categories under the Search bar (Browse.svelte) ----------
+   Cards, not posters: kicker + title on a solid left, a stack of the category's
+   leading IMDb posters on the right. The stack is deliberately flat — straight
+   posters, zero-blur shadows, no focus shadow: rotated posters with blurred
+   shadows cost this TV's GPU ~2.5 s of raster per few D-pad moves (measured
+   2026-09-28; 18 fps → ~55 fps without them). The two Top 250 cards (.lead) come first, two across and
+   taller; the genres follow four across. While a category loads, the cards dim
+   and the pressed one shows the gold bars. */
+.browse { transition: opacity .15s ease; }
+.browse.dim .catcard:not(.busy) { opacity: .45; }
+.bhead { margin: 52px 0 22px; font-size: 26px; font-weight: 700; color: var(--t1); }
+.cats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 24px 20px; }
+.cats.lead { grid-template-columns: repeat(2, 1fr); }
+/* Every card is its own compositor layer (will-change), and the focus ring is a
+   second, pre-rastered layer inside it whose opacity flips — so a D-pad move is
+   transform + opacity only and rasters nothing. Before, the scale transition
+   promoted the card to a layer and demoted it again when it ended, and each
+   switch re-rastered that strip of the whole Search page layer, posters and
+   gradients included, as did painting the outline (measured on the TV at 60 Hz,
+   2026-09-29, 40 presses at a held-▼ pace of 70 ms, 2 runs each: 19–24% → 0.5–0.7%
+   dropped frames, worst press-to-frame 222–241 → 33–37 ms, GPU raster flushes
+   ~430 → ~130). The flip side: the card's layer keeps its 1× raster while it
+   is scaled up 4%. The clip the posters need lives on .ccart — overflow:hidden
+   on the card would clip the ring, which sits outside it like the outline did. */
+.catcard { position: relative; height: 164px; border-radius: 12px; will-change: transform;
+  background: linear-gradient(135deg, #1b1a17, #111114); border: 1px solid rgba(255,255,255,.06);
+  transition: opacity .15s ease; }
+.cats.lead .catcard { height: 250px; background: linear-gradient(135deg, #2a2213, #121114 70%); border-color: rgba(var(--accent-rgb), .18); }
+.catcard .ccart { position: absolute; top: 0; bottom: 0; right: 0; width: 62%; overflow: hidden; border-radius: 0 11px 11px 0; }
+.catcard .ccart img { position: absolute; top: calc(14% + var(--i) * 7%); height: 100%; aspect-ratio: 2 / 3; object-fit: cover;
+  border-radius: 6px; box-shadow: -6px 0 0 rgba(0,0,0,.45); right: calc(8% + var(--i) * 19%); z-index: calc(3 - var(--i)); }
+.cats.lead .catcard .ccart img { top: calc(12% + var(--i) * 6%); right: calc(6% + var(--i) * 13%); }
+/* a solid left edge the title sits on, fading over the posters */
+.catcard::after { content: ''; position: absolute; inset: 0; z-index: 4; pointer-events: none; border-radius: 11px;
+  background: linear-gradient(90deg, #131316 34%, rgba(19,19,22,.75) 55%, rgba(19,19,22,0) 80%); }
+.cats.lead .catcard::after { background: linear-gradient(90deg, #1b1712 34%, rgba(27,23,18,.7) 58%, rgba(27,23,18,0) 82%); }
+.catcard .cctxt { position: absolute; left: 26px; bottom: 22px; right: 45%; z-index: 5; }
+.catcard .cck { font-size: 17px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--accent); }
+.catcard .cct { margin-top: 4px; font-size: 30px; font-weight: 700; line-height: 1.1; }
+.cats.lead .catcard .cct { font-size: 42px; }
+.catcard .mlbars { position: absolute; right: 26px; top: 22px; z-index: 5; height: 26px; }
+.catcard .mlbars i { height: 26px; }
+/* the focus ring: where outline: var(--fring) with a 4px offset would draw it */
+.catcard::before { content: ''; position: absolute; inset: -9px; z-index: 7; pointer-events: none;
+  border: 4px solid var(--accent); border-radius: 20px; opacity: 0; will-change: opacity; }
+.catcard.focus:focus { outline: none; transform: scale(1.04); z-index: 6; transition: transform .15s ease-out; }
+.catcard.focus:focus::before { opacity: 1; }
+/* an open category: kicker + big title over the grid */
+.chart .chhead { margin: 0 0 40px; }
+.chart .chk { font-size: 18px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--accent); }
+.chart .cht { margin-top: 6px; font-size: 48px; font-weight: 700; }
+.chart .libhead { margin: 0 0 24px; font-size: 26px; font-weight: 700; color: var(--t1); }
+.chart .libhead.after { margin-top: 56px; }
+
+/* the dimming overlay on a tile while its add is in flight */
+.mlover { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 12px; background: rgba(0,0,0,.55); color: var(--t1); font-size: 18px; font-weight: 600; }
+.mlbars { display: flex; align-items: center; gap: 6px; height: 34px; }
+.mlbars i { display: block; width: 6px; height: 34px; border-radius: 3px; background: var(--accent);
+  transform: scaleY(.4); will-change: transform; animation: vload-pulse .435s ease-in-out infinite alternate; }
+.mlbars i:nth-child(2) { animation-delay: -.145s; }
+.mlbars i:nth-child(3) { animation-delay: -.29s; }
+
+/* Poster ring (Tile / PendingTile): the queued/downloading state of a title
+   that is still coming in. This replaced a top-right percentage badge — a
+   number nobody can read from three metres, in the one corner that also has to
+   carry the watched dot — with a slow breath of the gold accent around the
+   poster itself. Downloading breathes brighter and faster than queued/paused;
+   a warning is a still red ring, because a stall is not motion.
+
+   ONLY `opacity` animates, on a dedicated overlay whose inset box-shadow draws
+   the ring. Animating border-color or the box-shadow itself would repaint the
+   poster every frame on this compositor; opacity stays on the compositor, and
+   the `content-visibility: auto` on unfocused grid tiles suspends the animation
+   entirely while the tile is scrolled out of view.
+
+   It breathes 3 times, then rests as a still line: a pulse that ran forever
+   kept the compositor drawing every vsync, ~25% of a core for as long as any
+   downloading tile was on screen (measured). Each keyframe cycle starts and
+   ends on the rest opacity, so the stop is seamless. It restarts only when the
+   element mounts or its animation-name changes (queued -> downloading); a new
+   percentage from the 4 s activity poll leaves the class alone. */
+.tile .dlring { position: absolute; inset: 0; border-radius: inherit; pointer-events: none;
+  box-shadow: inset 0 0 0 3px var(--accent); opacity: .5;
+  animation: dlring 2.4s ease-in-out 3; }
+@keyframes dlring { 0%, 100% { opacity: .5 } 25% { opacity: .16 } 75% { opacity: .8 } }
+.tile .dlring.queued, .tile .dlring.paused { opacity: .28; animation: dlring-q 4s ease-in-out 3; }
+@keyframes dlring-q { 0%, 100% { opacity: .28 } 25% { opacity: .1 } 75% { opacity: .42 } }
+.tile .dlring.warning { box-shadow: inset 0 0 0 3px var(--err); opacity: .55; animation: none; }
+/* Focused, the poster already wears a solid 4px gold outline — a pulse right
+   inside it would just make that band breathe. Hold it as a quiet steady line
+   instead: the state stays readable and the one tile being scaled and
+   re-rastered isn't also animating. Paused, not `animation: none` — removing
+   the animation would re-arm all 3 breaths on every blur as focus walks the grid. */
+.tile.focus:focus .dlring { animation-play-state: paused; opacity: .3; }
+.tile.focus:focus .dlring.warning { opacity: .5; }
+/* --- robust: download status in words + stale feed ---
+   The caption line (.y) carries the status word ("Downloading 43%", "Queued",
+   "Problem"), so colour/pulse is never the only signal; a Problem also reads
+   in the error colour. `.stale` = /api/activity has stopped answering: the
+   ring goes still and neutral grey and the caption says so instead of
+   showing a frozen %. */
+.tile .cap .s.dlstat { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tile .cap .s.dlstat.warning { color: var(--err); }
+.tile .cap .s.dlstat.stale { color: var(--t3); }
+.tile .dlring.stale, .tile.focus:focus .dlring.stale { box-shadow: inset 0 0 0 3px var(--t4); opacity: .4; animation: none; }
+
+/* Season pill / episode row for content that exists only in the download
+   queue so far (SeriesDetail): same shapes, dimmed until it's real. */
+.pill.pend { color: var(--t3); box-shadow: inset 0 0 0 1px rgba(255,255,255,.14); background: transparent; }
+.pill.pend.active { color: var(--t1); background: var(--surface2); }
+.eprow.pend .etitle { color: var(--t2); }
+/* The header line of a pending row reads: air date · quality → progress bar →
+   speed · time left (or just "Queued"). It replaced a right-hand percentage /
+   status pill, and it is the *only* download indicator on the row: the bar under
+   the thumbnail means "how far you watched" and is never borrowed for this.
+   An idle grab (queued/paused/warning) keeps the track and shows no fill —
+   nothing has landed, so nothing is gold. */
+.eprow.pend .esub { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
+.eprow .dlbar { flex: none; width: 140px; height: 9px; border-radius: 999px;
+  background: rgba(255,255,255,.18); overflow: hidden; }
+.eprow .dlbar > i { display: block; height: 100%; border-radius: inherit; background: var(--accent); }
+.eprow .dlbar.idle > i { background: transparent; }
+
+/* grid (Movies/Shows library) */
+/* padding-top clears the absolutely-positioned .top (36px gutter + the ~63px
+   tab pill) and then leaves a deliberate gap: the grid's first poster row used
+   to crowd the nav, and the pill bar is ~24px taller than the old underlined
+   tabs. 176px = 99px of nav + 77px of air. */
+.grid-wrap { padding: 176px 64px 64px; }
+.grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 40px 20px; }
+/* Offscreen grid rows skip layout, paint and image decode — a paged-in library
+   runs to hundreds of tiles whose decoded posters alone would blow the TV's
+   96 MB budget.
+   Width comes from the grid track, so only the height estimate (150% of a
+   ~239px column + the ~63px caption under it) matters, and `auto` pins the
+   real size after first render.
+   Every tile, focused or not: switching content-visibility off on an element
+   (it used to be `:not(:focus)`) makes Chromium 120 keep that element — and
+   with it the whole detached Library screen — alive for the rest of the
+   session. Measured on the TV: ~350 DOM nodes leaked per Library visit, ~0
+   with it constant. The paint containment would clip the focused tile's ring
+   + shadow (0 20px 60px), so overflow-clip-margin lets 100px of it through. */
+/* will-change: the same reason as .catcard — a focus move otherwise promotes the
+   scaling tile to a layer and folds it back into the page layer, re-rastering
+   that strip of the grid each time. Measured on the TV in Search's Top 250
+   (2026-09-28, 40 presses at 130 ms, 2 runs each): GPU raster flushes
+   ~1500 → ~705, dropped frames 19–23% → 14%, worst press→frame 67–103 → 55 ms
+   (that was with the TV stuck at 50 Hz, see refresh60.js). Library grids at 60 Hz
+   (2026-09-29, 2 runs each): Movies 3.3–4.4% → 0–0.4%, Shows 4.6–5.1% → 0.5%
+   dropped, ~750 → ~270 raster flushes. */
+.grid .tile { content-visibility: auto; contain-intrinsic-size: auto 239px auto 422px; overflow-clip-margin: 100px;
+  will-change: transform; }
+/* refresh60.js: the 1 s clip that puts the TV back to 60 Hz after a 50/48 Hz
+   video. It must be on screen to count, so it plays under all page content. */
+video.rate60 { position: fixed; left: 0; top: 0; width: 128px; height: 72px; z-index: -1; pointer-events: none; }
+/* Search's charts lay out at most 12 rows anyway (Browse.svelte windows them), so
+   content-visibility buys nothing there, while its per-element visibility
+   tracking ran on every frame of a scroll glide. Constant `visible` (so the leak
+   above, which needs a *switch*, doesn't apply). A/B on the TV, Top 250, 40
+   presses, 3 runs each: IntersectionObserver work 636–721 → 410–459 ms, main-thread
+   tasks > 33 ms 17–41 → 14–22; dropped frames stayed within run-to-run noise. */
+#search .chart .grid .tile { content-visibility: visible; }
+.grid .tile.v, .grid .tile.v .poster { width: 100%; }
+.grid .tile.v .poster { height: 0; padding-bottom: 150%; }
+.grid .tile.v .poster img, .grid .tile.v .poster .ph { position: absolute; inset: 0; }
+/* LookupDetail: what Add to library will do, under the button */
+.hero .lkhint { font-size: 22px; color: var(--t3); max-width: 1000px; }
+/* 16:9 tiles (Home's Next Up rail) */
+.tile.w, .tile.w .poster { width: 100%; }
+.tile.w .poster { height: 0; padding-bottom: 56.25%; }
+.tile.w .poster img, .tile.w .poster .ph { position: absolute; inset: 0; }
+
+/* ---------- movie/series detail body ---------- */
+.body { display: flex; flex-direction: column; gap: 24px; padding: 24px 64px 8px; position: relative; z-index: 2; }
+.body .overview { font-size: 26px; line-height: 1.5; color: var(--t1); max-width: 1100px; }
+.credits { font-size: 22px; color: var(--t3); }
+/* Same 60px rhythm as above/below the hero's button row, this time between the
+   credits line that ends .body and the Cast rail underneath (.body already
+   contributes 8px of padding-bottom). */
+.body + .rail { margin-top: 52px; }
+
+/* ---------- detail screens: resume/start over, compact tech, rhythm ----------
+   Resume's watch progress hangs just under its button (absolute, so the button
+   row's layout and centring don't change): 14px below the button, 6px clear of
+   the focus ring. Used by MovieDetail and SeriesDetail. */
+.btn.hasbar { position: relative; }
+.btn .rbar { position: absolute; left: 0; right: 0; bottom: -20px; height: 6px; border-radius: 3px;
+  background: rgba(255,255,255,.18); overflow: hidden; }
+.btn .rbar > i { display: block; height: 100%; background: var(--accent); }
+/* Home hero: Resume + Start over + More info outgrow the 760px info column; the
+   CTA group may run past it (the backdrop is 1920 wide) rather than wrap. */
+.hero.home .hero-cta { max-width: 1000px; }
+/* MovieDetail's tech grid, now in .body under the buttons: a "+N" / "Show less"
+   toggle ends a capped audio or subtitle row. */
+.tchip.more { color: var(--accent); font-weight: 700; }
+.tchip.more.focus:focus { outline: var(--fring); outline-offset: 3px; }
+/* Rail after rail (Cast → More Like This): the same 60px above a section heading
+   as .body + .rail gives (the cast strip's 14px bottom padding + 46px). */
+.page > .rail + .rail { margin-top: 46px; }
+.techgrid { display: grid; grid-template-columns: 140px 1fr; gap: 18px 20px; align-items: baseline; max-width: 1440px; }
+.techgrid .chips { display: flex; gap: 10px; flex-wrap: wrap; }
+.tchip { background: var(--surface); border-radius: 6px; padding: 6px 14px; font-size: 21px; font-weight: 600; display: inline-flex; align-items: center; gap: 12px; }
+.tchip.plain { background: none; color: var(--t3); padding: 6px 4px; font-weight: 400; }
+.tchip.muted { color: var(--t2); font-weight: 400; }
+.tchip.sel { outline: 2px solid var(--accent); }
+.tchip.forced { outline: 2px solid rgba(255,255,255,.3); }
+.tchip .mini { font-size: 20px; color: var(--accent-ink); background: var(--accent); border-radius: 5px; padding: 1px 9px; font-weight: 700; }
+/* The hero variant of the tech grid (TechGrid `hero`), tightened for a narrow,
+   clipping column. MovieDetail no longer uses it — its grid is the compact
+   .body one under the buttons — but the variant stays for any hero caller. */
+.techgrid.hero { grid-template-columns: 132px 1fr; gap: 10px 16px; max-width: none; }
+.techgrid.hero .chips { gap: 8px; }
+.techgrid.hero .tchip { font-size: 20px; padding: 4px 12px; gap: 10px; }
+.techgrid.hero .tchip.plain { padding: 4px 2px; }
+.techgrid.hero .tchip .mini { font-size: 20px; padding: 1px 8px; }
+
+/* cast + more-like-this rails share .rail */
+.cast-strip { display: flex; gap: 32px; padding: 26px 64px 14px; overflow-x: auto; overflow-y: hidden; }
+.cast { flex: none; width: 160px; display: flex; flex-direction: column; align-items: center; gap: 10px; text-align: center; }
+.cast.focus:focus { outline: none; transform: scale(1.06); transition: transform .15s ease-out; }
+.cast.focus:focus .head { outline: var(--fring); outline-offset: 3px; }
+.cast .head { width: 140px; height: 140px; border-radius: 50%; overflow: hidden; background: #14141c; display: flex; align-items: center; justify-content: center; color: var(--t4); font: 400 13px var(--mono); }
+.cast .head img { width: 100%; height: 100%; object-fit: cover; }
+.cast .n { font-size: 21px; font-weight: 600; line-height: 1.15; }
+.cast .r { font-size: 20px; color: var(--t3); }
+
+/* Chevron for the "N seasons ›" button on an episode's detail page. Drawn from
+   two borders instead of a "›" glyph: no dependency on the webOS font, and the
+   arrow can be sized (15px box ⇒ ~21px tall once rotated, against a 27px label)
+   independently of the text. .btn's own 14px flex gap plus the margin here is
+   the "padding to the text next to it". transform doesn't affect layout, so the
+   ~3px the rotated box overhangs is free — .btn.big has 32px of end padding. */
+.btn .chev { flex: none; width: 15px; height: 15px; margin: 0 3px 0 4px;
+  border-top: 4px solid currentColor; border-right: 4px solid currentColor;
+  border-radius: 3px; transform: rotate(45deg); }
+
+/* ---------- series: season pills + episodes ----------
+   The pills are the first row of .body (the black section under the hero), not
+   part of the hero's button row: 12px on top of .body's 24px padding and the
+   hero's own 36px bottom inset puts 72px between them and the gold Next-up
+   button. 36px underneath (12 + .body's 24px gap) against the 24px above the
+   episode list groups the season summary with the list it describes rather than
+   with the picker. Ten pills fit the full .body width before they wrap. */
+.pill { border-radius: 8px; padding: 10px 26px; font-size: 24px; font-weight: 600; color: var(--t2); background: rgba(255,255,255,.07); }
+.pill.active { background: var(--surface2); font-weight: 700; color: #fff; }
+.pill.focus:focus { outline: var(--fring); outline-offset: 3px; }
+.pill.active.focus:focus { outline: var(--fring); }
+/* a fully watched season: muted label behind a gold tick */
+.pill.done { color: var(--t3); }
+.pill.done .gi { color: var(--accent); margin-right: 10px; }
+.pill.active.done { color: var(--t1); }
+/* first hold on a season pill arms it ("Hold again to mark … watched") */
+.pill.armed, .pill.armed.active { background: var(--accent); color: var(--accent-ink); font-weight: 700; }
+.body .seasonrow { display: flex; flex-wrap: wrap; align-items: center; gap: 16px; margin: 12px 0; }
+.season-sum { font-size: 22px; color: var(--t3); }
+/* the only hint that a hold does anything — quiet, on the far side of the line */
+.season-sum .holdhint { float: right; font-size: 20px; color: var(--t3); }
+.eplist { display: flex; flex-direction: column; gap: 14px; }
+.eprow { display: flex; gap: 24px; align-items: center; border-radius: 10px; padding: 14px 18px; background: transparent; }
+.eprow.current { background: var(--row-hi); }
+.eprow.focus:focus { outline: none; background: var(--row-hi); box-shadow: inset 0 0 0 3px var(--accent); }
+.eprow .thumb { flex: none; width: 300px; height: 169px; border-radius: 8px; position: relative; overflow: hidden; background: #14141c; }
+.eprow .thumb img { width: 100%; height: 100%; object-fit: cover; }
+.eprow .thumb .ph { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; color: var(--t4); font: 400 18px var(--mono); }
+.eprow .thumb .progress { position: absolute; left: 0; right: 0; bottom: 0; height: 6px; background: rgba(255,255,255,.25); }
+.eprow .thumb .progress > i { display: block; height: 100%; background: var(--accent); }
+.eprow .meta { display: flex; flex-direction: column; gap: 8px; flex: 1; min-width: 0; }
+.eprow .line { display: flex; align-items: baseline; gap: 16px; }
+.eprow .etitle { font-size: 26px; font-weight: 700; }
+.eprow .esub { font-size: 21px; color: var(--t3); }
+/* Watched marker: a direct child of .eprow (not of .line), so the row's own
+   align-items:center centres it vertically instead of hanging it off the
+   title's baseline. A bare stroked tick in faint gold — the filled 56px disc it
+   used to be shouted louder than the episode title next to it. 30px of a 2.4/24
+   stroke is ~3px on screen, which still carries across the room.
+   margin-right is deliberately generous: 24px on top of the row's 18px padding
+   keeps the mark well clear of the row's right edge (and of the focus ring). */
+.eprow .echk { flex: none; margin-left: auto; margin-right: 24px; width: 30px; height: 30px;
+  color: rgba(var(--accent-rgb), .55); }
+.eprow .echk svg { display: block; width: 100%; height: 100%; }
+.eprow .plot { font-size: 22px; line-height: 1.4; color: var(--t2); max-width: 1200px; }
+/* watched episodes step back a little (the ✓ stays); full strength on focus */
+.eprow.watched .thumb, .eprow.watched .meta { opacity: .6; }
+.eprow.watched.focus:focus .thumb, .eprow.watched.focus:focus .meta { opacity: 1; }
+/* "35m left" on a partly watched row, in the slot the ✓ uses */
+.eprow .eleft { flex: none; margin-left: auto; margin-right: 24px; font-size: 21px; font-weight: 600;
+  color: var(--accent); white-space: nowrap; font-variant-numeric: tabular-nums; }
+
+/* ---------- load errors (LoadError.svelte) ----------
+   A whole screen that didn't load: centred message, reason, Retry + Back.
+   .inline: inside a screen that did (an episode list), left-aligned, Retry only. */
+.loaderr { min-height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 16px; padding: 64px; text-align: center; }
+.loaderr .t { font-size: 38px; font-weight: 700; }
+.loaderr .why { font-size: 23px; color: var(--t3); max-width: 1200px; }
+.loaderr .actions { margin-top: 20px; justify-content: center; gap: 18px; }
+/* .under: below a TopNav (Home "Can't reach Jellyfin", Library's first page) —
+   the same top-aligned spot the old .failcard held, not full height */
+.loaderr.under { min-height: 0; justify-content: flex-start; gap: 14px; padding: 180px 0 60px; }
+.loaderr.under .actions { margin-top: 22px; }
+.loaderr.inline { min-height: 0; align-items: flex-start; padding: 24px 0; text-align: left; }
+.loaderr.inline .t { font-size: 28px; }
+.loaderr.inline .actions { margin-top: 8px; }
+/* SeriesDetail's seasons failing: under the hero, not full height */
+.body .loaderr:not(.inline) { min-height: 0; padding: 48px 0; }
+
+/* ---------- person page (Person.svelte) ---------- */
+.personhead { display: flex; align-items: center; gap: 32px; padding: 72px 64px 0; }
+.personhead .head { flex: none; width: 160px; height: 160px; border-radius: 50%; overflow: hidden; background: #14141c; }
+.personhead .head img { width: 100%; height: 100%; object-fit: cover; }
+.personhead .title { font-size: 64px; font-weight: 800; letter-spacing: -.02em; line-height: 1; }
+.personhead .sub { font-size: 24px; color: var(--t3); margin-top: 12px; }
+.grid-wrap.person { padding-top: 48px; }
+
+/* ---------- playback OSD ---------- */
+#video-layer { position: fixed; inset: 0; background: #000; z-index: 100; }
+#video { width: 100%; height: 100%; background: #000; }
+/* SRT/VTT cues: drop the default black box, keep text readable with a shadow. */
+#video::cue { background: transparent; background-color: transparent; color: #fff; text-shadow: 0 0 6px rgba(0,0,0,.95), 0 2px 6px rgba(0,0,0,.95); }
+#pgs { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; display: none; }
+#osd { position: absolute; inset: 0; z-index: 2; opacity: 0; transition: opacity .2s; pointer-events: none; }
+#osd.show { opacity: 1; }
+/* let the pointer click the transport when the OSD is up; the scrim stays
+   click-through so tapping the video area toggles play/pause. */
+#osd.show .transport { pointer-events: auto; }
+#osd .scrim { position: absolute; inset: 0; pointer-events: none; background: linear-gradient(0deg, rgba(5,5,6,.92) 0%, rgba(5,5,6,.4) 26%, rgba(5,5,6,0) 45%); }
+.transport { position: absolute; left: 64px; right: 64px; bottom: 56px; display: flex; flex-direction: column; gap: 18px; z-index: 3; }
+.transport .head { display: flex; align-items: baseline; gap: 20px; }
+.transport .ttitle { font-size: 38px; font-weight: 800; flex: 0 1 auto; min-width: 0; max-width: 820px;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.transport .tsum { font-size: 24px; color: var(--t1); flex: none; }
+/* Read from the couch: the playhead is the one number that matters, so it is
+   the biggest and brightest; the duration and "ends" clock step down. */
+.transport .ttime { margin-left: auto; font-size: 30px; color: var(--t2); font-variant-numeric: tabular-nums; flex: none; }
+.transport .ttime .cur { color: #fff; font-weight: 700; }
+.transport .ttime .sep { color: var(--t2); }
+.transport .ttime .ends { font-size: 25px; color: var(--t3); }
+/* The .scrubber is a tall, invisible hitbox so it is easy to grab with the
+   pointer; the visible 10px bar is the .track child, vertically centred. */
+.scrubber { position: relative; display: flex; align-items: center; width: 100%; height: 40px; margin: -15px 0; padding: 0; background: none; border: none; cursor: pointer; }
+.scrubber > .track { position: relative; width: 100%; height: 10px; border-radius: 5px; background: rgba(255,255,255,.2); transition: height .12s ease-out; }
+.track > .fill { height: 100%; border-radius: 5px; background: var(--accent); pointer-events: none; }
+.track > .thumb { position: absolute; top: 50%; transform: translate(-50%, -50%); width: 26px; height: 26px; border-radius: 50%; background: var(--accent); box-shadow: 0 0 0 6px rgba(var(--accent-rgb), .25); pointer-events: none; transition: transform .12s ease-out, box-shadow .12s ease-out; }
+.scrubber.focus:focus { outline: none; }
+.scrubber:hover > .track, .scrubber.focus:focus > .track { height: 12px; }
+/* Grab handle grows on hover (pointer) and on focus (arrow keys) so it is an
+   easier target to hit and drag. */
+.scrubber:hover > .track > .thumb, .scrubber.focus:focus > .track > .thumb { transform: translate(-50%, -50%) scale(1.55); box-shadow: 0 0 0 10px rgba(var(--accent-rgb), .4); }
+/* Trickplay preview riding above the scrubber head while scrubbing (Osd.svelte
+   sets left/size/background from the sheet layout). Lifted clear of the title /
+   tech-summary row, which it used to cover. */
+.scrubber > .trick { position: absolute; bottom: calc(100% + 76px); border-radius: 10px; overflow: hidden;
+  background-color: #000; background-repeat: no-repeat; pointer-events: none;
+  box-shadow: 0 0 0 3px var(--accent), 0 18px 50px rgba(0,0,0,.7); }
+.scrubber > .trick > span { position: absolute; left: 50%; bottom: 10px; transform: translateX(-50%);
+  padding: 4px 12px; border-radius: 6px; background: rgba(0,0,0,.72); font-size: 24px; font-weight: 700;
+  font-variant-numeric: tabular-nums; white-space: nowrap; }
+.scrubber > .trick > span > small { margin-left: 10px; font-size: 21px; font-weight: 600; color: var(--accent); }
+/* margin-top on top of the .transport gap — the button row needs visible air
+   under the progress bar (the .scrubber's -15px margins pull them together). */
+.controls { display: flex; align-items: center; gap: 28px; margin-top: 22px; }
+.cbtn { display: flex; align-items: center; justify-content: center; border-radius: 50%; background: rgba(255,255,255,.12); }
+.cbtn.sm { width: 72px; height: 72px; }
+.cbtn.play { width: 84px; height: 84px; background: var(--accent); color: var(--accent-ink); }
+.cbtn svg { width: 32px; height: 32px; display: block; }
+.cbtn.play svg { width: 38px; height: 38px; }
+.cbtn.focus:focus, .pillbtn.focus:focus { outline: var(--fring); outline-offset: 4px; }
+/* Audio / Subtitles / Picture / Info: round icon buttons. The text labels are
+   gone, so the glyph is the only affordance — .on marks the open dropdown. */
+.pillrow { margin-left: auto; display: flex; gap: 20px; }
+.pillbtn { display: flex; align-items: center; justify-content: center; width: 68px; height: 68px; padding: 0;
+  border-radius: 50%; background: rgba(255,255,255,.12); }
+.pillbtn svg { width: 34px; height: 34px; display: block; }
+.pillbtn.on { background: var(--accent); color: var(--accent-ink); }
+
+/* ---------- OSD additions (Osd.svelte) ----------
+   .tep: an episode's "S1:E3 · Name" beside the show title — the part that gives
+   way (ellipsis) when the row is full. .tick: chapter boundaries cut into the
+   bar as thin dark gaps; the thumb (later in the DOM) stays on top. .tchap: the
+   chapter name under the time on the trickplay preview. .cbtn.wide: the Next
+   episode pill after ⏩. The ⏪/⏩ glyphs carry their step digits, so they
+   draw a little larger than the other round buttons. */
+.transport .tep { font-size: 28px; font-weight: 600; color: var(--t1); flex: 0 1 auto; min-width: 0;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.track > .tick { position: absolute; top: 0; bottom: 0; width: 4px; margin-left: -2px; background: rgba(5,5,6,.8); pointer-events: none; }
+.scrubber > .trick > .tchap { position: absolute; left: 10px; right: 10px; top: 10px; font-style: normal; font-size: 20px;
+  font-weight: 600; text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  text-shadow: 0 1px 4px rgba(0,0,0,.95); }
+.cbtn.sm svg { width: 38px; height: 38px; }
+.cbtn.wide { height: 72px; padding: 0 30px 0 24px; gap: 12px; border-radius: 36px; font-size: 24px; font-weight: 700; white-space: nowrap; }
+.cbtn.wide svg { width: 28px; height: 28px; }
+
+/* ---------- subtitles over the OSD (VideoLayer.svelte, adoptTrack) ----------
+   Text cues are drawn here instead of inside <video>, so they sit above the
+   scrim (undimmed) and glide up over the transport while it is shown — they
+   used to hide between the buttons, clipped at the bottom edge. With a chip up
+   (Skip Intro / Up Next, same corner, same height as the lifted subs) the block
+   narrows to keep clear of it. The PGS canvas can't reflow, so it just lifts. */
+#subs, #subs-top { position: absolute; left: 96px; right: 96px; z-index: 3; pointer-events: none;
+  display: flex; flex-direction: column; align-items: center; gap: 4px; text-align: center;
+  transition: transform .25s ease-out, left .2s ease-out, right .2s ease-out; }
+#subs { bottom: 70px; }
+#subs-top { top: 64px; }
+#subs .cue, #subs-top .cue { max-width: 100%; font-size: calc(52px * var(--sub-scale, 1)); line-height: 1.22; font-weight: 500; color: #fff;
+  white-space: pre-line; text-shadow: 0 0 6px rgba(0,0,0,.95), 0 2px 6px rgba(0,0,0,.95), 0 0 2px #000; }
+#video-layer.osd-up #subs { transform: translateY(-222px); }
+#video-layer.chip-intro #subs { left: 420px; right: 420px; }
+#video-layer.chip-next #subs { left: 96px; right: 760px; }
+/* An open menu (560–640px at right: 64px) would cover the line's right end. */
+/* lifecycle.js marks images that failed to load: no broken-image glyph. */
+img.imgfail { visibility: hidden; }
+#video-layer.pm-open #subs { left: 96px; right: 760px; }
+/* Size (--sub-scale, the subtitle menu's Size row): text cues reflow at the new
+   font size; the PGS bitmap can only be scaled as a whole. The origin sits 110px
+   above the bottom edge — about where discs put the dialogue's baseline — so a
+   bigger line stays where it was; scaling about the edge itself also scaled the
+   disc's bottom margin (measured, a 4K film at 150 %: 127 → 190px, the line
+   visibly high). Text placed below the origin grows downward, and a top-placed
+   sign moves up by the same factor. */
+#pgs { z-index: 3; transition: transform .25s ease-out; transform-origin: 50% calc(100% - 110px); transform: scale(var(--sub-scale, 1)); }
+#video-layer.osd-up #pgs { transform: translateY(-222px) scale(var(--sub-scale, 1)); }
+
+/* ---------- chapter list (VideoLayer.svelte) — the audio/subs dropdown's twin ---------- */
+#chapter-menu { position: absolute; right: 64px; bottom: 150px; width: 560px; max-height: calc(100vh - 174px);
+  overflow-y: auto; background: #0e0e11; border: 1px solid rgba(255,255,255,.1); border-radius: 14px;
+  padding: 28px 30px; display: flex; flex-direction: column; box-shadow: 0 30px 80px rgba(0,0,0,.7); z-index: 6; }
+#chapter-menu .sec { display: flex; flex-direction: column; gap: 12px; flex: none; }
+#chapter-menu .opt { display: flex; align-items: center; gap: 16px; border-radius: 8px; padding: 11px 16px; font-size: 23px; }
+#chapter-menu .opt.sub-sel { background: var(--row-hi); font-weight: 700; }
+/* focus = the tab-row menus' gold fill + thin gold line (.lvmenu .opt), one look for every menu row */
+#chapter-menu .opt.focus:focus { outline: none; color: #fff; background: rgba(var(--accent-rgb), .14); box-shadow: inset 0 0 0 2px rgba(var(--accent-rgb), .75); }
+#chapter-menu .chname { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+#chapter-menu .chat { flex: none; color: var(--t3); font-variant-numeric: tabular-nums; }
+/* the audio/subs panel element stays [hidden]-less while P.panel is set; it
+   has nothing to show for 'chapters' */
+#video-layer.pm-chapters #player-menu { display: none; }
+
+/* ---------- loading card / playback error (VideoLayer.svelte) ----------
+   Loading: the item's backdrop, dimmed, with title + spinner from the moment
+   the player opens until the first frame plays; it fades (not blinks) away.
+   Error: a modal card with what failed, the file's container/codecs, and
+   Retry / Back. */
+#spinner { flex-direction: column; gap: 26px; }
+.waitmsg { font-size: 26px; font-weight: 600; color: var(--accent); font-variant-numeric: tabular-nums;
+  text-shadow: 0 2px 8px rgba(0,0,0,.9); }
+/* Slow-link hint under "Buffering…" (P.slowNet): quieter than the gold word. */
+.slownet { margin-top: -14px; max-width: 960px; font-size: 24px; line-height: 1.45; text-align: center;
+  color: rgba(255,255,255,.88); font-variant-numeric: tabular-nums; text-shadow: 0 2px 8px rgba(0,0,0,.9); }
+/* visibility:hidden once faded: the card stays mounted for the whole playback, and its
+   infinite .ring spin at opacity 0 kept the compositor ticking every vsync (measured on
+   the TV: ~63 → ~6 impl frames/s, renderer+browser CPU ~10.7% → ~4% of a core). */
+#play-loading { position: absolute; inset: 0; z-index: 5; background: #000; opacity: 0; pointer-events: none;
+  visibility: hidden; transition: opacity .45s ease-out, visibility 0s .45s; }
+#play-loading.show { opacity: 1; visibility: visible; transition: opacity .15s ease-out, visibility 0s; }
+#play-loading .plbg { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; opacity: .38; }
+#play-loading .plshade { position: absolute; inset: 0;
+  background: radial-gradient(ellipse at center, rgba(0,0,0,.15) 0%, rgba(0,0,0,.65) 100%); }
+#play-loading .plbody { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center;
+  justify-content: center; gap: 18px; padding: 0 160px; text-align: center; }
+#play-loading .ring { margin-bottom: 18px; }
+#play-loading .pltitle { font-size: 56px; font-weight: 800; letter-spacing: -.01em; max-width: 100%;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-shadow: 0 2px 12px rgba(0,0,0,.8); }
+#play-loading .plsub { font-size: 30px; font-weight: 600; color: var(--t1); max-width: 100%;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-shadow: 0 2px 10px rgba(0,0,0,.8); }
+#play-loading .plfrom { font-size: 26px; font-weight: 600; color: var(--accent); font-variant-numeric: tabular-nums;
+  text-shadow: 0 2px 10px rgba(0,0,0,.8); }
+#play-error { position: absolute; inset: 0; z-index: 7; display: flex; align-items: center; justify-content: center;
+  background: rgba(0,0,0,.78); }
+#play-error .pecard { width: 1040px; background: #0e0e11; border: 1px solid rgba(255,255,255,.1); border-radius: 16px;
+  padding: 56px 64px; box-shadow: 0 30px 80px rgba(0,0,0,.7); }
+#play-error .petitle { font-size: 44px; font-weight: 800; color: var(--err); }
+#play-error .peitem { margin-top: 12px; font-size: 26px; font-weight: 600; color: var(--t1); }
+#play-error .pedetail { margin-top: 20px; font-size: 25px; line-height: 1.4; color: var(--t2); }
+#play-error .petech { margin-top: 16px; font: 500 20px var(--mono); color: var(--t3); }
+#play-error .perow { display: flex; gap: 22px; margin-top: 40px; }
+
+/* audio / subtitles / picture dropdown — one element, anchored *directly above the
+   pill button that opened it*: right edges flush, bottom edge 18px clear of the
+   button (10px clear of its 8px focus ring). Osd.svelte measures the button and
+   sets `right` / `bottom` / `max-height`; the values here are the static fallback
+   for the fixed 1920×1080 layout, where the pill row's top edge sits 132px off the
+   bottom (.transport bottom 56 + (84-68)/2 centring + 68 tall) — so 150px, and
+   174px = that plus 24px of headroom at the top of the screen.
+   A track list too long for the space above the button scrolls instead of running
+   off the top (scrollbars are hidden globally); PlayerMenu.svelte keeps the focused
+   row in view, since focus.js's ensureVisible() only knows the browse scrollers. */
+#player-menu { position: absolute; right: 64px; bottom: 150px; width: 560px; max-height: calc(100vh - 174px);
+  overflow-y: auto; background: rgba(14,14,17,.96);
+  border: 1px solid rgba(255,255,255,.1); border-radius: 14px; padding: 28px 30px; display: flex; flex-direction: column;
+  gap: 20px; box-shadow: 0 30px 80px rgba(0,0,0,.7); z-index: 6; }
+/* flex:none — a column flex item under a max-height must overflow the panel, never
+   compress itself to fit, or there would be nothing to scroll. */
+#player-menu .sec { display: flex; flex-direction: column; gap: 12px; flex: none; }
+#player-menu .opt { display: flex; align-items: center; gap: 12px; border-radius: 8px; padding: 11px 16px; font-size: 23px; }
+/* the current track = a lit row + gold ● (audio, subs, picture alike); the gold
+   fill + line means focus only (the .lvmenu look, shared by every menu row) — the
+   old outline marked the current audio track too, so with focus on another row two
+   rows looked focused. */
+#player-menu .opt.sub-sel { background: var(--row-hi); font-weight: 700; }
+#player-menu .opt.focus:focus { outline: none; color: #fff; background: rgba(var(--accent-rgb), .14); box-shadow: inset 0 0 0 2px rgba(var(--accent-rgb), .75); }
+#player-menu .opt .mini { margin-left: auto; font-size: 16px; color: var(--accent-ink); background: var(--accent); border-radius: 5px; padding: 2px 9px; font-weight: 700; }
+#player-menu .opt .rdot { margin-left: auto; font-size: 20px; color: var(--accent); }
+#player-menu .opt .mini + .rdot { margin-left: 0; }
+/* ---- player menu: subtitle timing, "More languages" fold, picture pending (tracks) ----
+   The timing row is one line: label, −, value, +; the two buttons are .opt rows so
+   ◀▶ walks between them (same line → spatialMove's vertical-overlap rule holds). */
+#player-menu .pmtiming { display: flex; align-items: center; gap: 12px; padding: 0 0 10px 16px; margin-bottom: 4px;
+  border-bottom: 1px solid rgba(255,255,255,.08); }
+#player-menu .pmtiming.pmsize { border-bottom: 0; margin-bottom: 0; padding-bottom: 8px; }
+#player-menu .pmtiming .pmt-l { flex: 1; font-size: 21px; color: var(--t2); }
+#player-menu .pmtiming .pmt-v { min-width: 104px; text-align: center; font-size: 22px; font-variant-numeric: tabular-nums; color: var(--t2); }
+#player-menu .pmtiming .pmt-v.on { color: var(--accent); font-weight: 700; }
+#player-menu .opt.pmt-b { flex: none; width: 56px; height: 48px; padding: 0; justify-content: center; background: rgba(255,255,255,.06); }
+#player-menu .opt.pmt-b svg { width: 24px; height: 24px; display: block; }
+#player-menu .opt.pmmore { color: var(--t2); font-size: 21px; margin-top: 4px; }
+#player-menu .opt.pmmore .pmm-n { margin-left: auto; font-size: 18px; color: var(--t3); }
+#player-menu .opt.pmmore svg { width: 26px; height: 26px; flex: none; color: var(--accent); transition: transform .2s; }
+#player-menu .opt.pmmore.open svg { transform: rotate(180deg); }
+#player-menu .opt.pend { color: var(--t2); }
+/* a status line in the row slot ("No picture modes…"), not a choice */
+#player-menu .opt.muted { color: var(--t3); }
+#player-menu .opt .pmwait { margin-left: auto; font-size: 17px; color: var(--t3); }
+
+/* ---------- skip intro ----------
+   A sibling of #osd, not a child of it: it has to stay visible (and clickable)
+   while the OSD is faded out. When the OSD *is* up it rides above the transport
+   — .transport is bottom:56px and ~198px tall (title + scrubber + 84px controls),
+   so 296px clears it and its focus ring on this fixed 1920x1080 layout. */
+#skip-intro { position: absolute; right: 64px; bottom: 76px; z-index: 3; display: inline-flex;
+  align-items: center; gap: 14px; padding: 16px 34px; border-radius: 10px; font-size: 28px;
+  font-weight: 700; white-space: nowrap; background: rgba(12,12,14,.82); color: #fff;
+  box-shadow: inset 0 0 0 2px rgba(255,255,255,.28), 0 14px 40px rgba(0,0,0,.55);
+  transition: bottom .2s ease-out; }
+#video-layer.osd-up #skip-intro { bottom: 296px; }
+#skip-intro .gi svg { color: var(--accent); }
+#skip-intro.focus:focus { outline: none; background: var(--accent); color: var(--accent-ink);
+  box-shadow: 0 0 0 4px rgba(var(--accent-rgb), .35), var(--fshadow); }
+#skip-intro.focus:focus .gi svg { color: currentColor; }
+
+/* Up Next card — same corner and chrome as Skip Intro (they never overlap in
+   time), with the next episode's still on the left. */
+#up-next { position: absolute; right: 64px; bottom: 76px; z-index: 3; display: flex; align-items: center;
+  gap: 22px; width: 640px; padding: 14px 26px 14px 14px; border-radius: 12px; text-align: left;
+  background: rgba(12,12,14,.86); color: #fff;
+  box-shadow: inset 0 0 0 2px rgba(255,255,255,.28), 0 14px 40px rgba(0,0,0,.55);
+  transition: bottom .2s ease-out; }
+#video-layer.osd-up #up-next { bottom: 296px; }
+#up-next .unthumb { flex: none; width: 208px; height: 117px; border-radius: 8px; overflow: hidden;
+  background: rgba(255,255,255,.06); }
+#up-next .unthumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+#up-next .untext { min-width: 0; }
+#up-next .unlabel { display: flex; align-items: center; gap: 12px; font-size: 28px; font-weight: 700; white-space: nowrap; }
+#up-next .unlabel .gi svg { color: var(--accent); }
+#up-next .uncount { color: var(--t3); font-weight: 600; font-variant-numeric: tabular-nums; }
+#up-next .untitle { margin-top: 8px; font-size: 22px; color: var(--t2); white-space: nowrap; overflow: hidden;
+  text-overflow: ellipsis; }
+#up-next.focus:focus { outline: none; box-shadow: 0 0 0 4px var(--accent), var(--fshadow); }
+
+#spinner { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; z-index: 4; }
+
+/* Paused with the OSD down: a small top-left tag (the bottom-right corner
+   belongs to Skip Intro / Up Next, top-centre to #subs-top). */
+#paused-tag { position: absolute; left: 64px; top: 56px; z-index: 3; display: flex; align-items: center;
+  gap: 14px; max-width: 1100px; padding: 12px 24px; border-radius: 10px; font-size: 24px; font-weight: 600;
+  color: #fff; background: rgba(12,12,14,.72); box-shadow: inset 0 0 0 1px rgba(255,255,255,.14);
+  white-space: nowrap; opacity: 0; transition: opacity .3s; pointer-events: none; }
+#paused-tag.show { opacity: 1; transition-delay: .25s; }
+#paused-tag .gi svg { color: var(--accent); }
+#paused-tag .ptw { font-weight: 700; }
+#paused-tag .ptt { min-width: 0; overflow: hidden; text-overflow: ellipsis; color: var(--t2); }
+#paused-tag .ptpos { flex: none; color: var(--t3); font-variant-numeric: tabular-nums; }
+.ring { width: 74px; height: 74px; border: 6px solid rgba(255,255,255,.2); border-top-color: var(--accent); border-radius: 50%; animation: spin 1s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* ---------- login ---------- */
+.login { display: flex; height: 100%; align-items: center; justify-content: center; }
+.login .card { width: 900px; background: rgba(255,255,255,.04); border-radius: 14px; padding: 56px 64px; }
+.login .brand { font-size: 64px; font-weight: 800; letter-spacing: -.02em; }
+.login .brand b { color: var(--accent); }
+.login .sub { color: var(--t3); margin: 10px 0 34px; font-size: 22px; }
+.qc-code { font-size: 92px; font-weight: 800; letter-spacing: .18em; color: var(--accent); margin: 12px 0; font-variant-numeric: tabular-nums; }
+.field { margin: 14px 0; }
+.field label { display: block; font-size: 20px; color: var(--t3); text-transform: uppercase; letter-spacing: .08em; margin-bottom: 8px; }
+/* font-family: inherit — an <input> does NOT inherit the page font, so the box
+   was rendering in the webOS UA default. That font sits the placeholder's
+   trailing dots mid-x-height instead of on the baseline (and a "…" glyph is
+   centred there by design), which is why the placeholder ellipsis floated. The
+   placeholders use three ASCII dots for the same reason. */
+.field input { width: 100%; height: 64px; background: rgba(255,255,255,.06); border: 2px solid transparent; border-radius: 8px; color: #fff; font-family: inherit; font-size: 24px; padding: 0 18px; }
+.field input::placeholder { color: var(--t3); }
+.field input:focus { outline: none; border-color: var(--accent); }
+.login .row { display: flex; gap: 18px; margin-top: 20px; }
+/* scoped: a bare .err also caught LookupTile's `.techbadge.lk.err` (and .msg.err) */
+.login .err { color: var(--err); min-height: 26px; margin-top: 10px; }
+/* --- robust: Login states ---
+   A Quick Connect code that stopped working says so and offers a new one;
+   Sign in shows "Signing in…" and ignores presses while the request runs. */
+.login .qc-dead { color: var(--err); font-size: 22px; margin-bottom: 16px; }
+.login #qc .btn { margin-top: 14px; }
+.login .btn.busy { opacity: .6; }
+
+/* ---------- launch splash (VibeReel entry animation) ---------- */
+#splash { position: fixed; inset: 0; z-index: 300; }
+#splash[hidden] { display: none; }
+.splash-scene { position: absolute; inset: 0; background: #050506; overflow: hidden; }
+/* Scoped: a bare .sbar also matched Search's bar (<label class="sbar">), and this
+   rule's opacity: 0 made the search field invisible (only the keyboard showed). */
+.splash-scene .sbar { position: absolute; left: 0; top: 0; width: 16.5px; opacity: 0; will-change: transform, opacity; }
+/* a pill as two caps + a stretched 1 px strip, all transform-only (Splash.svelte animateBars) */
+.splash-scene .sbar i { position: absolute; left: 0; top: 0; width: 16.5px; background: #e6b450; transform-origin: 0 0; will-change: transform; }
+.splash-scene .sbar .cap { height: 16.5px; border-radius: 50%; }
+.splash-scene .sbar .mid { height: 1px; }
+.sarrow { position: absolute; transform-origin: left center; will-change: transform, opacity; }
+.sring { position: absolute; border-radius: 50%; border: 3px solid #e6b450; }
+.sword { position: absolute; left: 820px; top: 465px; height: 150px; display: flex; align-items: center; font-size: 104px; letter-spacing: -.01em; font-family: 'Helvetica Neue', Helvetica, system-ui, sans-serif; white-space: nowrap; will-change: transform, opacity, clip-path; }
+.sword .v { font-weight: 300; color: #fff; }
+.sword .r { font-weight: 800; color: #e6b450; }
+/* (there is no `.sglow` any more — the breathing gold halo behind the lockup was
+   removed from the entry animation on purpose; don't reintroduce it.) */
+
+/* VibeReel wordmark lockup (nav + login) */
+/* No gap between .v and .r — the lockup reads "VibeReel" as one word; the only
+   spacing in the row is the glyph's own margin. */
+.wordmark { display: inline-flex; align-items: center; gap: 0; }
+.wordmark .mark { height: 1.05em; width: auto; margin-right: 12px; }
+.wordmark .v { font-weight: 300; color: #fff; letter-spacing: -.01em; }
+.wordmark .r { font-weight: 800; color: var(--accent); letter-spacing: -.01em; }
+
+/* inline SVG icon inside a text label */
+.gi { display: inline-flex; align-items: center; vertical-align: -0.16em; }
+.gi svg { width: 1.05em; height: 1.05em; display: block; }
+
+/* Long tile titles: clipped when idle, marquee on focus/hover. The text lives
+   in an inline-block .ti span: its width is the real text width on any engine
+   (the webOS webview gives flex-stretched blocks a min-content floor, which
+   defeated ellipsis/marquee on `.t` itself and let titles bleed over the next
+   tile), and the marquee translates it — transform stays on the compositor,
+   where the old text-indent animation forced a reflow every frame.
+   The timeline itself (still → linear travel → hold → instant snap back) is
+   built in `marqueeFocus()`; the offsets have to be computed from the overrun
+   to keep speed and holds constant, which a fixed @keyframes rule can't do.
+   Every tile's caption is a .cap under the artwork (rails and grids alike). */
+.tile .cap .t { display: block; width: 100%; max-width: 100%; min-width: 0; }
+.cap .t .ti { display: inline-block; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; vertical-align: top; }
+.cap .t.mq { text-overflow: clip; }
+.cap .t.mq .ti { max-width: none; text-overflow: clip; }
+
+/* ---------- toast ---------- */
+#toast { position: fixed; left: 64px; bottom: 44px; background: #000; border: 1px solid #333; color: #fff; font-size: 24px;
+  padding: 16px 26px; border-radius: 8px; opacity: 0; transition: opacity .2s; pointer-events: none; z-index: 200; max-width: 1100px; white-space: pre-line; }
+#toast.show { opacity: 1; }
+#toast .undo { margin-left: 22px; color: var(--accent); font-weight: 700; }
+/* During playback the bottom-left corner belongs to the transport (and the
+   subtitles), so toasts drop from the top centre instead. */
+body:has(#video-layer:not([hidden])) #toast { left: 50%; bottom: auto; top: 48px; transform: translateX(-50%);
+  text-align: center; }

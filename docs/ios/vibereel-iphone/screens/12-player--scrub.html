@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>Player — scrubbing · VibeReel</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&amp;display=swap">
+<link rel="stylesheet" href="../tokens.css">
+<link rel="stylesheet" href="../components.css">
+</head>
+<body class="proto">
+<div class="device device--landscape" data-component="DeviceFrame" style="width: 852px; height: 393px">
+<div class="player" data-component="Player">
+  <div class="player__video art" style="--a1: #c9d4d8; --a2: #1a2630; --a3: #3a5566"></div>
+  <div class="player__controls" data-component="PlayerControls">
+    <div class="player__scrim player__scrim--top"></div>
+    <div class="player__scrim player__scrim--bottom"></div>
+    <div class="player__top">
+      <span class="iconbtn" aria-hidden="true"><svg class="i" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18"></path></svg></span>
+      <div class="player__titles"><p class="player__show">Undercurrent</p><p class="player__ep">S2 · E4 · The Quiet Floor</p></div>
+    </div>
+    <div class="player__bottom">
+      <div class="scrubber scrubber--active" data-component="Scrubber">
+        <span class="scrubber__time">35:40</span>
+        <div class="scrubber__track" style="--p: .72; --b: .71">
+          <div class="scrubber__buffer"></div>
+          <div class="scrubber__fill"></div>
+          <i class="scrubber__tick" style="--at: .08"></i><i class="scrubber__tick" style="--at: .24"></i><i class="scrubber__tick" style="--at: .41"></i><i class="scrubber__tick" style="--at: .63"></i><i class="scrubber__tick" style="--at: .86"></i>
+          <span class="scrubber__thumb"></span>
+          <div class="trick" data-component="TrickplayPreview">
+            <p class="trick__chapter">Chapter 5 · The Lodge</p>
+            <div class="trick__frame"><div class="art" style="--a1: #d8a060; --a2: #2a1a10; --a3: #6a4a30"></div></div>
+            <p class="trick__time">35:40</p>
+          </div>
+        </div>
+        <span class="scrubber__time scrubber__time--end">−13:36</span>
+      </div>
+      <div class="player__row" style="visibility: hidden"><span class="pchip">Chapters</span></div>
+    </div>
+  </div>
+</div>
+<div class="device__island"></div>
+<div class="device__home"></div>
+</div>
+</body>
+</html>

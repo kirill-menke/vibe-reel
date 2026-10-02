@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>Search — browse · VibeReel</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&amp;display=swap">
+<link rel="stylesheet" href="../tokens.css">
+<link rel="stylesheet" href="../components.css">
+</head>
+<body class="proto">
+<div class="device" data-component="DeviceFrame" style="width: 393px; height: 852px">
+<div class="app">
+  <main class="screen" data-component="SearchScreen">
+    <header class="topbar topbar--large" data-component="TopBar">
+      <h1 class="topbar__title">Search</h1>
+      <div class="topbar__actions">
+        <a class="iconbtn" href="10-notifications.html" aria-label="Notifications, 3 new"><svg class="i" viewBox="0 0 24 24"><path d="M6 16.5V11a6 6 0 0 1 12 0v5.5l1.5 2h-15z"></path><path d="M10 20.5a2 2 0 0 0 4 0"></path></svg><span class="iconbtn__badge">3</span></a>
+        <a class="avatarbtn" href="11-accounts.html" aria-label="Account: Alice"><span class="avatar" style="--av: #e6b450">A</span></a>
+      </div>
+    </header>
+    <div class="search" data-component="SearchField">
+      <a class="search__field" href="07-search--results.html"><svg class="i i--sm" viewBox="0 0 24 24"><circle cx="11" cy="11" r="6.5"></circle><path d="m20 20-4.35-4.35"></path></svg><input class="search__input" type="search" placeholder="Movies, shows, people" enterkeyhint="search"></a>
+    </div>
+
+    <div class="group" data-component="BrowseCategories">
+      <p class="group__label">Charts</p>
+      <div class="catgrid">
+        <a class="catcard" href="07-search--ranked.html" data-component="CategoryCard">
+          <div class="catcard__fan"><div class="catcard__poster"><div class="art" style="--a1: #7a8a9a; --a2: #121820"></div></div><div class="catcard__poster"><div class="art" style="--a1: #b08a5a; --a2: #1a120a"></div></div><div class="catcard__poster"><div class="art" style="--a1: #4a5a7a; --a2: #0a0c14"></div></div></div>
+          <p class="catcard__title">IMDb Top 250</p><p class="catcard__sub">Movies · 61 in library</p>
+        </a>
+        <a class="catcard" href="07-search--ranked.html" data-component="CategoryCard">
+          <div class="catcard__fan"><div class="catcard__poster"><div class="art" style="--a1: #c9a24a; --a2: #1a140a"></div></div><div class="catcard__poster"><div class="art" style="--a1: #4b5d52; --a2: #07090a"></div></div><div class="catcard__poster"><div class="art" style="--a1: #8a3426; --a2: #140e0c"></div></div></div>
+          <p class="catcard__title">IMDb Top 250</p><p class="catcard__sub">Shows · 24 in library</p>
+        </a>
+      </div>
+    </div>
+    <div class="group">
+      <p class="group__label">Best rated by genre</p>
+      <div class="catgrid">
+        <a class="catcard" href="07-search--ranked.html"><div class="catcard__fan"><div class="catcard__poster"><div class="art" style="--a1: #b3262c; --a2: #1c0a0b"></div></div><div class="catcard__poster"><div class="art" style="--a1: #8fb3c9; --a2: #101820"></div></div><div class="catcard__poster"><div class="art" style="--a1: #b0b0b0; --a2: #101010"></div></div></div><p class="catcard__title">Drama</p><p class="catcard__sub">Best rated</p></a>
+        <a class="catcard" href="07-search--ranked.html"><div class="catcard__fan"><div class="catcard__poster"><div class="art" style="--a1: #6fa0c8; --a2: #0d1420"></div></div><div class="catcard__poster"><div class="art" style="--a1: #d09151; --a2: #2a180d"></div></div><div class="catcard__poster"><div class="art" style="--a1: #5f8f6a; --a2: #0a120d"></div></div></div><p class="catcard__title">Science Fiction</p><p class="catcard__sub">Best rated</p></a>
+        <a class="catcard" href="07-search--ranked.html"><div class="catcard__fan"><div class="catcard__poster"><div class="art" style="--a1: #d7dde2; --a2: #1a2028"></div></div><div class="catcard__poster"><div class="art" style="--a1: #6a5a8c; --a2: #0e0c14"></div></div><div class="catcard__poster"><div class="art" style="--a1: #5a7a9a; --a2: #0a0f16"></div></div></div><p class="catcard__title">Crime</p><p class="catcard__sub">Best rated</p></a>
+        <a class="catcard" href="07-search--ranked.html"><div class="catcard__fan"><div class="catcard__poster"><div class="art" style="--a1: #3f6fb5; --a2: #0f1522"></div></div><div class="catcard__poster"><div class="art" style="--a1: #d9869c; --a2: #231019"></div></div><div class="catcard__poster"><div class="art" style="--a1: #c9d36a; --a2: #1c2413"></div></div></div><p class="catcard__title">Comedy</p><p class="catcard__sub">Best rated</p></a>
+      </div>
+    </div>
+  </main>
+
+  <div class="tabbar-fade"></div>
+  <nav class="tabbar" aria-label="Tabs" data-component="TabBar">
+    <a class="tabbar__item" href="02-home.html"><svg class="i" viewBox="0 0 24 24"><path d="M4 10.5 12 4l8 6.5V19a1 1 0 0 1-1 1h-4.5v-6h-5v6H5a1 1 0 0 1-1-1z"></path></svg><span>Home</span></a>
+    <a class="tabbar__item" href="03-library-movies.html"><svg class="i" viewBox="0 0 24 24"><rect x="3.5" y="4.5" width="17" height="15" rx="2"></rect><path d="M7.5 4.5v15M16.5 4.5v15M3.5 9h4M3.5 15h4M16.5 9h4M16.5 15h4"></path></svg><span>Movies</span></a>
+    <a class="tabbar__item" href="03-library-shows.html"><svg class="i" viewBox="0 0 24 24"><rect x="3" y="6" width="18" height="12.5" rx="2"></rect><path d="M8.5 21h7M8.5 2.5 12 6l3.5-3.5"></path></svg><span>Shows</span></a>
+    <a class="tabbar__item tabbar__item--active" href="07-search--browse.html" aria-current="page"><svg class="i" viewBox="0 0 24 24"><circle cx="11" cy="11" r="6.5"></circle><path d="m20 20-4.35-4.35"></path></svg><span>Search</span></a>
+  </nav>
+</div>
+<div class="device__island"></div>
+<div class="device__status"><span>9:41</span><span class="device__glyphs"><svg viewBox="0 0 18 12"><rect x="0" y="8" width="3" height="4" rx="1"></rect><rect x="5" y="5.5" width="3" height="6.5" rx="1"></rect><rect x="10" y="3" width="3" height="9" rx="1"></rect><rect x="15" y="0" width="3" height="12" rx="1"></rect></svg><svg viewBox="0 0 27 12"><rect x=".5" y=".5" width="23" height="11" rx="3.3" fill="none" stroke="#fff" stroke-opacity=".45"></rect><rect x="2" y="2" width="17" height="8" rx="2"></rect><path d="M25 4v4c.8-.3 1.5-1.1 1.5-2S25.8 4.3 25 4z" fill-opacity=".45"></path></svg></span></div>
+<div class="device__home"></div>
+</div>
+</body>
+</html>

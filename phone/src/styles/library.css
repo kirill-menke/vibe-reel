@@ -1,0 +1,99 @@
+/* Workstream C — Library, Sort & filter, Search, Chart. Tokens only; the
+   design classes (.chips, .count, .grid, .tile, .search, .catcard, .pagehead)
+   live in components.css. */
+
+/* Chips row sits right under the large title (design 03-library-*) */
+.lib .chips { padding-top: var(--s-2); }
+.chips > .chip { flex: none; white-space: nowrap; }
+
+/* A re-query keeps the old content up, dimmed, until the new answer lands
+   (LIB-01, SRCH-02). A CSS transition runs with the NEW style's `transition`,
+   so the way back lives on the base rules: the new content "develops" from
+   0.45 instead of snapping. The dim itself waits --dim-delay, so a fast answer
+   never dims (it used to flicker to ~0.6 and snap back). pointer-events isn't
+   transitioned: the old content is inert at once. */
+:where(.lib__grid, .lib__emptywrap, .srch__grid > .tile) { transition: opacity var(--dur-base) var(--ease-out); }  /* :where — .lib__dim must win */
+.lib__dim { opacity: 0.45; pointer-events: none; transition: opacity var(--dur-fast) linear var(--dim-delay); }
+
+/* Long grids: skip layout/paint of off-screen tiles. Constant (never toggled —
+   Chromium leaks an element whose content-visibility switches, with its
+   whole detached tree). The intrinsic height is a
+   poster tile at the 3-column width: ~111 × 1.5 art + caption lines. */
+.lib__grid > .tile, .chart__grid > .tile, .srch__grid > .tile {
+  content-visibility: auto;
+  contain-intrinsic-size: auto 111px auto 206px;
+}
+
+/* Paging sentinel / "Couldn't load more" row under the grid */
+.lib__more {
+  display: flex; flex-direction: column; align-items: center; gap: var(--s-3);
+  min-height: 64px; padding: var(--s-6) var(--gutter) var(--s-2);
+}
+.lib__more-text { font: var(--t-caption); color: var(--text-faint); text-align: center; }
+
+/* Sort & filter sheet */
+.sf__seg { padding: 0 var(--gutter); }
+.sheet .btn--text:disabled { opacity: 0.4; }
+
+/* Search: the field row keeps the gutter; the grid breathes under it */
+.srch .search { padding-top: var(--s-2); }
+.srch .search__cancel { flex: none; }
+.srch .group:last-child { padding-bottom: var(--s-4); }
+.srch__skelcard { height: var(--catcard-h); border-radius: var(--r-card); box-shadow: none; }
+.srch .state--card { margin: var(--s-6) var(--gutter) 0; }
+
+/* Chart page */
+/* the filter is a segmented control (LIB-04): All / Not in library / In library */
+.chart__seg { padding: 0 var(--gutter) var(--s-4); }
+.chart__section {
+  padding: var(--s-6) var(--gutter) var(--s-3);
+  font: var(--t-heading); letter-spacing: var(--t-heading-ls);
+}
+.chart__seg + .chart__section { padding-top: var(--s-1); }
+.chart .state--card { margin: var(--s-6) var(--gutter) 0; }
+
+/* the field brings its own clear button */
+.search__input::-webkit-search-cancel-button,
+.search__input::-webkit-search-decoration { -webkit-appearance: none; appearance: none; display: none; }
+
+/* Search while active: the field stays pinned under the status bar (glass),
+   as iOS search does, so Cancel / clear / the query are always in reach */
+.srch--on .search {
+  position: sticky; top: 0; z-index: var(--z-header);
+  padding-top: var(--page-top); padding-bottom: var(--s-2);
+  background: var(--glass-bg-strong);
+  -webkit-backdrop-filter: var(--glass-blur); backdrop-filter: var(--glass-blur);
+}
+.srch--on .search__count { padding-top: var(--s-2); }
+
+/* Sort chip: a reversed order says so ("Title · Z–A") */
+.lib__rev { color: var(--text-faint); }
+
+/* Count line + "Clear filters" (only while a filter narrows the grid) */
+.lib__countrow { display: flex; align-items: center; justify-content: space-between; gap: var(--s-2); }
+.lib__countrow > .count { flex: 1; min-width: 0; }
+.lib__clear { margin: -6px calc(var(--gutter) - var(--s-2)) -6px 0; font: var(--t-button-sm); }
+
+/* Compact glass bar once the large title has scrolled away (Library.svelte):
+   title + what the grid shows; tap = back to top. Invisible and click-through
+   until then, so the large title's bell and avatar stay tappable. */
+.lib__bar { pointer-events: none; }
+.lib__bar--on { pointer-events: auto; }
+.lib__bartitle {
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px;
+  min-width: 0; height: var(--tap);
+}
+.lib__bartitle > .navbar__title { max-width: 100%; }
+.lib__barsub {
+  max-width: 100%; font: var(--t-caption); font-variant-numeric: tabular-nums; color: var(--text-faint);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  opacity: 0; transition: opacity var(--dur-fast) linear;
+}
+.lib__bar--on .lib__barsub { opacity: 1; }
+
+/* Landscape: three columns made each poster a screen tall — six, and keep the
+   content clear of the Dynamic Island / rounded corners */
+@media (orientation: landscape) and (min-width: 600px) {
+  .lib, .srch, .chart { --grid-cols: 6; }   /* the landscape --gutter (app.css) already clears the safe areas */
+  .srch .catgrid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}

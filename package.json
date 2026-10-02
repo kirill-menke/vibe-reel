@@ -1,0 +1,17 @@
+{
+  "name": "vibe-reel",
+  "private": true,
+  "type": "module",
+  "description": "A no-transcode Jellyfin client for rooted LG webOS TVs, with an iPhone PWA",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/kirill-menke/vibe-reel.git"
+  },
+  "devDependencies": {
+    "@sveltejs/vite-plugin-svelte": "^7.3.0",
+    "@webos-tools/cli": "^3.2.1",
+    "svelte": "^5.56.8",
+    "vite": "^8.2.1"
+  }
+}

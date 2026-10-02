@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>Library — sort and filter · VibeReel</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&amp;display=swap">
+<link rel="stylesheet" href="../tokens.css">
+<link rel="stylesheet" href="../components.css">
+</head>
+<body class="proto">
+<div class="device" data-component="DeviceFrame" style="width: 393px; height: 852px">
+<div class="app">
+  <main class="screen" aria-hidden="true">
+    <header class="topbar topbar--large"><h1 class="topbar__title">Shows</h1><div class="topbar__actions"><span class="iconbtn"><svg class="i" viewBox="0 0 24 24"><path d="M6 16.5V11a6 6 0 0 1 12 0v5.5l1.5 2h-15z"></path><path d="M10 20.5a2 2 0 0 0 4 0"></path></svg></span><span class="avatarbtn"><span class="avatar" style="--av: #e6b450">A</span></span></div></header>
+    <div class="chips"><span class="chip chip--strong">New episodes</span><span class="chip">Unwatched</span><span class="chip">Genre</span></div>
+    <div class="grid" style="padding-top: var(--s-3)">
+      <div class="tile tile--poster"><div class="tile__frame"><div class="art" style="--a1: #8a8f96; --a2: #16181c"></div></div></div>
+      <div class="tile tile--poster"><div class="tile__frame"><div class="art" style="--a1: #6e8a7a; --a2: #0e1512"></div></div></div>
+      <div class="tile tile--poster"><div class="tile__frame"><div class="art" style="--a1: #b9c7cb; --a2: #142028"></div></div></div>
+    </div>
+  </main>
+  <div class="scrim"></div>
+
+  <section class="sheet sheet--large" role="dialog" aria-label="Sort and filter" data-component="Sheet">
+    <div class="sheet__grabber"></div>
+    <div class="sheet__head">
+      <h2 class="sheet__title">Sort &amp; filter</h2>
+      <button class="btn btn--text" type="button"><span>Reset</span></button>
+    </div>
+    <div class="sheet__body" data-component="SortFilterPanel">
+      <p class="group__label">Sort by</p>
+      <div class="list" role="radiogroup">
+        <button class="row" type="button" role="radio" aria-checked="false"><span class="row__main"><span class="row__title">Recently added</span></span></button>
+        <button class="row row--selected" type="button" role="radio" aria-checked="true"><span class="row__main"><span class="row__title">New episodes</span></span><svg class="i i--sm row__check" viewBox="0 0 24 24"><path d="m5 12.5 4.5 4.5L19 7.5"></path></svg></button>
+        <button class="row" type="button" role="radio" aria-checked="false"><span class="row__main"><span class="row__title">Title</span></span></button>
+        <button class="row" type="button" role="radio" aria-checked="false"><span class="row__main"><span class="row__title">Release date</span></span></button>
+        <button class="row" type="button" role="radio" aria-checked="false"><span class="row__main"><span class="row__title">Rating</span></span></button>
+      </div>
+      <div class="group">
+        <p class="group__label">Order</p>
+        <div class="seg" style="margin: 0 var(--gutter)" data-component="SegmentedControl"><button class="seg__opt seg__opt--active" type="button">Newest first</button><button class="seg__opt" type="button">Oldest first</button></div>
+      </div>
+      <div class="group">
+        <p class="group__label">Filter</p>
+        <div class="list"><div class="row"><span class="row__main"><span class="row__title">Unwatched only</span></span><button class="switch" type="button" role="switch" aria-checked="false" aria-label="Unwatched only"></button></div></div>
+      </div>
+      <div class="group">
+        <p class="group__label">Genre</p>
+        <div class="chips chips--wrap">
+          <button class="chip" type="button">All</button>
+          <button class="chip chip--on" type="button" aria-pressed="true">Drama</button>
+          <button class="chip chip--on" type="button" aria-pressed="true">Sci-Fi</button>
+          <button class="chip" type="button">Crime</button>
+          <button class="chip" type="button">Comedy</button>
+          <button class="chip" type="button">Thriller</button>
+          <button class="chip" type="button">Mystery</button>
+          <button class="chip" type="button">Animation</button>
+          <button class="chip" type="button">Documentary</button>
+        </div>
+      </div>
+    </div>
+    <div class="sheet__foot"><a class="btn btn--primary btn--block" href="03-library-shows.html"><span>Show 23 shows</span></a></div>
+  </section>
+</div>
+<div class="device__island"></div>
+<div class="device__status"><span>9:41</span><span class="device__glyphs"><svg viewBox="0 0 18 12"><rect x="0" y="8" width="3" height="4" rx="1"></rect><rect x="5" y="5.5" width="3" height="6.5" rx="1"></rect><rect x="10" y="3" width="3" height="9" rx="1"></rect><rect x="15" y="0" width="3" height="12" rx="1"></rect></svg><svg viewBox="0 0 27 12"><rect x=".5" y=".5" width="23" height="11" rx="3.3" fill="none" stroke="#fff" stroke-opacity=".45"></rect><rect x="2" y="2" width="17" height="8" rx="2"></rect><path d="M25 4v4c.8-.3 1.5-1.1 1.5-2S25.8 4.3 25 4z" fill-opacity=".45"></path></svg></span></div>
+<div class="device__home"></div>
+</div>
+</body>
+</html>

@@ -1,0 +1,118 @@
+/* Workstream B — Home, Notifications, Accounts, Settings. Tokens only; the
+   design classes (hero, rail, tile, notif, row …) live in components.css. */
+
+/* ---- Home hero carousel: follows the finger (lib/carousel.js writes the
+   opacity/transform of every layer from one position p; nothing here
+   transitions). Horizontal drags are ours, vertical ones scroll the page.
+   Stack: backdrops (z 0–2, set per frame) < scrim (3) < text + pager (4). */
+.homehero { touch-action: pan-y; background: var(--surface-1); }
+.homehero__media { position: absolute; inset: 0; overflow: hidden; pointer-events: none; }
+.homehero__media > canvas,
+.homehero__media > img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+/* the pre-blurred copies (96 / 240 px canvases), scaled up by the compositor —
+   no live filter; under them the 32×18 blurhash, shown until the backdrop has
+   decoded and come into focus (HOME-02) */
+.homehero__blur, .homehero__hash { opacity: 0; }
+/* current slide + neighbours: layers promoted while idle, so a drag starts on
+   ready layers instead of promoting (and re-rastering) under the finger */
+.homehero__media--hot > canvas,
+.homehero__media--hot > img,
+.homehero__body--hot { will-change: transform, opacity; }
+/* hidden until carousel.js paints them (it writes every visible layer) */
+.homehero__body, .homehero__media > img { opacity: 0; }
+.homehero > .hero__scrim { z-index: 3; }
+.homehero__body, .homehero__dots { z-index: 4; }
+/* one pager for all slides at the spot each text block leaves for it
+   (.homehero__dotslot, the column's last row) */
+.homehero__dotslot { height: var(--dot); }
+/* the dots re-lay out every frame of a drag (widths follow p, ~0.4 ms a
+   frame at 4× CPU throttling): strict containment keeps that to this strip */
+.homehero__dots {
+  position: absolute; left: var(--gutter); right: var(--gutter); bottom: var(--s-5); margin: 0;
+  height: var(--dot); contain: strict;
+}
+.homehero__dots .dots__dot {
+  --k: 0;
+  position: relative; transition: none;
+  width: calc(var(--dot) + (var(--dot-active-w) - var(--dot)) * var(--k));
+}
+.homehero__dots .dots__dot::after {
+  content: ''; position: absolute; inset: 0; border-radius: inherit;
+  background: var(--gold); opacity: var(--k);
+}
+.homehero .hero__title { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.homehero .hero__meta { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+/* Legibility over any backdrop (a sunlit desert still, a white poster):
+   the design scrim fades to clear by 20 % and starts darkening only at 42 %,
+   so the status bar, wordmark and bell sat on raw bright art and the gold
+   eyebrow on busy art. Here the top band holds a veil to below the top bar,
+   the bottom ramp starts where the text block starts, and the text carries a
+   soft shadow that only shows where the art is light. */
+.homehero .hero__scrim {
+  background:
+    linear-gradient(180deg,
+      color-mix(in srgb, var(--bg) 78%, transparent) 0,
+      color-mix(in srgb, var(--bg) 52%, transparent) calc(var(--safe-top) + var(--topbar-h)),
+      transparent calc(var(--safe-top) + var(--topbar-h) + 110px)),
+    linear-gradient(0deg,
+      var(--bg) 0,
+      color-mix(in srgb, var(--bg) 88%, transparent) 24%,
+      color-mix(in srgb, var(--bg) 55%, transparent) 46%,
+      transparent 66%);
+}
+.homehero .hero__eyebrow,
+.homehero .hero__title,
+.homehero .hero__meta,
+.homehero .hero__progress { text-shadow: 0 1px 14px color-mix(in srgb, var(--bg) 70%, transparent); }
+
+/* Pull-down at the top (gestures.js pullStretch): backdrops, skeleton and
+   scrim stretch upward from their bottom edge into the rubber-band gap, so
+   the art runs to the top of the screen instead of ending in a hard edge on
+   the page's black. The hero may overflow upward only — the sides and bottom
+   stay clipped (the slides' parallax and text slide never show outside). */
+.home > .hero { overflow: visible; clip-path: inset(-100vh 0 0 0); }
+.home > .hero > .homehero__media,
+.home > .hero > .skel,
+.home > .hero > .hero__scrim { transform-origin: 50% 100%; }
+
+/* a rail cell that can fold away when its tile is removed */
+.home__cell { flex: none; display: flex; }
+
+/* no hero (empty library / error): the page starts under the top bar */
+.home.screen--below-topbar > .state--card { margin-top: var(--s-2); }
+
+/* ---- Notifications sheet ---- */
+.notifs__label { padding-left: var(--gutter); }
+.notifs__loading { display: flex; align-items: center; gap: var(--s-3); padding: var(--s-3) var(--gutter); font: var(--t-callout); color: var(--text-faint); }
+.notifs__empty { flex: 1; display: grid; place-items: center; min-height: 360px; }
+.notif { width: 100%; text-align: left; }
+.notif__time--gold { color: var(--gold); }
+.notif__time--dim { color: var(--text-faint); }
+
+/* ---- Accounts sheet ---- */
+.accounts__add { --av: var(--surface-3); color: var(--gold); }
+.accounts__add .i { width: 18px; height: 18px; }
+
+/* ---- Settings: a native <select> laid invisibly over a value row, so the
+   tap brings up the iOS picker wheel */
+.setrow { position: relative; }
+.setrow__select {
+  position: absolute; inset: 0; width: 100%; height: 100%;
+  opacity: 0; font-size: 17px; /* ≥ 16 px: iOS never zooms */
+  -webkit-appearance: none; appearance: none; border: 0; cursor: pointer;
+}
+.settings .seg { width: 100%; }
+
+/* Landscape phone: the hero is one screen tall (--hero-h, app.css) and its
+   text block sits above the floating tab bar, half the width, one-line title —
+   at 572 pt it used to push Resume below the fold. */
+@media (orientation: landscape) and (max-height: 500px) {
+  .home .hero__body {
+    right: auto; width: min(440px, 52%);
+    bottom: calc(var(--tabbar-bottom) + var(--tabbar-h) + var(--s-4));
+    gap: var(--s-2);
+  }
+  .homehero .hero__title { -webkit-line-clamp: 1; font-size: 36px; }
+  .homehero .hero__dots { justify-content: flex-start; }
+}

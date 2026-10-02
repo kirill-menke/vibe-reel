@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>IMDb Top 250 — Movies · VibeReel</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&amp;display=swap">
+<link rel="stylesheet" href="../tokens.css">
+<link rel="stylesheet" href="../components.css">
+</head>
+<body class="proto">
+<div class="device" data-component="DeviceFrame" style="width: 393px; height: 852px">
+<div class="app">
+  <main class="screen" data-component="RankedListScreen">
+    <div class="spacer-navbar"></div>
+    <header class="pagehead" data-component="PageHeader">
+      <p class="pagehead__eyebrow">Chart</p>
+      <h1 class="pagehead__title">IMDb Top 250</h1>
+      <p class="pagehead__sub">Movies · 61 in your library</p>
+    </header>
+    <div class="chips" style="padding-bottom: var(--s-4)"><span class="chip chip--on">All</span><span class="chip">Not in library</span><span class="chip">In library</span></div>
+    <div class="grid" data-component="RankedGrid">
+      <a class="tile tile--poster tile--watched" href="04-movie-detail.html"><div class="tile__frame"><div class="art" style="--a1: #7a8a9a; --a2: #121820"><span class="art__label">The Long Sentence</span></div><span class="tile__rank badge badge--rank badge--gold">1</span><span class="tile__corner tick" aria-label="Watched"><svg class="i" viewBox="0 0 24 24"><path d="m5 12.5 4.5 4.5L19 7.5"></path></svg></span></div><p class="tile__title">The Long Sentence</p><p class="tile__sub">1989 · ★ 9.3</p></a>
+      <a class="tile tile--poster" href="04-movie-detail.html"><div class="tile__frame"><div class="art" style="--a1: #b08a5a; --a2: #1a120a"><span class="art__label">The Patriarch</span></div><span class="tile__rank badge badge--rank badge--gold">2</span></div><p class="tile__title">The Patriarch</p><p class="tile__sub">1968 · ★ 9.2</p></a>
+      <a class="tile tile--poster" href="04-movie-detail.html"><div class="tile__frame"><div class="art" style="--a1: #4a5a7a; --a2: #0a0c14"><span class="art__label">Night Warden</span></div><span class="tile__rank badge badge--rank badge--gold">3</span></div><p class="tile__title">Night Warden</p><p class="tile__sub">2011 · ★ 9.0</p></a>
+      <a class="tile tile--poster" href="08-not-in-library.html"><div class="tile__frame"><div class="art" style="--a1: #8a6a3a; --a2: #140e08"><span class="art__label">The Patriarch Part II</span></div><span class="tile__rank badge badge--rank">4</span><span class="tile__badge tile__badge--bottom badge">Not in library</span></div><p class="tile__title">The Patriarch Part II</p><p class="tile__sub">1971 · ★ 9.0</p></a>
+      <a class="tile tile--poster" href="08-not-in-library.html"><div class="tile__frame"><div class="art" style="--a1: #9a9a9a; --a2: #121212"><span class="art__label">Jury Room</span></div><span class="tile__rank badge badge--rank">5</span><span class="tile__badge tile__badge--bottom badge">Not in library</span></div><p class="tile__title">Jury Room</p><p class="tile__sub">1953 · ★ 9.0</p></a>
+      <a class="tile tile--poster" href="04-movie-detail.html"><div class="tile__frame"><div class="art" style="--a1: #c9a24a; --a2: #1a140a; --a3: #5a3a1a"><span class="art__label">Crownfall: The Return</span></div><span class="tile__rank badge badge--rank">6</span></div><p class="tile__title">Crownfall: The Return</p><p class="tile__sub">2006 · ★ 9.0</p></a>
+      <a class="tile tile--poster" href="08-not-in-library.html"><div class="tile__frame"><div class="art" style="--a1: #a0a0a0; --a2: #0e0e0e; --a3: #8a2a2a"><span class="art__label">The Ledger</span></div><span class="tile__rank badge badge--rank">7</span><span class="tile__badge tile__badge--bottom badge">Not in library</span></div><p class="tile__title">The Ledger</p><p class="tile__sub">1997 · ★ 9.0</p></a>
+      <a class="tile tile--poster tile--watched" href="04-movie-detail.html"><div class="tile__frame"><div class="art" style="--a1: #d0b04a; --a2: #1a1206; --a3: #8a1a1a"><span class="art__label">Dime Novel</span></div><span class="tile__rank badge badge--rank">8</span><span class="tile__corner tick" aria-label="Watched"><svg class="i" viewBox="0 0 24 24"><path d="m5 12.5 4.5 4.5L19 7.5"></path></svg></span></div><p class="tile__title">Dime Novel</p><p class="tile__sub">1986 · ★ 8.9</p></a>
+      <a class="tile tile--poster" href="04-movie-detail.html"><div class="tile__frame"><div class="art" style="--a1: #7a9a6a; --a2: #0e140a"><span class="art__label">Crownfall: The Company</span></div><span class="tile__rank badge badge--rank">9</span></div><p class="tile__title">Crownfall: The Company</p><p class="tile__sub">2004 · ★ 8.9</p></a>
+    </div>
+  </main>
+
+  <nav class="navbar" data-component="NavBar">
+    <a class="iconbtn" href="07-search--browse.html" aria-label="Back"><svg class="i" viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"></path></svg></a>
+    <p class="navbar__title">IMDb Top 250</p>
+    <span></span>
+  </nav>
+
+  <div class="tabbar-fade"></div>
+  <nav class="tabbar" aria-label="Tabs" data-component="TabBar">
+    <a class="tabbar__item" href="02-home.html"><svg class="i" viewBox="0 0 24 24"><path d="M4 10.5 12 4l8 6.5V19a1 1 0 0 1-1 1h-4.5v-6h-5v6H5a1 1 0 0 1-1-1z"></path></svg><span>Home</span></a>
+    <a class="tabbar__item" href="03-library-movies.html"><svg class="i" viewBox="0 0 24 24"><rect x="3.5" y="4.5" width="17" height="15" rx="2"></rect><path d="M7.5 4.5v15M16.5 4.5v15M3.5 9h4M3.5 15h4M16.5 9h4M16.5 15h4"></path></svg><span>Movies</span></a>
+    <a class="tabbar__item" href="03-library-shows.html"><svg class="i" viewBox="0 0 24 24"><rect x="3" y="6" width="18" height="12.5" rx="2"></rect><path d="M8.5 21h7M8.5 2.5 12 6l3.5-3.5"></path></svg><span>Shows</span></a>
+    <a class="tabbar__item tabbar__item--active" href="07-search--browse.html" aria-current="page"><svg class="i" viewBox="0 0 24 24"><circle cx="11" cy="11" r="6.5"></circle><path d="m20 20-4.35-4.35"></path></svg><span>Search</span></a>
+  </nav>
+</div>
+<div class="device__island"></div>
+<div class="device__status"><span>9:41</span><span class="device__glyphs"><svg viewBox="0 0 18 12"><rect x="0" y="8" width="3" height="4" rx="1"></rect><rect x="5" y="5.5" width="3" height="6.5" rx="1"></rect><rect x="10" y="3" width="3" height="9" rx="1"></rect><rect x="15" y="0" width="3" height="12" rx="1"></rect></svg><svg viewBox="0 0 27 12"><rect x=".5" y=".5" width="23" height="11" rx="3.3" fill="none" stroke="#fff" stroke-opacity=".45"></rect><rect x="2" y="2" width="17" height="8" rx="2"></rect><path d="M25 4v4c.8-.3 1.5-1.1 1.5-2S25.8 4.3 25 4z" fill-opacity=".45"></path></svg></span></div>
+<div class="device__home"></div>
+</div>
+</body>
+</html>

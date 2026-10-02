@@ -1,0 +1,1348 @@
+/* ==========================================================================
+   VibeReel · iPhone PWA · components.css
+   Global, BEM-ish class names. Uses tokens.css only — no per-screen values.
+   States: `.pressing` for real touches (lib/press.js — delayed and
+   scroll-safe; never write `:active`), `.is-pressed` to hold a pressed state
+   from code. Press pattern (MOT-03): the base rule's transition is the
+   RELEASE (--dur-release + --spring-snappy), the pressed rule's is the PRESS-IN
+   (--dur-press + --ease-out). Artwork also darkens (an opacity veil, never a
+   filter); rows light up at once and fade out like UITableView's deselect.
+   No hover styles anywhere.
+   ========================================================================== */
+
+/* ---------------------------------------------------------------- 0. Base */
+*, *::before, *::after { box-sizing: border-box; }
+html, body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  letter-spacing: var(--t-body-ls);
+  -webkit-font-smoothing: antialiased;
+  -webkit-tap-highlight-color: transparent;
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+/* body, not html: the root's font-size is the type unit (tokens.css --tu) */
+body { font: var(--t-body); }
+h1, h2, h3, h4, p, ul, ol, figure { margin: 0; padding: 0; }
+ul, ol { list-style: none; }
+a { color: inherit; text-decoration: none; }
+img, video, canvas, svg { display: block; }
+button {
+  font: inherit; color: inherit; letter-spacing: inherit;
+  background: none; border: 0; padding: 0; margin: 0;
+  cursor: pointer; text-align: inherit;
+  -webkit-user-select: none; user-select: none;
+}
+input { font: var(--t-input); color: var(--text); }
+.tnum { font-variant-numeric: tabular-nums; }
+.sr-only {
+  position: absolute; width: 1px; height: 1px; overflow: hidden;
+  clip: rect(0 0 0 0); white-space: nowrap;
+}
+/* Long-press targets: no iOS callout / selection */
+.no-callout { -webkit-touch-callout: none; -webkit-user-select: none; user-select: none; }
+/* A press cancelled by a scroll goes without a release animation (lib/press.js) */
+.press-cut, .press-cut * { transition-duration: 0s !important; }
+
+/* --------------------------------------------------------------- 1. Icons */
+.i {
+  width: var(--icon); height: var(--icon); flex: none;
+  fill: none; stroke: currentColor; stroke-width: var(--icon-stroke);
+  stroke-linecap: round; stroke-linejoin: round;
+}
+.i--sm   { width: var(--icon-sm); height: var(--icon-sm); }
+.i--xs   { width: var(--icon-xs); height: var(--icon-xs); }
+.i--lg   { width: var(--icon-lg); height: var(--icon-lg); }
+.i--fill { fill: currentColor; stroke: none; }
+.i--gold { color: var(--gold); }
+
+/* ---------------------------------------------------------- 2. App shell */
+.app { position: relative; width: 100%; height: 100%; overflow: hidden; background: var(--bg); }
+.screen {
+  position: absolute; inset: 0;
+  overflow-x: hidden; overflow-y: auto;
+  overscroll-behavior-y: contain;
+  -webkit-overflow-scrolling: touch;
+  padding-bottom: var(--page-bottom);
+}
+.screen--no-tabbar { padding-bottom: calc(var(--safe-bottom) + var(--s-8)); }
+.screen__pad { padding-top: var(--page-top); }        /* tab roots without a hero */
+.screen--dim > *:not(.sheet):not(.ctx) { filter: none; } /* hook; sheets dim with .scrim */
+
+/* Wordmark */
+.wordmark {
+  font: var(--t-wordmark); letter-spacing: var(--t-wordmark-ls);
+  color: var(--text); white-space: nowrap;
+}
+.wordmark__accent { color: var(--gold); font-style: italic; }
+.wordmark--xl { font-size: 56px; }
+
+/* ------------------------------------------------ 3. Top bars & icon buttons */
+/* Tab-root header: wordmark or large title left, bell + avatar right */
+.topbar {
+  position: relative; z-index: var(--z-header);
+  display: flex; align-items: center; justify-content: space-between; gap: var(--s-3);
+  min-height: calc(var(--safe-top) + var(--topbar-h));
+  padding: var(--safe-top) calc(var(--safe-right) + var(--s-3)) 0 var(--gutter);
+}
+.topbar--overlay { position: absolute; top: 0; left: 0; right: 0; }
+/* The bars' glass (NAV-03 + MOT-09): tint, blur and hairline live on a
+   ::before layer that fades in and out with the solid state — iOS crossfades
+   a bar's scroll-edge → standard appearance; toggling backdrop-filter on the
+   bar itself popped the blur in one frame. Never put opacity, filter,
+   transform or isolation on .topbar/.navbar themselves: that makes them a
+   backdrop root and the layer's blur would sample nothing. Both bars have a
+   z-index, so z-index: −1 keeps the layer under their content. */
+.topbar::before, .navbar::before {
+  content: ""; position: absolute; inset: 0; z-index: -1; pointer-events: none;
+  background: var(--glass-bg-strong);
+  -webkit-backdrop-filter: var(--glass-blur); backdrop-filter: var(--glass-blur);
+  box-shadow: inset 0 -1px 0 var(--line);
+  opacity: 0; transition: opacity var(--dur-fast) linear;
+}
+.topbar--solid::before, .navbar--solid::before { opacity: 1; }
+/* (the solid mark's 34 → 28 px step is a scale: app.css, .wordmark--short) */
+/* NAV-08: a solid Home bar's empty space scrolls the page up (TopBar.svelte);
+   the mark lets the tap through to it */
+.topbar__totop { position: absolute; inset: 0; z-index: -1; pointer-events: none; }
+.topbar--solid .topbar__totop { pointer-events: auto; }
+.topbar--solid .wordmark--short { pointer-events: none; }
+/* Content offsets for screens drawn mid-scroll under a fixed bar */
+.screen--below-topbar { padding-top: calc(var(--safe-top) + var(--topbar-h)); }
+.screen--below-navbar { padding-top: calc(var(--safe-top) + var(--s-1) + var(--tap) + var(--s-2)); }
+/* Same height as the nav bar, for flow content (sticky children need a spacer, not scroller padding) */
+.spacer-navbar { height: calc(var(--safe-top) + var(--s-1) + var(--tap) + var(--s-2)); }
+.topbar--large { align-items: flex-end; padding-bottom: var(--s-2); }
+.topbar__title { font: var(--t-large); letter-spacing: var(--t-large-ls); }
+.topbar__actions { display: flex; align-items: center; gap: var(--s-2); }
+
+/* Pushed-page nav bar: glass back capsule; turns solid + shows title after scroll */
+.navbar {
+  position: absolute; top: 0; left: 0; right: 0; z-index: var(--z-header);
+  display: grid; grid-template-columns: var(--tap) 1fr var(--tap); align-items: center; gap: var(--s-2);
+  padding: calc(var(--safe-top) + var(--s-1)) calc(var(--safe-right) + var(--s-3)) var(--s-2) calc(var(--safe-left) + var(--s-3));
+}
+/* Inline title: fades in with a 4 px rise once the bar is solid. In NavBar it
+   is a button (tap = scroll to top, NAV-08), untappable while invisible. */
+.navbar__title {
+  font: var(--t-headline); letter-spacing: var(--t-headline-ls);
+  text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  opacity: 0; transform: translateY(4px); pointer-events: none;
+  transition: opacity var(--dur-fast) linear, transform var(--dur-fast) var(--ease-out);
+}
+button.navbar__title { min-width: 0; min-height: var(--tap); }
+.navbar--solid .navbar__title { opacity: 1; transform: translateY(0); pointer-events: auto; } /* not none: none ↔ a transform re-lays out */
+/* The back button's own glass disc goes only once the bar's glass has faded
+   in (its blur switches off after --dur-fast), and comes back at once. */
+.navbar .iconbtn {
+  transition: transform var(--dur-release) var(--spring-snappy), background-color var(--dur-fast) linear,
+    box-shadow var(--dur-fast) linear, -webkit-backdrop-filter 0s, backdrop-filter 0s;
+}
+.navbar--solid .iconbtn {
+  background: none; box-shadow: none; -webkit-backdrop-filter: none; backdrop-filter: none;
+  transition-delay: 0s, 0s, 0s, var(--dur-fast), var(--dur-fast);
+}
+/* Reduce Motion: the title only fades. translateY(0) in both states, not
+   none: none ↔ translateY(0) still started a transform transition and a layer */
+@media (prefers-reduced-motion: reduce) { .navbar__title { transform: translateY(0); } }
+
+.iconbtn {
+  position: relative; flex: none;
+  display: inline-grid; place-items: center;
+  width: var(--tap); height: var(--tap); border-radius: var(--r-pill);
+  color: var(--text);
+  background: var(--glass-bg);
+  -webkit-backdrop-filter: var(--glass-blur); backdrop-filter: var(--glass-blur);
+  box-shadow: inset 0 0 0 1px var(--glass-line);
+  transition: transform var(--dur-release) var(--spring-snappy), background-color var(--dur-fast) linear;
+}
+.iconbtn.pressing, .iconbtn.is-pressed {
+  transform: scale(var(--press-scale)); background: var(--glass-bg-strong);
+  transition: transform var(--dur-press) var(--ease-out), background-color var(--dur-press) linear;
+}
+.iconbtn--plain { background: none; box-shadow: none; -webkit-backdrop-filter: none; backdrop-filter: none; }
+.iconbtn--surface { background: var(--surface-2); box-shadow: none; -webkit-backdrop-filter: none; backdrop-filter: none; }
+.iconbtn--on { color: var(--gold); }
+.iconbtn__badge {
+  position: absolute; top: 2px; right: 0;
+  min-width: 18px; height: 18px; padding: 0 5px; border-radius: var(--r-pill);
+  display: grid; place-items: center;
+  background: var(--gold); color: var(--text-on-gold);
+  font: var(--t-micro); letter-spacing: 0; font-variant-numeric: tabular-nums;
+  box-shadow: 0 0 0 2px var(--bg);
+}
+
+/* Small visual close button (sheet headers) with a 44pt hit area */
+.closebtn {
+  position: relative; display: inline-grid; place-items: center;
+  width: 30px; height: 30px; border-radius: var(--r-pill);
+  background: var(--surface-3); color: var(--text-dim);
+}
+.closebtn { transition: transform var(--dur-release) var(--spring-snappy); }
+.closebtn.pressing { transform: scale(var(--press-scale-sm)); transition: transform var(--dur-press) var(--ease-out); }
+.closebtn::before { content: ""; position: absolute; inset: -7px; }
+.closebtn .i { width: var(--icon-xs); height: var(--icon-xs); stroke-width: 2.2; }
+
+/* Avatar */
+.avatar {
+  flex: none; display: inline-grid; place-items: center;
+  width: var(--avatar); height: var(--avatar); border-radius: var(--r-pill);
+  background: var(--av, var(--gold)); color: var(--text-on-gold);
+  font: 600 15px/1 var(--font-ui);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.16);
+}
+.avatar--sm { width: var(--avatar-sm); height: var(--avatar-sm); font-size: 13px; }
+.avatar--lg { width: var(--avatar-lg); height: var(--avatar-lg); font-size: 24px; }
+.avatarbtn { position: relative; display: inline-grid; place-items: center; width: var(--tap); height: var(--tap); border-radius: var(--r-pill); }
+.avatarbtn .avatar { transition: transform var(--dur-release) var(--spring-snappy); }
+.avatarbtn.pressing .avatar, .avatarbtn.is-pressed .avatar { transform: scale(var(--press-scale)); transition: transform var(--dur-press) var(--ease-out); }
+
+/* --------------------------------------------------------------- 4. Tab bar */
+.tabbar {
+  position: absolute; left: 50%; bottom: var(--tabbar-bottom); z-index: var(--z-tabbar);
+  transform: translateX(-50%);
+  display: flex; gap: var(--s-1); padding: var(--s-1);
+  border-radius: var(--r-pill);
+  background: var(--glass-bg-strong);
+  -webkit-backdrop-filter: var(--glass-blur); backdrop-filter: var(--glass-blur);
+  box-shadow: inset 0 0 0 1px var(--glass-line), var(--glass-shadow);
+}
+/* One selection lens glides between the items (NAV-05, the iOS 26 tab bar)
+   instead of each item fading its own pill; TabBar.svelte sets --i and
+   gives it a small horizontal stretch on the way. */
+.tabbar__lens {
+  position: absolute; left: var(--s-1); top: var(--s-1);
+  width: var(--tabbar-item-w); height: var(--tabbar-h); border-radius: var(--r-pill);
+  background: var(--gold-soft); pointer-events: none;
+  transform: translateX(calc(var(--i, 0) * (var(--tabbar-item-w) + var(--s-1))));
+  transition: transform var(--dur-spring-quick) var(--spring-snappy), scale var(--dur-release) var(--spring-snappy),
+    background-color var(--dur-fast) linear;
+}
+/* Drag (NAV-17, TabBar.svelte): the bar takes horizontal drags itself; the
+   lens lifts and brightens while it follows the finger (inline transform, no
+   glide), glides over at the start when the drag began on another item, and
+   the base rule's glide snaps it into its slot on release. */
+.tabbar { touch-action: none; }
+.tabbar--drag .tabbar__lens {
+  scale: 1.1; background-color: rgba(230, 180, 80, 0.26);
+  transition: scale var(--dur-press) var(--ease-out), background-color var(--dur-fast) linear;
+}
+.tabbar--drag.tabbar--catch .tabbar__lens {
+  transition: transform var(--dur-fast) var(--ease-out), scale var(--dur-press) var(--ease-out), background-color var(--dur-fast) linear;
+}
+.tabbar__item {
+  position: relative;   /* above the lens */
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px;
+  width: var(--tabbar-item-w); height: var(--tabbar-h); border-radius: var(--r-pill);
+  color: var(--text-faint);
+  font: var(--t-tab); letter-spacing: var(--t-tab-ls);
+  transition: color var(--dur-fast) linear, transform var(--dur-release) var(--spring-snappy);
+}
+.tabbar__item.pressing, .tabbar__item.is-pressed {
+  transform: scale(var(--press-scale));
+  transition: color var(--dur-fast) linear, transform var(--dur-press) var(--ease-out);
+}
+.tabbar__item--active { color: var(--gold); }
+/* SF Symbols switch to their filled variant when selected: a light tint of
+   the glyph's closed shapes (the search handle is a line and stays open) */
+.tabbar__item--active .i { fill: currentColor; fill-opacity: 0.22; }
+@media (prefers-reduced-motion: reduce) { .tabbar__lens, .tabbar--drag .tabbar__lens { transition: none; scale: none; } }
+/* A soft fade under the floating bar so rails don't collide with it */
+.tabbar-fade {
+  position: absolute; left: 0; right: 0; bottom: 0; z-index: calc(var(--z-tabbar) - 1);
+  height: calc(var(--safe-bottom) + var(--tabbar-h) + var(--s-8));
+  background: linear-gradient(0deg, var(--bg) 18%, rgba(10, 10, 12, 0));
+  pointer-events: none;
+}
+
+/* ---------------------------------------------------------------- 5. Buttons */
+.btn {
+  position: relative; flex: none;
+  display: inline-flex; align-items: center; justify-content: center; gap: var(--s-2);
+  height: var(--btn-h); padding: 0 var(--s-6); border-radius: var(--r-pill);
+  font: var(--t-button); letter-spacing: var(--t-button-ls); white-space: nowrap;
+  overflow: hidden;
+  transition: transform var(--dur-release) var(--spring-snappy), background-color var(--dur-fast) linear, color var(--dur-fast) linear;
+}
+.btn.pressing, .btn.is-pressed {
+  transform: scale(var(--press-scale));
+  transition: transform var(--dur-press) var(--ease-out), background-color var(--dur-press) linear, color var(--dur-fast) linear;
+}
+.btn > * { position: relative; }  /* above .btn__fill */
+.btn--primary { background: var(--gold); color: var(--text-on-gold); }
+.btn--primary.pressing, .btn--primary.is-pressed { background: var(--gold-press); }
+.btn--glass {
+  background: var(--glass-bg); color: var(--text);
+  -webkit-backdrop-filter: var(--glass-blur); backdrop-filter: var(--glass-blur);
+  box-shadow: inset 0 0 0 1px var(--glass-line);
+}
+.btn--surface { background: var(--surface-2); color: var(--text); }
+.btn--surface.pressing, .btn--surface.is-pressed { background: var(--surface-press); }
+.btn--text { height: var(--tap); padding: 0 var(--s-2); color: var(--gold); }
+.btn--danger { background: var(--danger-soft); color: var(--danger); }
+.btn--block { display: flex; width: 100%; }
+.btn--grow { flex: 1 1 0; min-width: 0; }
+.btn--sm { height: var(--btn-h-sm); padding: 0 var(--s-4); font: var(--t-button-sm); overflow: visible; }
+.btn--sm::after { content: ""; position: absolute; left: 0; right: 0; top: -4px; bottom: -4px; } /* 44pt hit */
+.btn[disabled], .btn--disabled { opacity: 0.4; pointer-events: none; }
+/* busy isn't "can't": the spinner is the signal, the button stays at full strength
+   (Login's "Signing in…", LoadError's "Retrying…"; LGN-02) */
+.btn[aria-busy="true"] { opacity: 1; }
+/* Live status button (queued / downloading): greyed, non-interactive, progress fills behind */
+.btn--status { background: var(--surface-2); color: var(--text-dim); pointer-events: none; font-variant-numeric: tabular-nums; }
+.btn--status[disabled] { opacity: 1; }
+/* The fill glides per update on the compositor (scaleX, not width — DET-10):
+   ~0.4 s of motion per 4 s poll, idle the rest of the time. */
+.btn--status .btn__fill {
+  position: absolute; left: 0; top: 0; bottom: 0;
+  width: 100%;
+  transform: scaleX(var(--p, 0)); transform-origin: left center;
+  background: var(--gold-soft);
+  transition: transform var(--dur-spring) var(--spring-smooth);
+}
+/* Fixed-width numbers so the centred line doesn't shift sideways as the %
+   or the speed changes digit count ("9.8 MB/s" → "12.1 MB/s") */
+.btn--status .btn__pct { color: var(--gold); display: inline-block; min-width: 3.2ch; text-align: right; }
+.btn--status .btn__rate { display: inline-block; min-width: 7ch; text-align: center; }
+.btn__sub { font: var(--t-callout); opacity: 0.72; }
+
+/* Secondary actions under the primary button (Trailer, Watched, Restart…) */
+.actions { display: flex; justify-content: space-around; gap: var(--s-2); }
+.action {
+  display: flex; flex-direction: column; align-items: center; gap: 6px;
+  min-width: 72px; padding: var(--s-1) 0;
+  color: var(--text-dim); font: var(--t-caption); letter-spacing: var(--t-caption-ls);
+}
+.action__icon {
+  display: grid; place-items: center;
+  width: var(--tap); height: var(--tap); border-radius: var(--r-pill);
+  background: var(--surface-2); color: var(--text);
+  transition: transform var(--dur-release) var(--spring-snappy), background-color var(--dur-fast) linear;
+}
+.action.pressing .action__icon, .action.is-pressed .action__icon {
+  transform: scale(var(--press-scale)); background: var(--surface-press);
+  transition: transform var(--dur-press) var(--ease-out), background-color var(--dur-press) linear;
+}
+.action--on { color: var(--gold); }
+.action--on .action__icon { background: var(--gold-soft); color: var(--gold); }
+
+/* ----------------------------------------------- 6. Art, progress, badges */
+/* .art is the image slot. In the app it holds an <img>. While it loads the
+   slot is flat --surface-2 like the skeleton before it (or --a2, a tint of the
+   image's own colour — Tile's `tint`, from its blurhash), and the image fades
+   in over it (MOT-05). The prototype's tonal gradient + lettering is kept for
+   a real miss (.art--empty: no src, or a broken one). */
+.art {
+  position: relative; overflow: hidden; display: block;
+  background: var(--a2, var(--surface-2));
+}
+.art--empty {
+  background:
+    radial-gradient(95% 70% at 72% 22%, var(--a1, #3a3a42) 0%, rgba(0, 0, 0, 0) 68%),
+    radial-gradient(90% 70% at 12% 92%, var(--a3, rgba(0, 0, 0, 0)) 0%, rgba(0, 0, 0, 0) 70%),
+    var(--a2, var(--surface-2));
+}
+/* 45 % of the colour: a white poster doesn't flash a bright box */
+.art--tint {
+  --a2: color-mix(in srgb, var(--tint) 45%, var(--surface-2));
+  --a1: color-mix(in srgb, var(--tint) 70%, #3a3a42);
+}
+.art > img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+/* lazy images fade in once loaded (Art.svelte's fadeIn: .no-fade when it was
+   already in the memory cache) — opacity only */
+.art > .art__fade { opacity: 0; transition: opacity var(--dur-img) var(--ease-out); }
+.art > .art__fade.is-in { opacity: 1; }
+.art > .art__fade.no-fade { transition: none; }
+.art__label {
+  position: absolute; left: 9%; right: 9%; bottom: 9%;
+  font: var(--t-art); color: rgba(255, 255, 255, 0.9);
+  text-wrap: balance; text-shadow: 0 1px 12px rgba(0, 0, 0, 0.35);
+  display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 4; overflow: hidden; overflow-wrap: anywhere;
+}
+.art__label--sm { font-size: 13px; }
+.art--fill { position: absolute; inset: 0; }
+
+.progress {
+  position: relative; height: var(--progress-h); border-radius: var(--r-pill);
+  background: var(--track-dim); overflow: hidden;
+}
+.progress__fill {
+  position: absolute; left: 0; top: 0; bottom: 0;
+  width: calc(var(--p, 0) * 100%);
+  background: var(--gold); border-radius: inherit;
+}
+
+/* Progress ring (downloads, Up Next countdown) — set --p (0–1) */
+.ring { position: relative; display: inline-grid; place-items: center; width: var(--ring-size); height: var(--ring-size); flex: none; }
+.ring__svg { position: absolute; inset: 0; width: 100%; height: 100%; transform: rotate(-90deg); fill: none; stroke-width: var(--ring-stroke); }
+.ring__track { stroke: var(--track-dim); }
+.ring__value {
+  stroke: var(--gold); stroke-linecap: round;
+  stroke-dasharray: 100; stroke-dashoffset: calc(100 - var(--p, 0) * 100);
+  transition: stroke-dashoffset var(--dur-base) linear;
+}
+.ring__label { position: relative; font: var(--t-micro); letter-spacing: 0; font-variant-numeric: tabular-nums; color: var(--text); }
+.ring--lg { width: var(--ring-size-lg); height: var(--ring-size-lg); }
+.ring--lg .ring__label { font: var(--t-num); font-variant-numeric: tabular-nums; }
+/* only ever on art in a tile or an episode row: tint, no backdrop blur (--chip-bg) */
+.ring--glass { border-radius: var(--r-pill); background: var(--chip-bg); }
+
+.badge {
+  display: inline-flex; align-items: center; gap: 4px;
+  height: 20px; padding: 0 6px; border-radius: var(--r-xs);
+  font: var(--t-badge); letter-spacing: var(--t-badge-ls); white-space: nowrap;
+  color: var(--text);
+  background: var(--glass-bg-strong);
+  -webkit-backdrop-filter: var(--glass-blur); backdrop-filter: var(--glass-blur);
+  box-shadow: inset 0 0 0 1px var(--glass-line);
+}
+.badge .i { width: 11px; height: 11px; stroke-width: 2.4; }
+/* Badges on tile art (Top 250 ranks: ~250 of them) drop the blur for the
+   flat chip tint; glass stays on the few standalone ones (detail eyebrow) */
+.tile .badge:not(.badge--gold, .badge--outline) { background: var(--chip-bg); -webkit-backdrop-filter: none; backdrop-filter: none; }
+/* opaque fill: a blur behind it is never seen */
+.badge--gold { background: var(--gold); color: var(--text-on-gold); box-shadow: none; -webkit-backdrop-filter: none; backdrop-filter: none; }
+.badge--outline { background: none; color: var(--text-dim); box-shadow: inset 0 0 0 1px var(--line-strong); -webkit-backdrop-filter: none; backdrop-filter: none; }
+.badge--pill { border-radius: var(--r-pill); padding: 0 8px; }
+.badge--rank { height: 26px; padding: 0 8px; border-radius: var(--r-sm); font: var(--t-rank); letter-spacing: 0; text-transform: none; }
+.badge--rank.badge--gold { box-shadow: none; }
+
+/* Watched tick */
+.tick {
+  display: inline-grid; place-items: center; flex: none;
+  width: var(--tick-size); height: var(--tick-size); border-radius: var(--r-pill);
+  background: var(--gold); color: var(--text-on-gold);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+}
+.tick .i { width: 13px; height: 13px; stroke-width: 2.6; }
+.tick--hollow { background: none; color: var(--text-faint); box-shadow: inset 0 0 0 1.5px var(--line-strong); }
+
+/* Tech badges (4K · Dolby Vision · Atmos …) */
+.techbadges { display: flex; flex-wrap: wrap; gap: 6px; }
+.tech {
+  display: inline-flex; align-items: center; height: 22px; padding: 0 7px;
+  border-radius: var(--r-sm);
+  font: 700 calc(11 * var(--tu))/1 var(--font-ui); letter-spacing: 0.02em; color: var(--text-dim);
+  box-shadow: inset 0 0 0 1px var(--line-strong);
+}
+.tech--strong { color: var(--text); background: var(--surface-2); box-shadow: none; }
+
+/* Dots (hero pager) */
+.dots { display: flex; justify-content: center; align-items: center; gap: 6px; }
+.dots__dot { width: var(--dot); height: var(--dot); border-radius: var(--r-pill); background: var(--track-buffer); transition: width var(--dur-base) var(--ease-out); }
+.dots__dot--active { width: var(--dot-active-w); background: var(--gold); }
+
+/* Spinner (transform-only animation). It loops forever, so it must only be
+   in the DOM while something is actually loading — unmount it or [hidden] it
+   when idle (an off-screen spinner still runs; MOT-12). */
+.spinner {
+  width: var(--spinner); height: var(--spinner); flex: none;
+  border-radius: var(--r-pill);
+  border: 2.5px solid var(--track-dim); border-top-color: var(--gold);
+  animation: vr-spin 0.9s linear infinite;
+}
+.spinner--lg { width: var(--spinner-lg); height: var(--spinner-lg); border-width: 3px; }
+@keyframes vr-spin { to { transform: rotate(360deg); } }
+
+/* ------------------------------------------------------------------ 7. Hero */
+.hero { position: relative; height: var(--hero-h); overflow: hidden; }
+.hero__media { position: absolute; inset: 0; }
+.hero__scrim { position: absolute; inset: 0; background: var(--scrim-hero); }
+.hero__body {
+  position: absolute; left: var(--gutter); right: var(--gutter); bottom: var(--s-5);
+  display: flex; flex-direction: column; gap: var(--s-3);
+}
+.hero__eyebrow { font: var(--t-micro); letter-spacing: var(--t-micro-ls); text-transform: uppercase; color: var(--gold); }
+.hero__title { font: var(--t-hero); letter-spacing: var(--t-hero-ls); text-wrap: balance; }
+.hero__meta { font: var(--t-callout); color: var(--text-dim); margin-top: calc(var(--s-2) * -1); }
+.hero__progress { display: flex; align-items: center; gap: var(--s-3); font: var(--t-caption); color: var(--text-dim); font-variant-numeric: tabular-nums; }
+.hero__progress .progress { width: 96px; }
+.hero__actions { display: flex; align-items: center; gap: var(--s-3); margin-top: var(--s-1); }
+.hero__dots { margin-top: var(--s-2); }
+
+/* -------------------------------------------------------- 8. Rails & tiles */
+.rail { display: flex; flex-direction: column; gap: var(--s-3); padding-top: var(--section-gap); }
+.rail__head { display: flex; align-items: center; justify-content: space-between; gap: var(--s-3); padding: 0 var(--gutter); min-height: 28px; }
+.rail__title { font: var(--t-headline); letter-spacing: var(--t-headline-ls); display: flex; align-items: baseline; gap: var(--s-2); }
+.rail__title-sub { font: var(--t-callout); color: var(--text-faint); letter-spacing: 0; }
+.rail__track {
+  display: flex; gap: var(--rail-gap);
+  overflow-x: auto; overflow-y: hidden;
+  padding: 0 var(--gutter);
+  scroll-snap-type: x mandatory; scroll-padding-inline: var(--gutter);
+  scrollbar-width: none;
+}
+.rail__track::-webkit-scrollbar { display: none; }
+.rail__track > * { scroll-snap-align: start; }
+
+.tile {
+  position: relative; flex: none;
+  display: flex; flex-direction: column; gap: 7px;
+  width: var(--tile-w, auto); min-width: 0;
+  -webkit-touch-callout: none; -webkit-user-select: none; user-select: none;
+}
+.tile--poster { --tile-w: var(--poster-w-rail); }
+.tile--landscape { --tile-w: var(--thumb-w-rail); }
+.tile--fluid { --tile-w: 100%; }
+.grid .tile { --tile-w: auto; }
+.tile__frame {
+  position: relative; overflow: hidden;
+  aspect-ratio: var(--ratio-poster); border-radius: var(--r-poster);
+  background: var(--surface-2);
+  transition: transform var(--dur-release) var(--spring-snappy);
+}
+.tile__frame::after { content: ""; position: absolute; inset: 0; border-radius: inherit; box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.07); pointer-events: none; }
+.tile--landscape .tile__frame { aspect-ratio: var(--ratio-thumb); border-radius: var(--r-thumb); }
+.tile.pressing .tile__frame, .tile.is-pressed .tile__frame { transform: scale(var(--press-scale)); transition: transform var(--dur-press) var(--ease-out); }
+/* Pressed artwork darkens (SPEC §1): a black veil under the badges, opacity only */
+.tile__frame::before {
+  content: ""; position: absolute; inset: 0; z-index: calc(var(--z-media-ui) - 1);
+  border-radius: inherit; background: #000; opacity: 0; pointer-events: none;
+  transition: opacity var(--dur-base) var(--ease-out);
+}
+.tile.pressing .tile__frame::before, .tile.is-pressed .tile__frame::before { opacity: var(--press-dim); transition-duration: var(--dur-press); }
+.tile__frame > .art { position: absolute; inset: 0; }
+.tile__badge  { position: absolute; top: 6px; left: 6px; z-index: var(--z-media-ui); }
+.tile__badge--bottom { top: auto; bottom: 6px; }
+.tile__corner { position: absolute; top: 6px; right: 6px; z-index: var(--z-media-ui); }
+/* Quick "add to library" on non-library posters (collection rail, charts) */
+.tile__add {
+  position: absolute; right: 6px; bottom: 6px; z-index: var(--z-media-ui);
+  display: grid; place-items: center; width: 30px; height: 30px; border-radius: var(--r-pill);
+  background: var(--chip-bg); color: var(--text);   /* no blur: up to 40 of these on Home */
+  box-shadow: inset 0 0 0 1px var(--glass-line);
+}
+.tile__add.pressing { transform: scale(var(--press-scale-sm)); transition: transform var(--dur-press) var(--ease-out); }
+.tile__add::before { content: ""; position: absolute; inset: -7px; }
+.tile__add .i { width: var(--icon-xs); height: var(--icon-xs); stroke-width: 2.2; }
+/* the "+" answers the tap (LIB-02): spinner while adding, then a gold ✓ that
+   pops in (Svelte scale, Tile.svelte) and leaves after 1.2 s */
+.tile__add { transition: transform var(--dur-release) var(--spring-snappy), background-color var(--dur-fast) linear, color var(--dur-fast) linear; }
+.tile__add--done { background: var(--gold); color: var(--text-on-gold); box-shadow: none; }
+.tile__add .tile__spin { width: 14px; height: 14px; border-width: 2px; }
+.tile__check { display: grid; place-items: center; }
+.tile__check .i { stroke-width: 2.6; }
+.tile__progress { position: absolute; left: var(--s-2); right: var(--s-2); bottom: var(--s-2); z-index: var(--z-media-ui); }
+.tile__overlay { position: absolute; inset: 0; z-index: var(--z-media-ui); display: grid; place-items: center; align-content: center; gap: 6px; }
+.tile__title { font: var(--t-tile); letter-spacing: var(--t-tile-ls); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.tile__sub { font: var(--t-caption); letter-spacing: var(--t-caption-ls); color: var(--text-faint); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: -4px; font-variant-numeric: tabular-nums; }
+.tile__sub--gold { color: var(--gold); }
+/* One-line caption (Continue Watching / Next Up): the title ellipsizes, the
+   sub keeps all of its text at the right edge ("S2 · E4 · 23m left") */
+.tile__cap { display: flex; align-items: baseline; gap: var(--s-2); min-width: 0; }
+.tile__cap .tile__title { flex: 0 1 auto; min-width: 0; }
+.tile__cap .tile__sub { flex: none; margin: 0 0 0 auto; overflow: visible; }
+/* Downloading / queued: dimmed art, live ring on top */
+.tile--downloading .tile__frame > .art, .tile--queued .tile__frame > .art { opacity: 0.34; filter: saturate(0.4); }
+.tile--downloading .tile__title, .tile--queued .tile__title { color: var(--text-dim); }
+.tile__queued { display: grid; justify-items: center; gap: 4px; font: var(--t-micro); letter-spacing: var(--t-micro-ls); text-transform: uppercase; color: var(--text-dim); }
+/* Watched: tick in corner, art slightly quieter */
+.tile--watched .tile__frame > .art { opacity: 0.72; }
+
+/* Poster grid */
+.count { padding: var(--s-2) var(--gutter) var(--s-3); font: var(--t-caption); color: var(--text-faint); font-variant-numeric: tabular-nums; }
+.grid {
+  display: grid; grid-template-columns: repeat(var(--grid-cols), minmax(0, 1fr));
+  gap: var(--grid-row-gap) var(--grid-gap);
+  padding: 0 var(--gutter);
+}
+
+/* ------------------------------------------------------------ 9. Title pages */
+.detail__hero { position: relative; height: var(--backdrop-h); overflow: hidden; }
+.detail__hero > .art { position: absolute; inset: 0; }
+.detail__scrim { position: absolute; inset: 0; background: var(--scrim-hero); }
+.detail__body {
+  position: relative; z-index: 1;
+  margin-top: calc(var(--s-16) * -2);
+  padding: 0 var(--gutter);
+  display: flex; flex-direction: column; gap: var(--s-4);
+}
+.detail__eyebrow { font: var(--t-micro); letter-spacing: var(--t-micro-ls); color: var(--text-faint); display: flex; align-items: center; gap: var(--s-2); }
+.detail__title { font: var(--t-title); letter-spacing: var(--t-title-ls); text-wrap: balance; }
+.detail__head { display: flex; flex-direction: column; gap: var(--s-2); }
+.detail__genres { font: var(--t-callout); color: var(--text-faint); }
+.detail__resume { display: flex; align-items: center; gap: var(--s-3); font: var(--t-caption); color: var(--text-dim); font-variant-numeric: tabular-nums; }
+.detail__resume .progress { flex: 1; }
+.detail__buttons { display: flex; flex-direction: column; gap: var(--s-3); }
+.detail__note { font: var(--t-caption); color: var(--text-faint); text-align: center; }
+
+.meta { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; font: var(--t-callout); color: var(--text-dim); font-variant-numeric: tabular-nums; }
+.meta__dot { width: 3px; height: 3px; border-radius: var(--r-pill); background: var(--text-faint); }
+.meta__rating { display: inline-flex; align-items: center; gap: 3px; color: var(--text); }
+.meta__rating .i { width: 13px; height: 13px; color: var(--gold); fill: var(--gold); stroke: none; }
+.meta__cert { display: inline-flex; align-items: center; height: 18px; padding: 0 5px; border-radius: var(--r-xs); box-shadow: inset 0 0 0 1px var(--line-strong); font: 600 calc(11 * var(--tu))/1 var(--font-ui); color: var(--text-dim); }
+
+.overview { font: var(--t-body); letter-spacing: var(--t-body-ls); color: var(--text-dim); }
+.overview--clamp { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 3; overflow: hidden; }
+.overview__more { align-self: flex-start; position: relative; margin-top: calc(var(--s-3) * -1); height: var(--btn-h-sm); color: var(--text); font: 600 calc(15 * var(--tu))/1 var(--font-ui); }
+.overview__more::after { content: ""; position: absolute; left: -8px; right: -8px; top: -4px; bottom: -4px; }
+/* Text-only controls dim while pressed, as iOS system buttons do */
+.overview__more { transition: opacity var(--dur-base) var(--ease-out); }
+.overview__more.pressing { opacity: 0.55; transition-duration: var(--dur-press); }
+
+.section { padding-top: var(--section-gap); }
+.section__head { display: flex; align-items: center; justify-content: space-between; padding: 0 var(--s-2) var(--s-3) var(--gutter); min-height: 28px; }
+.section__title { font: var(--t-headline); letter-spacing: var(--t-headline-ls); }
+.section__sub { font: var(--t-callout); color: var(--text-faint); margin-top: 2px; }
+.kv { display: grid; grid-template-columns: max-content 1fr; gap: 6px var(--s-4); padding: 0 var(--gutter); font: var(--t-callout); }
+.kv dt { color: var(--text-faint); }
+.kv dd { margin: 0; color: var(--text-dim); }
+
+/* ------------------------------------------ 10. Cast, collection, seasons, episodes */
+.cast { flex: none; width: var(--cast-w); display: flex; flex-direction: column; align-items: center; gap: 6px; text-align: center; }
+.cast__photo { position: relative; width: var(--cast-w); height: var(--cast-w); border-radius: var(--r-pill); overflow: hidden; transition: transform var(--dur-release) var(--spring-snappy); }
+.cast.pressing .cast__photo, .cast.is-pressed .cast__photo { transform: scale(var(--press-scale)); transition: transform var(--dur-press) var(--ease-out); }
+.cast__photo::before {
+  content: ""; position: absolute; inset: 0; z-index: calc(var(--z-media-ui) - 1);
+  border-radius: inherit; background: #000; opacity: 0; pointer-events: none;
+  transition: opacity var(--dur-base) var(--ease-out);
+}
+.cast.pressing .cast__photo::before, .cast.is-pressed .cast__photo::before { opacity: var(--press-dim); transition-duration: var(--dur-press); }
+.cast__photo > .art { width: 100%; height: 100%; }
+.cast__initials { position: absolute; inset: 0; display: grid; place-items: center; font: var(--t-art); color: rgba(255, 255, 255, 0.8); }
+.cast__name { font: var(--t-caption); color: var(--text); font-weight: 600; width: 100%; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; text-wrap: balance; }
+.cast__role { font: var(--t-caption); color: var(--text-faint); width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; margin-top: -4px; }
+
+/* Season picker */
+.pills { display: flex; gap: var(--s-2); overflow-x: auto; padding: 4px var(--gutter); scrollbar-width: none; }
+.pills::-webkit-scrollbar { display: none; }
+/* Season picker bar (SeasonPills: it wraps the .pills scroller and is sticky,
+   detail.css), glass once pinned under the solid nav bar (.pills--sticky).
+   The glass is the bars' MOT-09 technique: a ::before that is always there
+   and fades in — switching backdrop-filter on by class created the layer at
+   the pin point, mid-scroll, and the blur popped in one frame. It sits on the
+   bar, not on the scroller, or it would scroll sideways with the pills. */
+.detail__pills::before {
+  content: ""; position: absolute; inset: 0; z-index: -1; pointer-events: none;
+  background: var(--glass-bg-strong);
+  -webkit-backdrop-filter: var(--glass-blur); backdrop-filter: var(--glass-blur);
+  box-shadow: inset 0 -1px 0 var(--line);
+  opacity: 0; transition: opacity var(--dur-fast) linear;
+}
+.pills--sticky::before { opacity: 1; }
+.pill {
+  position: relative; flex: none;
+  display: inline-flex; align-items: center; gap: 6px;
+  height: var(--btn-h-sm); padding: 0 var(--s-4); border-radius: var(--r-pill);
+  background: var(--surface-2); color: var(--text-dim);
+  font: 600 calc(14 * var(--tu))/1 var(--font-ui); letter-spacing: -0.005em; white-space: nowrap;
+  transition: transform var(--dur-release) var(--spring-snappy), background-color var(--dur-fast) linear;
+}
+.pill::after { content: ""; position: absolute; left: 0; right: 0; top: -4px; bottom: -4px; }
+.pill.pressing, .pill.is-pressed { transform: scale(var(--press-scale)); transition: transform var(--dur-press) var(--ease-out), background-color var(--dur-fast) linear; }
+.pill--active { background: var(--text); color: var(--text-on-light); }
+.pill--dim { background: none; color: var(--text-faint); box-shadow: inset 0 0 0 1px var(--line-strong); }
+.pill .tick { --tick-size: 16px; }
+.pill .tick .i { width: 10px; height: 10px; }
+.pill__pct { font: var(--t-micro); letter-spacing: 0; color: var(--gold); font-variant-numeric: tabular-nums; }
+
+/* Episode row */
+.episodes { display: flex; flex-direction: column; }
+.episode {
+  position: relative;
+  display: grid; grid-template-columns: var(--still-w) minmax(0, 1fr); align-items: center;
+  gap: var(--s-3) var(--s-3);
+  padding: var(--s-3) var(--gutter);
+  transition: background-color var(--dur-base) var(--ease-out);
+}
+.episode.pressing, .episode.is-pressed { background: var(--surface-1); transition-duration: 0s; }
+.episode__still { position: relative; width: var(--still-w); aspect-ratio: var(--ratio-thumb); border-radius: var(--r-thumb); overflow: hidden; background: var(--surface-2); }
+.episode__still > .art { position: absolute; inset: 0; }
+.episode__still .tile__progress { left: 6px; right: 6px; bottom: 6px; }
+.episode__still .tile__corner { top: 5px; right: 5px; }
+.episode__head { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.episode__num { font: var(--t-caption); color: var(--text-faint); font-variant-numeric: tabular-nums; }
+.episode__title { font: 600 calc(15 * var(--tu))/1.25 var(--font-ui); letter-spacing: -0.01em; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; }
+.episode__status { font: var(--t-caption); color: var(--gold); font-variant-numeric: tabular-nums; display: flex; align-items: center; gap: 6px; }
+.episode__overview { grid-column: 1 / -1; font: 400 calc(13 * var(--tu))/1.4 var(--font-ui); color: var(--text-dim); display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; margin-top: calc(var(--s-1) * -1); }
+.episode--downloading .episode__still > .art, .episode--queued .episode__still > .art { opacity: 0.32; filter: saturate(0.4); }
+.episode--downloading .episode__title, .episode--queued .episode__title,
+.episode--downloading .episode__overview, .episode--queued .episode__overview { color: var(--text-faint); }
+.episode--queued .episode__status { color: var(--text-faint); }
+.episode__ringwrap { position: absolute; inset: 0; display: grid; place-items: center; z-index: var(--z-media-ui); }
+.episode--watched .episode__still > .art { opacity: 0.7; }
+
+/* --------------------------------------------------------------- 11. Person */
+.person__head { display: flex; flex-direction: column; align-items: center; gap: var(--s-3); padding: calc(var(--safe-top) + var(--s-12)) var(--gutter) 0; text-align: center; }
+.person__photo { width: var(--person-photo); height: var(--person-photo); border-radius: var(--r-pill); overflow: hidden; box-shadow: var(--shadow-poster); }
+.person__photo > .art { width: 100%; height: 100%; }
+.person__name { font: var(--t-title); letter-spacing: var(--t-title-ls); }
+.person__facts { font: var(--t-callout); color: var(--text-faint); }
+.person__bio { padding: var(--s-4) var(--gutter) 0; }
+
+/* Page header for pushed pages without a backdrop (charts, settings) */
+.pagehead { display: flex; flex-direction: column; gap: var(--s-1); padding: var(--s-2) var(--gutter) var(--s-4); }
+.pagehead__eyebrow { font: var(--t-micro); letter-spacing: var(--t-micro-ls); text-transform: uppercase; color: var(--gold); }
+.pagehead__title { font: var(--t-large); letter-spacing: var(--t-large-ls); }
+.pagehead__sub { font: var(--t-callout); color: var(--text-faint); }
+
+/* ---------------------------------------------------------------- 12. Search */
+.search { display: flex; align-items: center; gap: var(--s-2); padding: 0 var(--gutter); }
+.search__field {
+  position: relative; isolation: isolate;
+  flex: 1; min-width: 0;
+  display: flex; align-items: center; gap: var(--s-2);
+  height: var(--field-h); padding: 0 var(--s-2) 0 var(--s-3);
+  border-radius: var(--r-field); color: var(--text-faint);
+}
+/* The fill is its own layer, so Search.svelte can stretch it while the field
+   narrows for Cancel (SRCH-01) without scaling the icon or the text */
+.search__bg {
+  position: absolute; inset: 0; z-index: -1; border-radius: inherit;
+  background: var(--surface-2); transform-origin: left center; pointer-events: none;
+}
+.search__field--focus .search__bg { box-shadow: inset 0 0 0 1.5px var(--gold-line); }
+.search__input { flex: 1; min-width: 0; height: 100%; background: none; border: 0; outline: none; font: var(--t-input); color: var(--text); caret-color: var(--gold); }
+.search__input::placeholder { color: var(--text-faint); }
+.search__clear { display: grid; place-items: center; width: var(--tap); height: var(--tap); color: var(--text-faint); }
+/* iOS's xmark.circle.fill: a filled disc with the cross knocked out (the 44pt
+   button keeps its hit box). Scoped: Login's password eye reuses .search__clear. */
+.search .search__clear .i {
+  width: 17px; height: 17px; padding: 3.5px; border-radius: 50%;
+  background: var(--text-faint); color: var(--surface-2); stroke-width: 3;
+}
+.search__cancel { font: 400 calc(17 * var(--tu))/1 var(--font-ui); color: var(--gold); height: var(--tap); padding: 0 var(--s-1); }
+.search__clear, .search__cancel { transition: opacity var(--dur-base) var(--ease-out); }
+.search__clear.pressing, .search__cancel.pressing { opacity: 0.55; transition-duration: var(--dur-press); }
+.search__count { padding: var(--s-4) var(--gutter) var(--s-3); font: var(--t-callout); font-variant-numeric: tabular-nums; color: var(--text-faint); }
+
+.catgrid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--s-3); padding: 0 var(--gutter); }
+.catcard {
+  position: relative; overflow: hidden;
+  display: flex; flex-direction: column; justify-content: flex-end; gap: 2px;
+  height: var(--catcard-h); padding: var(--s-3) var(--s-4);
+  border-radius: var(--r-card); background: var(--surface-1);
+  box-shadow: inset 0 0 0 1px var(--line);
+  transition: transform var(--dur-release) var(--spring-snappy);
+}
+.catcard.pressing, .catcard.is-pressed { transform: scale(var(--press-scale)); transition: transform var(--dur-press) var(--ease-out); }
+.catcard::before {
+  content: ""; position: absolute; inset: 0; z-index: var(--z-media-ui);
+  border-radius: inherit; background: #000; opacity: 0; pointer-events: none;
+  transition: opacity var(--dur-base) var(--ease-out);
+}
+.catcard.pressing::before, .catcard.is-pressed::before { opacity: var(--press-dim); transition-duration: var(--dur-press); }
+.catcard__fan { position: absolute; left: 50%; top: var(--s-4); width: 0; height: calc(var(--catcard-poster-w) * 1.5); }
+.catcard__poster {
+  position: absolute; top: 0; left: calc(var(--catcard-poster-w) / -2);
+  width: var(--catcard-poster-w); aspect-ratio: var(--ratio-poster);
+  border-radius: var(--r-sm); overflow: hidden; box-shadow: var(--shadow-poster);
+  transform-origin: 50% 110%;
+}
+.catcard__poster > .art { position: absolute; inset: 0; }
+.catcard__poster:nth-child(1) { transform: translateX(-30px) rotate(-11deg); }
+.catcard__poster:nth-child(2) { transform: translateY(-4px); z-index: 1; }
+.catcard__poster:nth-child(3) { transform: translateX(30px) rotate(11deg); }
+.catcard__title { position: relative; font: 600 calc(15 * var(--tu))/1.2 var(--font-ui); letter-spacing: -0.01em; }
+.catcard__sub { position: relative; font: var(--t-caption); color: var(--text-faint); }
+.catcard--wide { grid-column: 1 / -1; }
+
+/* Ranked grid tile: rank sits under the art's top-left corner */
+.tile__rank { position: absolute; top: 6px; left: 6px; z-index: var(--z-media-ui); }
+
+/* ------------------------------------------ 13. Lists, rows, controls, fields */
+.group { padding-top: var(--s-6); }
+.group__label { padding: 0 var(--gutter) var(--s-2) calc(var(--gutter) + var(--s-4)); font: var(--t-micro); letter-spacing: var(--t-micro-ls); text-transform: uppercase; color: var(--text-faint); }
+.group__foot { padding: var(--s-2) var(--gutter) 0 calc(var(--gutter) + var(--s-4)); font: var(--t-caption); color: var(--text-faint); }
+.list { margin: 0 var(--gutter); border-radius: var(--r-card); background: var(--surface-1); overflow: hidden; }
+.list--flush { margin: 0; border-radius: 0; background: none; }
+.sheet .list { background: var(--surface-2); }
+.row {
+  position: relative; display: flex; align-items: center; gap: var(--s-3);
+  width: 100%; min-height: var(--row-h); padding: var(--s-2) var(--s-4);
+  transition: background-color var(--dur-base) var(--ease-out);
+}
+.row + .row::before { content: ""; position: absolute; top: 0; left: var(--s-4); right: 0; height: 1px; background: var(--line); }
+.row--inset-sep + .row--inset-sep::before { left: calc(var(--s-4) + var(--avatar) + var(--s-3)); }
+.row.pressing, .row.is-pressed { background: var(--surface-press); transition-duration: 0s; }
+.row__icon { display: grid; place-items: center; width: 30px; height: 30px; border-radius: var(--r-sm); background: var(--surface-3); color: var(--text); flex: none; }
+.row__icon .i { width: 18px; height: 18px; }
+.row__main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.row__title { font: 400 calc(16 * var(--tu))/1.3 var(--font-ui); letter-spacing: -0.01em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.row__sub { font: var(--t-caption); color: var(--text-faint); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.row__value { font: 400 calc(15 * var(--tu))/1 var(--font-ui); font-variant-numeric: tabular-nums; color: var(--text-faint); white-space: nowrap; }
+.row__trail { display: flex; align-items: center; gap: var(--s-2); color: var(--text-faint); flex: none; }
+.row__check { color: var(--gold); }
+.row--selected .row__title { color: var(--gold); font-weight: 600; }
+.row--danger .row__title { color: var(--danger); }
+.row--action .row__title { color: var(--gold); }
+.row--column { flex-direction: column; align-items: stretch; gap: var(--s-3); padding-top: var(--s-3); padding-bottom: var(--s-3); }
+.row--wrap { padding-top: var(--s-3); padding-bottom: var(--s-3); }
+.row--wrap .row__title, .row--wrap .row__sub { white-space: normal; overflow-wrap: anywhere; }
+.row--wrap .row__sub { line-height: 1.35; }
+
+/* Drawn switch — the fallback where there is no native <input switch>
+   (Switch.svelte), tuned to UISwitch (SW-01 / MOT-08): translucent off track
+   that shows on both list colours, a 27 pt thumb on a spring, stretching
+   toward the middle while pressed (`.pressing`, lib/press.js). */
+.switch {
+  position: relative; flex: none;
+  width: var(--switch-w); height: var(--switch-h); border-radius: var(--r-pill);
+  background: rgba(120, 120, 128, 0.32);
+  transition: background-color var(--dur-fast) linear;
+}
+.switch::after {
+  content: ""; position: absolute; top: 2px; left: 2px;
+  width: calc(var(--switch-h) - 4px); height: calc(var(--switch-h) - 4px); border-radius: var(--r-pill);
+  background: #fff; box-shadow: 0 3px 8px rgba(0, 0, 0, 0.15), 0 3px 1px rgba(0, 0, 0, 0.06);
+  transition: transform var(--dur-spring-quick) var(--spring-snappy), width var(--dur-press) var(--ease-out);
+}
+.switch::before { content: ""; position: absolute; inset: -7px -6px; }   /* 44pt hit */
+.switch--on { background: var(--gold); }
+.switch[disabled] { opacity: 0.4; cursor: default; }
+.switch--on::after { transform: translateX(calc(var(--switch-w) - var(--switch-h))); }
+.switch.pressing::after { width: calc(var(--switch-h) - 4px + 7px); }
+.switch--on.pressing::after { transform: translateX(calc(var(--switch-w) - var(--switch-h) - 7px)); }
+/* Native switch (iOS 17.4+): the system control in our gold, a 44 pt hit box */
+.switch-hit { position: relative; flex: none; display: inline-grid; place-items: center; padding: 7px 6px; margin: -7px -6px; }
+.switch-native { margin: 0; accent-color: var(--gold); }
+.switch-native:disabled { opacity: 0.4; }
+@media (prefers-reduced-motion: reduce) {
+  .switch::after { transition-duration: 1ms; }
+}
+
+.seg { position: relative; display: flex; gap: 2px; padding: 2px; border-radius: var(--r-field); background: var(--surface-3); }
+/* One thumb under the options slides to the picked one (MOT-07). Placed by the
+   component's --n (options) / --i (picked index): equal-width options (flex 1 1 0),
+   so its width is one option's and each step is one option + the 2px gap. */
+.seg__thumb {
+  position: absolute; top: 2px; bottom: 2px; left: 2px;
+  width: calc((100% - 4px - (var(--n) - 1) * 2px) / var(--n));
+  border-radius: calc(var(--r-field) - 2px);
+  background: var(--surface-press); box-shadow: 0 1px 4px rgba(0, 0, 0, 0.35);
+  transform: translateX(calc(var(--i) * (100% + 2px)));
+  transition: transform var(--dur-spring-quick) var(--spring-snappy), scale var(--dur-release) var(--spring-snappy);
+}
+.seg--none .seg__thumb { opacity: 0; }
+.seg:has(.seg__opt--active.press-cut) .seg__thumb { transition-duration: 0s; }   /* a press a scroll took: no spring back */
+/* pressing the picked option squeezes the thumb under the finger */
+.seg:has(.seg__opt--active.pressing) .seg__thumb {
+  scale: var(--press-scale);
+  transition: transform var(--dur-spring-quick) var(--spring-snappy), scale var(--dur-press) var(--ease-out);
+}
+.seg__opt {
+  position: relative; z-index: 1; min-width: 0; padding: 0 var(--s-1);   /* labels above the thumb */
+  flex: 1 1 0; display: grid; place-items: center;
+  height: var(--seg-h); border-radius: calc(var(--r-field) - 2px);
+  font: 600 calc(13 * var(--tu))/1 var(--font-ui); color: var(--text-dim); white-space: nowrap;
+  transition: transform var(--dur-release) var(--spring-snappy), color var(--dur-fast) linear;
+}
+.seg__opt::after { content: ""; position: absolute; inset: -2px -1px; }   /* the track's padding counts: 44pt hit */
+.seg__opt--active { color: var(--text); }   /* the thumb draws the selection */
+.seg__opt.pressing { transform: scale(var(--press-scale)); transition: transform var(--dur-press) var(--ease-out), color var(--dur-fast) linear; }
+@media (prefers-reduced-motion: reduce) { .seg__thumb { transition: none; } }
+
+.chips { display: flex; gap: var(--s-2); overflow-x: auto; padding: 5px var(--gutter); scrollbar-width: none; }
+.chips::-webkit-scrollbar { display: none; }
+.chips--wrap { flex-wrap: wrap; overflow: visible; row-gap: var(--s-3); }
+.chip {
+  position: relative; flex: none;
+  display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+  height: 34px; min-width: var(--tap); padding: 0 var(--s-3); border-radius: var(--r-pill);
+  background: var(--surface-2); color: var(--text-dim);
+  font: var(--t-callout); letter-spacing: var(--t-callout-ls); white-space: nowrap;
+  transition: transform var(--dur-release) var(--spring-snappy), background-color var(--dur-fast) linear;
+}
+.chip::after { content: ""; position: absolute; left: 0; right: 0; top: -5px; bottom: -5px; }
+.chip.pressing, .chip.is-pressed { transform: scale(var(--press-scale)); transition: transform var(--dur-press) var(--ease-out), background-color var(--dur-fast) linear; }
+.chip .i { width: var(--icon-xs); height: var(--icon-xs); }
+.chip--on { background: var(--gold-soft); color: var(--gold); box-shadow: inset 0 0 0 1px var(--gold-line); }
+.chip--strong { color: var(--text); }
+
+.field { display: flex; flex-direction: column; gap: 6px; }
+.field__label { font: var(--t-caption); color: var(--text-faint); padding-left: var(--s-1); }
+.field__box {
+  display: flex; align-items: center; gap: var(--s-2);
+  height: var(--field-h); padding: 0 var(--s-2) 0 var(--s-3);
+  border-radius: var(--r-field); background: var(--surface-2); color: var(--text-faint);
+  transition: box-shadow var(--dur-fast) linear;
+}
+.field__input { flex: 1; min-width: 0; height: 100%; background: none; border: 0; outline: none; font: var(--t-input); color: var(--text); }
+.field__input::placeholder { color: var(--text-faint); }
+.field__hint { font: var(--t-caption); color: var(--text-faint); padding-left: var(--s-1); }
+.field--focus .field__box { box-shadow: inset 0 0 0 1.5px var(--gold-line); }
+.field--error .field__box { box-shadow: inset 0 0 0 1.5px var(--danger); }
+.field--error .field__hint { color: var(--danger); }
+.form { display: flex; flex-direction: column; gap: var(--s-4); }
+
+/* Login */
+.login { display: flex; flex-direction: column; gap: var(--s-6); padding: calc(var(--safe-top) + var(--s-10)) var(--gutter) calc(var(--safe-bottom) + var(--s-6)); }
+.login__brand { display: flex; flex-direction: column; align-items: center; gap: var(--s-2); text-align: center; padding-bottom: var(--s-2); }
+.login__tag { font: var(--t-callout); color: var(--text-faint); }
+.divider { display: flex; align-items: center; gap: var(--s-3); font: var(--t-caption); color: var(--text-faint); }
+.divider::before, .divider::after { content: ""; flex: 1; height: 1px; background: var(--line); }
+
+/* ------------------------------------------------ 14. Overlays */
+.scrim { position: absolute; inset: 0; z-index: var(--z-scrim); background: var(--scrim); }
+
+/* Bottom sheet (medium = content height, large = near full height) */
+.sheet {
+  position: absolute; left: 0; right: 0; bottom: 0; z-index: var(--z-sheet);
+  display: flex; flex-direction: column;
+  max-height: calc(100% - var(--safe-top) - var(--s-3));
+  background: var(--surface-1);
+  border-radius: var(--r-sheet) var(--r-sheet) 0 0;
+  box-shadow: var(--shadow-sheet), inset 0 1px 0 var(--line);
+  padding-bottom: var(--safe-bottom);
+}
+.sheet--large { top: calc(var(--safe-top) + var(--s-4)); }   /* ~10 px of the receding page card peek above it (SHT-03) */
+.sheet__grabber { flex: none; width: var(--grabber-w); height: 5px; border-radius: var(--r-pill); background: var(--line-strong); margin: 7px auto 0; }
+.sheet__head { flex: none; display: flex; align-items: center; justify-content: space-between; gap: var(--s-3); padding: var(--s-3) calc(var(--safe-right) + var(--s-4)) var(--s-2) var(--gutter); }
+.sheet__title { font: var(--t-heading); letter-spacing: var(--t-heading-ls); }
+.sheet__body { flex: 1; min-height: 0; overflow-y: auto; padding-bottom: var(--s-4); }
+.sheet__foot { flex: none; display: flex; gap: var(--s-3); padding: var(--s-3) var(--gutter) var(--s-2); }
+
+/* Landscape side panel (player pickers): floating glass */
+.panel {
+  position: absolute; z-index: var(--z-sheet);
+  top: var(--s-3); bottom: calc(var(--safe-bottom) + var(--s-1)); right: var(--safe-right);
+  display: flex; flex-direction: column;
+  width: var(--panel-w, var(--sheet-side-w));
+  border-radius: var(--r-sheet);
+  background: var(--glass-bg-strong);
+  -webkit-backdrop-filter: var(--glass-blur); backdrop-filter: var(--glass-blur);
+  box-shadow: inset 0 0 0 1px var(--glass-line), var(--shadow-float);
+  overflow: hidden;
+}
+.panel--narrow { --panel-w: var(--panel-narrow-w); }
+.panel__head { flex: none; display: flex; align-items: center; justify-content: space-between; padding: var(--s-3) var(--s-3) var(--s-1) var(--s-5); }
+.panel__title { font: var(--t-headline); letter-spacing: var(--t-headline-ls); }
+.panel__cols { flex: 1; min-height: 0; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.panel__col { min-height: 0; overflow-y: auto; padding: 0 var(--s-2) var(--s-3); scrollbar-width: none; }
+.panel__col + .panel__col { box-shadow: inset 1px 0 0 var(--line); }
+.panel__label { padding: var(--s-3) var(--s-3) var(--s-2); font: var(--t-micro); letter-spacing: var(--t-micro-ls); text-transform: uppercase; color: var(--text-faint); display: flex; align-items: center; gap: 6px; }
+.panel__body { flex: 1; min-height: 0; overflow-y: auto; padding: 0 var(--s-2) var(--s-3); scrollbar-width: none; }
+
+/* Track option (audio / subtitle / chapter) */
+.option {
+  display: flex; align-items: center; gap: var(--s-3);
+  width: 100%; min-height: var(--row-h); padding: var(--s-2) var(--s-3);
+  border-radius: var(--r-field);
+  transition: background-color var(--dur-base) var(--ease-out);
+}
+.option.pressing, .option.is-pressed { background: rgba(255, 255, 255, 0.08); transition-duration: 0s; }
+.option__check { width: var(--icon-sm); height: var(--icon-sm); flex: none; color: var(--gold); }
+.option__check--off { visibility: hidden; }
+.option__main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.option__title { font: 500 calc(15 * var(--tu))/1.25 var(--font-ui); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.option__sub { font: var(--t-caption); color: var(--text-faint); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.option--selected { background: rgba(255, 255, 255, 0.06); }
+.option--selected .option__title { color: var(--gold); }
+.option__thumb { position: relative; display: block; width: 96px; aspect-ratio: var(--ratio-thumb); border-radius: var(--r-sm); overflow: hidden; flex: none; }
+.option__thumb > .art { position: absolute; inset: 0; }
+.option__time { font: var(--t-num); color: var(--text-faint); font-variant-numeric: tabular-nums; }
+
+/* Long-press context menu: lifted preview + menu, background blurred */
+.ctx { position: absolute; inset: 0; z-index: var(--z-ctx); }
+.ctx__backdrop { position: absolute; inset: 0; background: var(--scrim-ctx); -webkit-backdrop-filter: blur(18px) saturate(120%); backdrop-filter: blur(18px) saturate(120%); }
+.ctx__stack { position: absolute; left: var(--gutter); right: var(--gutter); display: flex; flex-direction: column; gap: var(--s-3); }
+.ctx__preview { transform: scale(1.03); transform-origin: 50% 100%; box-shadow: var(--shadow-lift); border-radius: var(--r-thumb); }
+.ctx__preview--card { padding: var(--s-3); border-radius: var(--r-card); background: var(--surface-1); }
+.ctx__menu {
+  width: var(--ctx-menu-w); border-radius: var(--r-card); overflow: hidden;
+  background: rgba(38, 38, 44, 0.92);
+  -webkit-backdrop-filter: var(--glass-blur); backdrop-filter: var(--glass-blur);
+  box-shadow: inset 0 0 0 1px var(--glass-line), var(--shadow-float);
+}
+.ctx__item {
+  position: relative; display: flex; align-items: center; justify-content: space-between; gap: var(--s-3);
+  width: 100%; min-height: var(--tap); padding: var(--s-3) var(--s-4);
+  font: 400 calc(16 * var(--tu))/1.2 var(--font-ui); letter-spacing: -0.01em;
+  transition: background-color var(--dur-base) var(--ease-out);
+}
+.ctx__item + .ctx__item::before { content: ""; position: absolute; top: 0; left: 0; right: 0; height: 1px; background: var(--line); }
+.ctx__item.pressing, .ctx__item.is-pressed { background: rgba(255, 255, 255, 0.08); transition-duration: 0s; }
+.ctx__item .i { width: var(--icon-sm); height: var(--icon-sm); }
+.ctx__item--danger { color: var(--danger); }
+/* an action that can't run right now (Home's "Play from beginning" offline): greyed like
+   a disabled UIAction. Used to inherit detail.css's caption look for the old confirm row. */
+.ctx__item:disabled { opacity: 0.4; }
+.ctx__sep { height: 8px; background: rgba(0, 0, 0, 0.3); }
+/* a caption heading a menu ({ title: true, label }) — questions go to confirm() */
+.ctx__title { padding: var(--s-3) var(--s-4); text-align: center; font: var(--t-caption); letter-spacing: var(--t-caption-ls); color: var(--text-faint); }
+.ctx__title + .ctx__item::before { content: ""; position: absolute; top: 0; left: 0; right: 0; height: 1px; background: var(--line); }
+
+/* Long-press build-up (MOT-04 / CTX-01): `.holding` from 150 ms of stillness
+   (lib/gestures.js longpress) — the artwork sinks toward the lift, a row
+   lights. Doubled class: must out-rank `.tile.pressing .tile__frame` (0,3,0). */
+.tile.tile.holding .tile__frame, .cast.cast.holding .cast__photo, .pill.pill.holding {
+  transform: scale(0.92);
+  transition: transform var(--dur-hold) var(--ease-in), background-color var(--dur-fast) linear;
+}
+.tile.tile.holding .tile__frame::before, .cast.cast.holding .cast__photo::before { opacity: var(--press-dim); }
+.episode.holding, .row.holding, .holding > .row { background: var(--surface-press); transition-duration: 0s; }
+@media (prefers-reduced-motion: reduce) {
+  .tile.tile.holding .tile__frame, .cast.cast.holding .cast__photo, .pill.pill.holding { transform: scale(var(--press-scale)); transition-duration: 0s; }
+}
+
+/* Action sheet (ACT-01, components/ActionSheet.svelte): UIAlertController
+   .actionSheet — a titled group of actions and a separate Cancel */
+.actsheet { position: absolute; inset: 0; z-index: var(--z-ctx); }
+.actsheet__scrim { position: absolute; inset: 0; background: var(--scrim); }
+.actsheet__box {
+  position: absolute; left: var(--gutter); right: var(--gutter); bottom: calc(var(--safe-bottom) + var(--s-2));
+  display: flex; flex-direction: column; gap: var(--s-2);
+  max-width: 480px; margin: 0 auto;
+}
+.actsheet__group {
+  border-radius: 14px; overflow: hidden;
+  background: color-mix(in srgb, var(--surface-2) 96%, transparent);
+  -webkit-backdrop-filter: var(--glass-blur); backdrop-filter: var(--glass-blur);
+}
+.actsheet__head { padding: var(--s-4) var(--s-4) var(--s-3); text-align: center; display: flex; flex-direction: column; gap: 4px; }
+.actsheet__title { font: 600 calc(13 * var(--tu))/1.3 var(--font-ui); color: var(--text-faint); }
+.actsheet__msg { font: 400 calc(13 * var(--tu))/1.35 var(--font-ui); color: var(--text-faint); }
+.actsheet__btn {
+  position: relative; display: grid; place-items: center; width: 100%; min-height: 56px; padding: var(--s-2) var(--s-4);
+  font: 400 calc(17 * var(--tu))/1.2 var(--font-ui); color: var(--gold); text-align: center;
+  transition: background-color var(--dur-base) var(--ease-out);
+}
+.actsheet__head + .actsheet__btn::before, .actsheet__btn + .actsheet__btn::before { content: ""; position: absolute; top: 0; left: 0; right: 0; height: 1px; background: var(--line); }
+.actsheet__btn--danger { color: var(--danger); }
+.actsheet__btn--cancel { font-weight: 600; }
+.actsheet__btn.pressing { background: var(--surface-press); transition-duration: 0s; }
+.actsheet__btn:focus-visible { outline: 2px solid var(--gold-line); outline-offset: -2px; }
+
+/* Toast */
+.toast {
+  position: absolute; left: 50%; z-index: var(--z-toast);
+  bottom: calc(var(--tabbar-bottom) + var(--tabbar-h) + var(--s-5));
+  transform: translateX(-50%);
+  display: flex; align-items: center; gap: var(--s-3);
+  width: max-content; max-width: var(--toast-max-w);
+  min-height: var(--tap); padding: 10px var(--s-2) 10px var(--s-4);
+  border-radius: 22px;   /* = a pill at the 44 pt single line; a rounded rect when it wraps (TST-01) */
+  text-align: left;
+  touch-action: none;    /* drag down to dismiss (Toast.svelte) */
+  background: var(--glass-bg-strong);
+  -webkit-backdrop-filter: var(--glass-blur); backdrop-filter: var(--glass-blur);
+  box-shadow: inset 0 0 0 1px var(--glass-line), var(--shadow-float);
+  font: var(--t-callout);
+}
+.toast--no-tabbar { bottom: calc(var(--safe-bottom) + var(--s-5)); }
+/* offline: the banner sits at tab bar + 12 and is ~65 tall — the toast goes over it */
+.toast--above-banner { bottom: calc(var(--tabbar-bottom) + var(--tabbar-h) + var(--s-3) + 76px); }
+.toast--no-tabbar.toast--above-banner { bottom: calc(var(--safe-bottom) + var(--s-3) + 76px); }
+.toast__icon { color: var(--gold); display: grid; }
+.toast--bad .toast__icon { color: var(--danger); }
+.toast__text { white-space: nowrap; }
+.toast__action { height: var(--tap); padding: 0 var(--s-3); color: var(--gold); font-weight: 600; }
+
+/* Offline banner — sits just above the tab bar so the header stays usable */
+.banner {
+  position: absolute; z-index: var(--z-banner);
+  left: var(--s-3); right: var(--s-3);
+  bottom: calc(var(--tabbar-bottom) + var(--tabbar-h) + var(--s-3));
+  display: flex; align-items: center; gap: var(--s-3);
+  padding: var(--s-2) var(--s-2) var(--s-2) var(--s-4);
+  border-radius: var(--r-card);
+  background: var(--glass-bg-strong);
+  -webkit-backdrop-filter: var(--glass-blur); backdrop-filter: var(--glass-blur);
+  box-shadow: inset 0 0 0 1px var(--glass-line), var(--shadow-float);
+}
+/* a pushed page has no tab bar (NAV-17): the banner drops to the bottom edge */
+.banner--low { bottom: max(var(--s-3), var(--safe-bottom)); }
+.banner__icon { color: var(--danger); display: grid; }
+.banner__text { flex: 1; min-width: 0; font: var(--t-caption); color: var(--text-dim); }
+.banner__title { display: block; font: 600 calc(14 * var(--tu))/1.3 var(--font-ui); color: var(--text); }
+
+/* ------------------------------------------------ 15. Skeletons & states */
+/* Skeletons (MOT-06): still for --dur-skel-wait (a fast load never pulses), three breaths,
+   then they rest at 0.7 — an endless pulse reads as "stuck" and kept the compositor busy.
+   The keyframes start and end on the resting value and there is no fill, so the finished
+   animation drops out of getAnimations() with no jump. */
+.skel { background: var(--surface-2); border-radius: var(--r-xs); opacity: 0.7; animation: vr-pulse var(--dur-skel-pulse) var(--ease-inout) var(--dur-skel-wait) 3; }
+.skel--poster { aspect-ratio: var(--ratio-poster); border-radius: var(--r-poster); }
+.skel--thumb { aspect-ratio: var(--ratio-thumb); border-radius: var(--r-thumb); }
+.skel--line { height: 12px; border-radius: var(--r-pill); }
+.skel--line-lg { height: 26px; border-radius: var(--r-sm); }
+.skel--pill { height: var(--btn-h); border-radius: var(--r-pill); }
+.skel--circle { border-radius: var(--r-pill); }
+.skel--hero { position: absolute; inset: 0; border-radius: 0; background: var(--surface-1); }
+.skel-stack { display: flex; flex-direction: column; gap: var(--s-2); }
+@keyframes vr-pulse { 0%, 100% { opacity: 0.7; } 50% { opacity: 1; } }
+/* Inside a page use `use:fadeIn` (lib/safe.js) for content replacing a skeleton, not this class:
+   routes toggle [hidden], and un-hiding restarts a CSS animation — the fade replayed on every
+   pop/tab switch back to the page. `.fade-in` is only for elements that never sit in a route. */
+.fade-in { animation: vr-fade-in var(--dur-fast) linear; }   /* short fade: linear (tokens.css pairs) */
+@keyframes vr-fade-in { from { opacity: 0; } }
+
+.state {
+  display: flex; flex-direction: column; align-items: center; gap: var(--s-3);
+  padding: var(--s-8) var(--s-8); text-align: center;
+}
+.state__icon { display: grid; place-items: center; width: 64px; height: 64px; border-radius: var(--r-pill); background: var(--surface-2); color: var(--text-dim); margin-bottom: var(--s-1); }
+.state__icon .i { width: 28px; height: 28px; }
+.state--error .state__icon { background: var(--danger-soft); color: var(--danger); }
+.state__title { font: var(--t-heading); letter-spacing: var(--t-heading-ls); }
+.state__text { font: var(--t-body); color: var(--text-dim); max-width: 300px; }
+.state__actions { display: flex; gap: var(--s-3); margin-top: var(--s-2); }
+.state--fill { position: absolute; inset: 0; justify-content: center; padding-bottom: var(--page-bottom); }
+.state--card { margin: var(--s-4) var(--gutter) 0; border-radius: var(--r-card); background: var(--surface-1); padding: var(--s-6) var(--s-5); }
+
+/* ------------------------------------------------ 16. Notifications */
+.notif { position: relative; display: flex; align-items: center; gap: var(--s-3); padding: var(--s-3) var(--s-4) var(--s-3) var(--gutter); transition: background-color var(--dur-base) var(--ease-out); }
+.notif.pressing, .notif.is-pressed { background: var(--surface-2); transition-duration: 0s; }
+.notif--unseen::before { content: ""; position: absolute; left: 7px; top: 50%; width: 7px; height: 7px; margin-top: -3.5px; border-radius: var(--r-pill); background: var(--gold); }
+.notif__art { position: relative; width: var(--mini-poster-w); aspect-ratio: var(--ratio-poster); border-radius: var(--r-sm); overflow: hidden; flex: none; }
+.notif__art > .art { position: absolute; inset: 0; }
+.notif__main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.notif__title { font: var(--t-headline); letter-spacing: var(--t-headline-ls); font-size: calc(16 * var(--tu)); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.notif__sub { font: var(--t-callout); color: var(--text-dim); }
+.notif__time { font: var(--t-caption); font-variant-numeric: tabular-nums; color: var(--text-faint); }
+.notif__trail { flex: none; display: flex; align-items: center; gap: var(--s-2); }
+.notif__date { display: flex; flex-direction: column; align-items: flex-end; font: var(--t-caption); color: var(--text-faint); text-align: right; }
+.notif__date strong { font: 600 calc(14 * var(--tu))/1.2 var(--font-ui); color: var(--text); }
+
+/* ------------------------------------------------ 17. Player */
+.player { position: absolute; inset: 0; overflow: hidden; background: #000; color: var(--text); -webkit-user-select: none; user-select: none; }
+.player__video { position: absolute; inset: 0; }
+.player__video--dim { opacity: 0.45; }
+/* PGS canvas sits here; nothing permanent may cover this band */
+.player__subs { position: absolute; left: 0; right: 0; bottom: 0; height: var(--subs-band); display: flex; align-items: flex-start; justify-content: center; pointer-events: none; }
+.player__subtext { font: 600 19px/1.25 var(--font-ui); color: #fff; text-align: center; text-shadow: 0 0 3px #000, 0 0 3px #000, 0 2px 6px rgba(0, 0, 0, 0.8); }
+.player__subs--raised { transform: translateY(calc(var(--skip-raise) * -1 + var(--subs-band))); }
+
+.player__controls { position: absolute; inset: 0; transition: opacity var(--dur-base) var(--ease-out); }
+.player__controls--hidden { opacity: 0; pointer-events: none; }
+.player__scrim { position: absolute; left: 0; right: 0; pointer-events: none; }
+.player__scrim--top { top: 0; height: 132px; background: var(--scrim-player-top); }
+.player__scrim--bottom { bottom: 0; height: 168px; background: var(--scrim-player-bottom); }
+.player__top {
+  position: absolute; top: var(--player-pad); left: var(--safe-left); right: var(--safe-right);
+  display: flex; align-items: center; gap: var(--s-3);
+}
+.player__titles { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.player__show { font: var(--t-micro); letter-spacing: var(--t-micro-ls); text-transform: uppercase; color: var(--text-faint); }
+.player__ep { font: var(--t-headline); letter-spacing: var(--t-headline-ls); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.player__tools { display: flex; gap: var(--s-2); }
+.player__center {
+  position: absolute; left: 50%; top: 50%; transform: translate(-50%, -58%);
+  display: flex; align-items: center; gap: var(--s-12);
+}
+.player__bottom {
+  position: absolute; left: var(--safe-left); right: var(--safe-right); bottom: var(--safe-bottom);
+  display: flex; flex-direction: column; gap: var(--s-1);
+}
+.player__row { display: flex; align-items: center; gap: var(--s-2); }
+.player__spacer { flex: 1; }
+
+/* Transport button */
+.pbtn {
+  position: relative; display: grid; place-items: center; flex: none;
+  width: var(--player-btn); height: var(--player-btn); border-radius: var(--r-pill);
+  color: #fff;
+  background: var(--glass-bg);
+  -webkit-backdrop-filter: var(--glass-blur); backdrop-filter: var(--glass-blur);
+  box-shadow: inset 0 0 0 1px var(--glass-line);
+  transition: transform var(--dur-release) var(--spring-snappy);
+}
+.pbtn.pressing, .pbtn.is-pressed { transform: scale(var(--press-scale-sm)); transition: transform var(--dur-press) var(--ease-out); }
+.pbtn--lg { width: var(--player-btn-lg); height: var(--player-btn-lg); }
+.pbtn--lg .i { width: var(--icon-lg); height: var(--icon-lg); }
+
+/* Player chip (Audio / Subtitles / Chapters) */
+.pchip {
+  position: relative; display: inline-flex; align-items: center; gap: 7px; flex: none;
+  height: var(--pchip-h); padding: 0 var(--s-3); border-radius: var(--r-pill);
+  font: 600 calc(13 * var(--tu))/1 var(--font-ui); color: var(--text); white-space: nowrap;
+  background: var(--glass-bg);
+  -webkit-backdrop-filter: var(--glass-blur); backdrop-filter: var(--glass-blur);
+  box-shadow: inset 0 0 0 1px var(--glass-line);
+  transition: transform var(--dur-release) var(--spring-snappy);
+}
+.pchip::after { content: ""; position: absolute; left: 0; right: 0; top: -2px; bottom: -2px; }
+.pchip .i { width: 18px; height: 18px; }
+.pchip__dim { color: var(--text-faint); font-weight: 500; }
+.pchip.pressing, .pchip.is-pressed { transform: scale(var(--press-scale)); transition: transform var(--dur-press) var(--ease-out); }
+
+/* Scrubber */
+.scrubber { display: flex; align-items: center; gap: var(--s-3); height: var(--tap); }
+.scrubber__time { font: var(--t-num); font-variant-numeric: tabular-nums; color: var(--text); min-width: 44px; }
+.scrubber__time--end { text-align: right; color: var(--text-dim); }
+.scrubber__track {
+  position: relative; flex: 1;
+  height: var(--scrub-h); border-radius: var(--r-pill);
+  background: var(--track-dim);
+  transition: height var(--dur-fast) var(--ease-out);
+}
+.scrubber__buffer { position: absolute; left: 0; top: 0; bottom: 0; border-radius: inherit; width: calc(var(--b, 0) * 100%); background: var(--track-buffer); }
+/* Fill and thumb move by transform, not width/left: a drag changes --p on
+   every pointer move, and a width/left change re-laid the track out each time
+   (the drag handlers then read its geometry back, forcing that layout). The
+   fill is a full-width bar slid left inside a pill-clipped box — its rounded
+   start is the clip's, its square end sits under the thumb; the thumb rides a
+   full-width box, so translateX(100%) is the track's width. */
+.scrubber__fillclip { position: absolute; inset: 0; border-radius: inherit; overflow: hidden; }
+.scrubber__fill { position: absolute; inset: 0; background: var(--gold); transform: translateX(calc((var(--p, 0) - 1) * 100%)); will-change: transform; }
+.scrubber__thumbpos { position: absolute; inset: 0; transform: translateX(calc(var(--p, 0) * 100%)); will-change: transform; pointer-events: none; }
+.scrubber__tick { position: absolute; top: 0; bottom: 0; left: calc(var(--at) * 100%); width: 2px; margin-left: -1px; background: rgba(0, 0, 0, 0.7); }
+.scrubber__mark { position: absolute; top: 0; bottom: 0; left: calc(var(--from) * 100%); width: calc((var(--to) - var(--from)) * 100%); background: rgba(230, 180, 80, 0.35); } /* intro / credits segment */
+.scrubber__thumb {
+  position: absolute; top: 50%; left: 0;
+  width: var(--scrub-thumb); height: var(--scrub-thumb); margin: calc(var(--scrub-thumb) / -2) 0 0 calc(var(--scrub-thumb) / -2);
+  border-radius: var(--r-pill); background: #fff; box-shadow: 0 1px 6px rgba(0, 0, 0, 0.5);
+  transition: transform var(--dur-fast) var(--ease-out);
+}
+.scrubber--active .scrubber__track { height: var(--scrub-h-active); }
+.scrubber--active .scrubber__thumb { transform: scale(1.45); }
+.scrubber--active .scrubber__time { color: var(--gold); }
+
+/* Trickplay preview (above the thumb while dragging) */
+.trick {
+  position: absolute; bottom: calc(100% + var(--s-4)); left: calc(var(--p, 0) * 100%);
+  transform: translateX(-50%);
+  display: flex; flex-direction: column; align-items: center; gap: 6px;
+  pointer-events: none;
+}
+.trick__frame { position: relative; width: var(--trick-w); height: var(--trick-h); border-radius: var(--r-thumb); overflow: hidden; box-shadow: 0 0 0 2px #fff, var(--shadow-float); }
+.trick__frame > .art { position: absolute; inset: 0; }
+.trick__time { font: 700 calc(15 * var(--tu))/1 var(--font-ui); font-variant-numeric: tabular-nums; text-shadow: 0 1px 6px rgba(0, 0, 0, 0.7); }
+.trick__chapter { font: var(--t-caption); color: var(--text-dim); text-shadow: 0 1px 6px rgba(0, 0, 0, 0.7); }
+
+/* Skip Intro / Recap / Credits — stays visible when controls hide */
+.skipchip {
+  position: absolute; z-index: var(--z-toast);
+  right: calc(var(--safe-right) + var(--s-2)); bottom: calc(var(--subs-band) + var(--s-2));
+  display: inline-flex; align-items: center; gap: var(--s-2);
+  height: var(--tap); padding: 0 var(--s-5) 0 var(--s-4);
+  border-radius: var(--r-pill);
+  background: rgba(243, 239, 230, 0.94); color: var(--text-on-light);
+  font: var(--t-button-sm); letter-spacing: -0.01em;
+  box-shadow: var(--shadow-float);
+  transition: transform var(--dur-release) var(--spring-snappy);
+}
+.skipchip .i { width: 18px; height: 18px; }
+.skipchip.pressing, .skipchip.is-pressed { transform: scale(var(--press-scale)); transition: transform var(--dur-press) var(--ease-out); }
+.skipchip--raised { bottom: calc(var(--safe-bottom) + var(--skip-raise)); }
+
+/* Double-tap seek feedback */
+.seekflash {
+  position: absolute; top: 0; bottom: 0; width: 38%;
+  display: grid; place-items: center; align-content: center; gap: 6px;
+  background: rgba(255, 255, 255, 0.10);
+  font: 700 calc(15 * var(--tu))/1 var(--font-ui); font-variant-numeric: tabular-nums;
+  pointer-events: none;
+}
+.seekflash--right { right: 0; border-radius: 50% 0 0 50% / 50% 0 0 50%; }
+.seekflash--left { left: 0; border-radius: 0 50% 50% 0 / 0 50% 50% 0; }
+.seekflash__chev { display: flex; }
+.seekflash__chev .i { width: 20px; height: 20px; margin: 0 -5px; }
+
+/* Up Next card */
+.upnext {
+  position: absolute; z-index: var(--z-toast);
+  right: calc(var(--safe-right) + var(--s-2)); bottom: calc(var(--safe-bottom) + var(--s-4));
+  width: var(--upnext-w);
+  display: grid; grid-template-columns: 124px minmax(0, 1fr); gap: var(--s-3);
+  padding: var(--s-3);
+  border-radius: var(--r-card);
+  background: var(--glass-bg-strong);
+  -webkit-backdrop-filter: var(--glass-blur); backdrop-filter: var(--glass-blur);
+  box-shadow: inset 0 0 0 1px var(--glass-line), var(--shadow-float);
+}
+.upnext__thumb { position: relative; aspect-ratio: var(--ratio-thumb); border-radius: var(--r-sm); overflow: hidden; }
+.upnext__thumb > .art { position: absolute; inset: 0; }
+.upnext__ring { position: absolute; inset: 0; display: grid; place-items: center; background: rgba(0, 0, 0, 0.28); }
+.upnext__ring .ring { --ring-size: 40px; }
+.upnext__ring .ring__svg { stroke-width: 2.5; }
+.upnext__main { min-width: 0; display: flex; flex-direction: column; justify-content: center; gap: 3px; }
+.upnext__eyebrow { font: var(--t-micro); letter-spacing: var(--t-micro-ls); text-transform: uppercase; color: var(--gold); font-variant-numeric: tabular-nums; }
+.upnext__title { font: 600 calc(15 * var(--tu))/1.25 var(--font-ui); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.upnext__sub { font: var(--t-caption); color: var(--text-faint); }
+.upnext__actions { grid-column: 1 / -1; display: flex; gap: var(--s-2); }
+
+/* Center cards: loading / buffering / error */
+.pcard {
+  position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%);
+  width: var(--pcard-w); display: flex; flex-direction: column; align-items: center; gap: var(--s-3);
+  padding: var(--s-5) var(--s-6);
+  border-radius: var(--r-sheet);
+  background: var(--glass-bg-strong);
+  -webkit-backdrop-filter: var(--glass-blur); backdrop-filter: var(--glass-blur);
+  box-shadow: inset 0 0 0 1px var(--glass-line), var(--shadow-float);
+  text-align: center;
+}
+.pcard__row { display: flex; align-items: center; gap: var(--s-3); font: var(--t-headline); }
+.pcard__title { font: var(--t-headline); }
+.pcard__text { font: var(--t-callout); color: var(--text-dim); }
+.pcard__hint { font: var(--t-caption); color: var(--text-faint); max-width: 300px; }
+.pcard__icon { display: grid; place-items: center; width: 48px; height: 48px; border-radius: var(--r-pill); background: var(--danger-soft); color: var(--danger); }
+.pcard__actions { display: flex; gap: var(--s-2); margin-top: var(--s-1); }
+.pcard--bare { background: none; box-shadow: none; -webkit-backdrop-filter: none; backdrop-filter: none; }
+
+.pload { position: absolute; inset: 0; }
+.pload__art { position: absolute; inset: -20px; filter: blur(14px); opacity: 0.5; }
+.pload__body { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); display: flex; flex-direction: column; align-items: center; gap: var(--s-2); text-align: center; }
+.pload__title { font: var(--t-title); letter-spacing: var(--t-title-ls); }
+.pload__sub { font: var(--t-callout); color: var(--text-dim); }
+.pload__body .spinner { margin-top: var(--s-4); }
+
+/* Lock mode */
+.lockpill {
+  position: absolute; left: 50%; top: var(--s-4); transform: translateX(-50%);
+  display: flex; align-items: center; gap: var(--s-3);
+  height: var(--btn-h); padding: 0 var(--s-5) 0 var(--s-2);
+  border-radius: var(--r-pill);
+  background: var(--glass-bg-strong);
+  -webkit-backdrop-filter: var(--glass-blur); backdrop-filter: var(--glass-blur);
+  box-shadow: inset 0 0 0 1px var(--glass-line);
+}
+.lockpill__icon { display: grid; place-items: center; width: 36px; height: 36px; border-radius: var(--r-pill); background: var(--gold); color: var(--text-on-gold); }
+.lockpill__icon .i { width: 18px; height: 18px; }
+.lockpill__text { display: flex; flex-direction: column; gap: 2px; font: 600 calc(14 * var(--tu))/1.2 var(--font-ui); }
+.lockpill__text span { font: var(--t-caption); color: var(--text-faint); }
+
+/* Portrait player */
+.pport { position: absolute; inset: 0; background: var(--bg); overflow-y: auto; scrollbar-width: none; padding-bottom: calc(var(--safe-bottom) + var(--s-6)); }
+.pport__video { position: relative; margin-top: var(--safe-top); aspect-ratio: var(--ratio-thumb); background: #000; overflow: hidden; }
+.pport__video > .art { position: absolute; inset: 0; }
+.pport__overlay { position: absolute; inset: 0; background: rgba(0, 0, 0, 0.28); }
+.pport__close { position: absolute; top: var(--s-2); left: var(--s-2); }
+.pport__tools { position: absolute; top: var(--s-2); right: var(--s-2); display: flex; gap: var(--s-2); }
+.pport__center { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); display: flex; align-items: center; gap: var(--s-8); }
+.pport__center .pbtn { --player-btn: 44px; }
+.pport__center .pbtn--lg { --player-btn-lg: 60px; }
+.pport__scrub { position: absolute; left: var(--s-3); right: var(--s-3); bottom: 0; }
+.pport__scrub .scrubber__time { font-size: calc(11 * var(--tu)); min-width: 36px; }
+.pport__info { padding: var(--s-5) var(--gutter) 0; display: flex; flex-direction: column; gap: var(--s-3); }
+.pport__title { font: var(--t-title); letter-spacing: var(--t-title-ls); }
+.pport__meta { font: var(--t-callout); color: var(--text-dim); margin-top: calc(var(--s-2) * -1); }
+.pport__chips { display: flex; gap: var(--s-2); flex-wrap: wrap; }
+.pport__chips .pchip { background: var(--surface-2); box-shadow: none; -webkit-backdrop-filter: none; backdrop-filter: none; }
+
+.rotatehint {
+  display: flex; align-items: center; gap: var(--s-4);
+  margin: var(--s-5) var(--gutter) 0; padding: var(--s-4);
+  border-radius: var(--r-card); background: var(--surface-1);
+  box-shadow: inset 0 0 0 1px var(--line);
+}
+.rotatehint__icon { display: grid; place-items: center; width: 48px; height: 48px; border-radius: var(--r-pill); background: var(--gold-soft); color: var(--gold); flex: none; }
+/* Turns the phone twice, then rests turned (MOT-12): it sits beside a playing
+   film in portrait, and a looping animation would keep the display pipeline
+   running for the whole film. Remounts (and replays) on every return to
+   portrait. Rest pose = the reduced-motion pose below. The rest pose is the BASE
+   style and the fill is only `backwards` (the upright start during the delay):
+   once done the animation is out of effect and leaves getAnimations(), instead
+   of holding its end frame for the whole film. */
+.rotatehint__icon .i { transform: rotate(-90deg); animation: vr-rotate 1.2s var(--ease-inout) 600ms 3 alternate backwards; }
+.rotatehint__text { font: var(--t-callout); color: var(--text-dim); }
+.rotatehint__text strong { display: block; font: 600 calc(15 * var(--tu))/1.3 var(--font-ui); color: var(--text); }
+@keyframes vr-rotate { 0%, 25% { transform: rotate(0deg); } 75%, 100% { transform: rotate(-90deg); } }
+
+/* ------------------------------------------------ 18. Focus & motion preferences */
+/* Keyboard / Full Keyboard Access / Switch Control: one gold ring on every
+   control (touch never shows it — :focus-visible). */
+.iconbtn:focus-visible, .avatarbtn:focus-visible, .closebtn:focus-visible, .tabbar__item:focus-visible,
+.chip:focus-visible, .pill:focus-visible, .seg__opt:focus-visible, .switch:focus-visible, .action:focus-visible,
+.cast:focus-visible, .catcard:focus-visible, .option:focus-visible, .ctx__item:focus-visible, .notif:focus-visible,
+.episode:focus-visible, .pbtn:focus-visible, .pchip:focus-visible, .skipchip:focus-visible,
+.toast__action:focus-visible, .tile__add:focus-visible {
+  outline: 2px solid var(--gold); outline-offset: 2px;
+}
+@media (prefers-reduced-motion: reduce) {
+  .rotatehint__icon .i { animation: none; transform: rotate(-90deg); }
+  .dots__dot, .btn--status .btn__fill, .ring__value, .scrubber__track, .scrubber__thumb { transition: none; }
+}
+

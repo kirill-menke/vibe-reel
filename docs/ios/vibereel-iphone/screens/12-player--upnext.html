@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>Player — Up Next · VibeReel</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&amp;display=swap">
+<link rel="stylesheet" href="../tokens.css">
+<link rel="stylesheet" href="../components.css">
+</head>
+<body class="proto">
+<div class="device device--landscape" data-component="DeviceFrame" style="width: 852px; height: 393px">
+<div class="player" data-component="Player">
+  <div class="player__video art" style="--a1: #2a3238; --a2: #050607"></div>
+  <section class="upnext" role="dialog" aria-label="Up next" data-component="UpNextCard">
+    <a class="upnext__thumb" href="12-player--loading.html">
+      <div class="art" style="--a1: #8a7a6a; --a2: #15110e; --a3: #3a4a5a"></div>
+      <span class="upnext__ring"><span class="ring" style="--p: .7" data-component="ProgressRing"><svg class="ring__svg" viewBox="0 0 36 36"><circle class="ring__track" cx="18" cy="18" r="16" pathLength="100"></circle><circle class="ring__value" cx="18" cy="18" r="16" pathLength="100"></circle></svg><svg class="i i--sm i--fill" viewBox="0 0 24 24" style="position: relative; margin-left: 2px"><path d="M7.5 5.3v13.4a1 1 0 0 0 1.5.86l10.9-6.7a1 1 0 0 0 0-1.72L9 4.44a1 1 0 0 0-1.5.86z"></path></svg></span></span>
+    </a>
+    <div class="upnext__main">
+      <p class="upnext__eyebrow">Up next in 3 s</p>
+      <p class="upnext__title">E5 · Open Water</p>
+      <p class="upnext__sub">Undercurrent · 54 min</p>
+    </div>
+    <div class="upnext__actions">
+      <a class="btn btn--primary btn--sm btn--grow" href="12-player--loading.html"><svg class="i i--xs i--fill" viewBox="0 0 24 24"><path d="M7.5 5.3v13.4a1 1 0 0 0 1.5.86l10.9-6.7a1 1 0 0 0 0-1.72L9 4.44a1 1 0 0 0-1.5.86z"></path></svg><span>Play now</span></a>
+      <button class="btn btn--glass btn--sm" type="button"><span>Watch credits</span></button>
+    </div>
+  </section>
+</div>
+<div class="device__island"></div>
+<div class="device__home"></div>
+</div>
+</body>
+</html>

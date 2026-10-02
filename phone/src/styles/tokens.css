@@ -1,0 +1,307 @@
+/* Instrument Serif, self-hosted (SIL OFL 1.1 — see /fonts/OFL.txt). Split like
+   Google Fonts serves it: latin + latin-ext, regular + italic. */
+@font-face {
+  font-family: 'Instrument Serif'; font-style: normal; font-weight: 400; font-display: swap;
+  src: url(/fonts/InstrumentSerif-Regular-latin.woff2) format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: 'Instrument Serif'; font-style: normal; font-weight: 400; font-display: swap;
+  src: url(/fonts/InstrumentSerif-Regular-latin-ext.woff2) format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+@font-face {
+  font-family: 'Instrument Serif'; font-style: italic; font-weight: 400; font-display: swap;
+  src: url(/fonts/InstrumentSerif-Italic-latin.woff2) format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: 'Instrument Serif'; font-style: italic; font-weight: 400; font-display: swap;
+  src: url(/fonts/InstrumentSerif-Italic-latin-ext.woff2) format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+
+/* ==========================================================================
+   VibeReel · iPhone PWA · tokens.css
+   Every design decision lives here as a custom property on :root.
+   components.css only ever references these tokens.
+   ========================================================================== */
+
+:root {
+  color-scheme: dark;
+  font-size: 17px;
+
+  /* ---------------------------------------------------------------- Color */
+  /* Surfaces (near-black, very slightly warm so gold feels at home) */
+  --bg:               #0a0a0c;   /* page */
+  --surface-1:        #131316;   /* sheets, cards on bg */
+  --surface-2:        #1b1b20;   /* grouped lists, fields, chips */
+  --surface-3:        #26262c;   /* segmented track, switch off, skeleton */
+  --surface-press:    #303038;   /* pressed row / chip */
+  --line:             rgba(255, 255, 255, 0.08);   /* hairlines */
+  --line-strong:      rgba(255, 255, 255, 0.18);   /* outlines, grabber */
+
+  /* Text */
+  --text:             #f3efe6;                     /* primary, warm white */
+  --text-dim:         rgba(243, 239, 230, 0.72);   /* secondary (meta, overview) */
+  --text-faint:       rgba(243, 239, 230, 0.56);   /* tertiary (captions); 4.5:1 on --bg and --surface-1 */
+  --text-on-gold:     #1b1405;
+  --text-on-light:    #0a0a0c;
+
+  /* Accent */
+  --gold:             #e6b450;
+  --gold-press:       #c99a3d;
+  --gold-soft:        rgba(230, 180, 80, 0.15);   /* active tab / chip fill */
+  --gold-line:        rgba(230, 180, 80, 0.50);   /* active chip outline */
+
+  /* Status */
+  --danger:           #ff7a6b;
+  --danger-soft:      rgba(255, 122, 107, 0.14);
+  --ok:               #8fd19e;
+
+  /* Glass (chrome capsules over content) */
+  --glass-bg:         rgba(26, 26, 31, 0.50);
+  --glass-bg-strong:  rgba(18, 18, 22, 0.82);
+  --glass-line:       rgba(255, 255, 255, 0.13);
+  --glass-blur:       blur(22px) saturate(170%);
+  --glass-shadow:     0 10px 30px rgba(0, 0, 0, 0.35);
+  /* chips on artwork in tiles/rows (badges, quick-add, download ring): the
+     strong glass tint without the blur — a few hundred backdrop blurs per
+     grid cost more than they show at 82 %, so a touch more opaque instead */
+  --chip-bg:          rgba(18, 18, 22, 0.88);
+
+  /* Scrims */
+  --scrim:            rgba(0, 0, 0, 0.56);
+  --scrim-strong:     rgba(6, 6, 8, 0.78);
+  --scrim-ctx:        rgba(6, 6, 8, 0.42);    /* under a context menu, paired with blur */
+  --scrim-hero:       linear-gradient(180deg,
+                        rgba(10, 10, 12, 0.55) 0%,
+                        rgba(10, 10, 12, 0.00) 20%,
+                        rgba(10, 10, 12, 0.00) 42%,
+                        rgba(10, 10, 12, 0.80) 76%,
+                        #0a0a0c 100%);
+  --scrim-player-top:    linear-gradient(180deg, rgba(0, 0, 0, 0.66), rgba(0, 0, 0, 0));
+  --scrim-player-bottom: linear-gradient(0deg, rgba(0, 0, 0, 0.74), rgba(0, 0, 0, 0));
+  --track-dim:        rgba(255, 255, 255, 0.22);   /* progress/scrub track */
+  --track-buffer:     rgba(255, 255, 255, 0.40);
+
+  /* ----------------------------------------------------------- Typography */
+  --font-ui:      -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display", "Helvetica Neue", system-ui, sans-serif;
+  --font-display: "Instrument Serif", "New York", ui-serif, Georgia, serif;   /* Google Font */
+
+  /* Type unit: 1/17 of the root size, i.e. 1px at iOS's default text size.
+     The root is 17px (iOS's body size at the default "Large" setting); on a
+     touch device with WebKit's system fonts it is the user's Dynamic Type body
+     size instead (`font: -apple-system-body`, below :root), so Settings →
+     Display → Text Size reaches the app. Held to 88–124 %: the layout has
+     fixed heights (buttons, rows, tiles) that stay intact up to there. Every
+     font size in the app is `calc(N * var(--tu))`; timecodes/captions in the
+     player that must not reflow may stay px. */
+  --tu: clamp(0.88px, 1rem / 17, 1.24px);
+
+  /* Roles: font shorthand (weight size/line-height family) + tracking.
+     Wordmark, rank badge and poster lettering stay px: brand / art, drawn
+     inside fixed shapes. */
+  --t-wordmark:      400 30px/1 var(--font-display);    --t-wordmark-ls: -0.01em;
+  --t-hero:          400 calc(42 * var(--tu))/1.0 var(--font-display);  --t-hero-ls: -0.01em;     /* home hero title */
+  --t-title:         400 calc(36 * var(--tu))/1.02 var(--font-display); --t-title-ls: -0.005em;   /* detail title */
+  --t-large:         400 calc(34 * var(--tu))/1.05 var(--font-display); --t-large-ls: 0;          /* tab root title: Movies, Search */
+  --t-heading:       600 calc(20 * var(--tu))/1.2 var(--font-ui);       --t-heading-ls: -0.015em; /* sheet titles, big empty-state title */
+  --t-headline:      600 calc(17 * var(--tu))/1.25 var(--font-ui);      --t-headline-ls: -0.01em; /* rail titles, row titles */
+  --t-body:          400 calc(15 * var(--tu))/1.45 var(--font-ui);      --t-body-ls: -0.005em;
+  --t-callout:       500 calc(14 * var(--tu))/1.35 var(--font-ui);      --t-callout-ls: -0.005em; /* meta lines, chips */
+  --t-tile:          500 calc(13 * var(--tu))/1.25 var(--font-ui);      --t-tile-ls: -0.005em;    /* tile titles */
+  --t-caption:       500 calc(12 * var(--tu))/1.3 var(--font-ui);       --t-caption-ls: 0.005em;
+  --t-micro:         700 calc(11 * var(--tu))/1 var(--font-ui);         --t-micro-ls: 0.06em;     /* uppercase eyebrows, section labels (11: iOS's smallest legible size) */
+  --t-badge:         600 calc(11 * var(--tu))/1 var(--font-ui);         --t-badge-ls: -0.005em;   /* badges on art: "Not in library" */
+  --t-button:        600 calc(16 * var(--tu))/1 var(--font-ui);         --t-button-ls: -0.01em;
+  --t-button-sm:     600 calc(14 * var(--tu))/1 var(--font-ui);
+  --t-tab:           600 10px/1 var(--font-ui);         --t-tab-ls: 0.01em;  /* px: iOS tab-bar labels don't scale either */
+  --t-input:         400 max(16px, calc(17 * var(--tu)))/1.2 var(--font-ui); /* >= 16px so iOS never zooms */
+  --t-num:           600 calc(13 * var(--tu))/1 var(--font-ui);         /* timecodes. The `font` shorthand resets font-variant-numeric — declare tabular-nums AFTER it (MOT-10) */
+  --t-rank:          400 22px/1 var(--font-display);
+  --t-art:           400 17px/1.05 var(--font-display); /* placeholder poster lettering */
+
+  /* ------------------------------------------------------------- Spacing */
+  --s-1: 4px;   --s-2: 8px;   --s-3: 12px;  --s-4: 16px;  --s-5: 20px;
+  --s-6: 24px;  --s-7: 28px;  --s-8: 32px;  --s-10: 40px; --s-12: 48px; --s-16: 64px;
+  --gutter:        20px;    /* page side padding */
+  --rail-gap:      10px;
+  --grid-gap:      10px;    /* column gap in poster grids */
+  --grid-row-gap:  18px;
+  --section-gap:   28px;    /* between rails / sections */
+
+  /* --------------------------------------------------------------- Radii */
+  --r-xs:     4px;     /* badges */
+  --r-sm:     6px;     /* tech badges, mini posters */
+  --r-poster: 8px;
+  --r-thumb:  10px;    /* landscape thumbs, stills */
+  --r-card:   14px;    /* grouped lists, category cards */
+  --r-field:  12px;
+  --r-sheet:  22px;
+  --r-pill:   999px;
+  --r-device: 55px;    /* iPhone 15 screen corner, prototype frame */
+
+  /* ------------------------------------------------------- Shadow / depth */
+  --shadow-poster: 0 6px 18px rgba(0, 0, 0, 0.45);
+  --shadow-float:  0 12px 32px rgba(0, 0, 0, 0.45);
+  --shadow-sheet:  0 -10px 40px rgba(0, 0, 0, 0.5);
+  --shadow-lift:   0 24px 60px rgba(0, 0, 0, 0.6);
+
+  /* ------------------------------------------------------------- Z-layers */
+  --z-content:  0;
+  --z-media-ui: 5;     /* overlays inside a tile / hero */
+  --z-header:   10;    /* navbar / topbar */
+  --z-tabbar:   20;
+  --z-route-deep: 21; /* pushed pages: above the tab bar (NAV-17), below the banner */
+  --z-banner:   30;    /* offline banner */
+  --z-scrim:    40;
+  --z-sheet:    50;
+  --z-ctx:      75;    /* long-press context menu, action sheet — above a lingering toast (TST-01) */
+  --z-toast:    70;
+  --z-device:   100;   /* prototype frame only */
+
+  /* ---------------------------------------------------------------- Motion */
+  --dur-press:  110ms;   /* pressed scale */
+  --dur-fast:   180ms;   /* fades, chip toggles */
+  --dur-base:   260ms;   /* controls show/hide, toasts */
+  --dur-push:   380ms;   /* page push / pop */
+  --dur-sheet:  440ms;   /* Login modal present (router sheets present on --dur-spring) */
+  --dur-hero:   6000ms;  /* hero auto-advance interval (not an animation) */
+  --dur-hide:   3500ms;  /* player controls auto-hide delay */
+  --ease-out:    cubic-bezier(0.22, 0.9, 0.3, 1);
+  --ease-in:     cubic-bezier(0.4, 0, 1, 1);
+  --ease-inout:  cubic-bezier(0.65, 0, 0.35, 1);
+  --ease-sheet:  cubic-bezier(0.32, 0.72, 0, 1);    /* iOS sheet / push curve */
+  --press-scale: 0.96;
+
+  /* ---- Motion v2 (docs/ios/polish/motion-system.md MOT-01; JS mirror: lib/safe.js) ----
+     Springs follow SwiftUI's parameterisation: damping ratio ζ = 1 − bounce, mass 1,
+     from rest. A linear() curve is time-normalised, so its shape depends only on ζ and
+     the duration token sets the speed. Durations are the SETTLE time (|1 − x| < 0.2 %);
+     the motion reads as finished at ~55 % of it.
+       --spring-smooth  ζ 1.0  (.smooth)   no overshoot   toast in, sliding indicators
+       --spring-snappy  ζ 0.85 (.snappy)   0.6 %          press release, knobs, thumbs
+       --spring-bouncy  ζ 0.7  (.bouncy)   4.6 %          badge pop, context-menu lift
+     Pairs: press in = --dur-press + --ease-out · release = --dur-release + --spring-snappy
+     · row highlight off = --dur-base + --ease-out (on: instant) · cross-fades ≥ 200 ms =
+     --ease-standard · short fades ≤ 180 ms stay linear. */
+  --ease-standard:   cubic-bezier(0.42, 0, 0.58, 1);  /* UIKit's default UIView curve */
+  /* springs: fallbacks for iOS 17.0–17.1 (no linear()); the real curves are below */
+  --spring-smooth:   cubic-bezier(0.22, 0.9, 0.3, 1);
+  --spring-snappy:   cubic-bezier(0.2, 0.9, 0.25, 1.02);
+  --spring-bouncy:   cubic-bezier(0.34, 1.3, 0.64, 1);
+  --dur-spring-quick: 420ms;  /* response 0.3 s: press release, switch knob, segment thumb, badge pop */
+  --dur-spring:       700ms;  /* response 0.5 s: toast in, context-menu lift, sliding indicators */
+  --dur-release:      var(--dur-spring-quick);
+  --dur-hold:         350ms;  /* long-press build-up: from 150 ms of stillness to the menu at 500 ms (lib/gestures.js) */
+  --dur-img:          220ms;  /* image fade-in once decoded */
+  --press-dim:        0.14;   /* black veil over pressed artwork */
+  --press-scale-sm:   0.9;    /* small round controls: player transport, close, quick-add */
+  --press-delay:      70;     /* ms before a touch counts as a press — read by lib/press.js (unitless on purpose) */
+  --dim-delay:        200ms;  /* a re-query dims its old content only if still waiting after this (library.css .lib__dim) */
+  --dur-skel-wait:    400ms;  /* a skeleton stays still this long: loads under it never pulse (MOT-06) */
+  --dur-skel-pulse:   1.6s;   /* one skeleton breath; three, then it rests */
+
+  /* -------------------------------------------------- Sizes & aspect ratios */
+  --tap:            44px;   /* minimum touch target */
+  --icon:           24px;
+  --icon-sm:        20px;
+  --icon-xs:        16px;
+  --icon-stroke:    1.75;
+  --icon-lg:        32px;   /* player transport */
+
+  --ratio-poster:   2 / 3;
+  --ratio-thumb:    16 / 9;
+  --ratio-backdrop: 16 / 9;
+
+  --poster-w-rail:  116px;  /* poster tile in a rail */
+  --thumb-w-rail:   252px;  /* landscape tile in Continue Watching / Next Up */
+  --cast-w:         76px;
+  --still-w:        150px;  /* episode still */
+  --mini-poster-w:  44px;   /* rows: notifications, search suggestions */
+  --grid-cols:      3;
+
+  --hero-h:         572px;  /* home hero, includes status bar area */
+  --backdrop-h:     440px;  /* detail backdrop */
+  --topbar-h:       52px;
+  --tabbar-h:       54px;
+  --tabbar-item-w:  76px;
+  --btn-h:          50px;
+  --btn-h-sm:       36px;
+  --field-h:        50px;
+  --row-h:          52px;
+  --seg-h:          40px;
+  --progress-h:     3px;
+  --catcard-h:      164px;
+  --sheet-side-w:   560px;  /* landscape track picker */
+  --toast-max-w:    353px;
+  --avatar-sm:      32px;
+  --avatar:         36px;
+  --avatar-lg:      64px;
+  --person-photo:   132px;
+  --ring-size:      44px;
+  --ring-size-lg:   64px;
+  --ring-stroke:    3;
+  --tick-size:      22px;
+  --dot:            6px;
+  --dot-active-w:   18px;
+  --spinner:        22px;
+  --spinner-lg:     32px;
+  --catcard-poster-w: 58px;
+  --grabber-w:      36px;
+  --switch-w:       51px;
+  --switch-h:       31px;
+  --ctx-menu-w:     312px;
+  --panel-narrow-w: 380px;  /* chapters panel */
+
+  /* Player */
+  --scrub-h:        4px;
+  --scrub-h-active: 8px;
+  --scrub-thumb:    14px;
+  --trick-w:        224px;  /* 320×180 source shown at 70% */
+  --trick-h:        126px;
+  --subs-band:      15%;    /* bottom band kept free for PGS subtitles */
+  --player-btn:     52px;
+  --player-btn-lg:  72px;
+  --upnext-w:       320px;
+  --player-pad:     12px;   /* top inset of player chrome in landscape */
+  --pchip-h:        40px;
+  --pcard-w:        360px;
+  --skip-raise:     104px;  /* skip chip offset above the bottom controls when they are visible */
+
+  /* ----------------------------------------------------------- Safe areas */
+  --safe-top:    env(safe-area-inset-top, 0px);
+  --safe-right:  env(safe-area-inset-right, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  --safe-left:   env(safe-area-inset-left, 0px);
+  /* helpers */
+  --page-top:     calc(var(--safe-top) + var(--s-2));
+  --page-bottom:  calc(var(--safe-bottom) + var(--tabbar-h) + var(--s-8));   /* clears the floating tab bar */
+  --tabbar-bottom: max(var(--s-3), calc(var(--safe-bottom) - var(--s-3)));
+}
+
+/* The real spring curves where linear() exists (Safari 17.2+). Declared over the
+   fallbacks rather than as var() fallbacks: an invalid token would compute to
+   `ease`, not to the previous declaration. Regenerate with the generator in
+   motion-system.md (RDP of 400 samples at 0.004 tolerance). */
+@supports (transition-timing-function: linear(0, 1)) {
+  :root {
+    --spring-smooth: linear(0, 0.005 1.3%, 0.02 2.5%, 0.081 5.5%, 0.158 8.3%, 0.462 18.3%, 0.554 21.8%, 0.63 25%, 0.695 28.2%, 0.754 31.8%, 0.806 35.5%, 0.848 39.3%, 0.887 43.8%, 0.92 48.8%, 0.945 54.3%, 0.965 60.5%, 0.988 75.3%, 1);
+    --spring-snappy: linear(0, 0.005 1.3%, 0.022 2.8%, 0.055 4.5%, 0.098 6.3%, 0.186 9.3%, 0.51 19.3%, 0.609 22.8%, 0.689 26%, 0.758 29.3%, 0.816 32.5%, 0.863 35.8%, 0.903 39.3%, 0.937 43.3%, 0.965 47.8%, 0.985 52.8%, 0.997 58.3%, 1.006 71.8%, 1);
+    --spring-bouncy: linear(0, 0.006 1.3%, 0.028 2.8%, 0.063 4.3%, 0.108 5.8%, 0.218 8.8%, 0.585 17.8%, 0.692 20.8%, 0.776 23.5%, 0.848 26.3%, 0.911 29.3%, 0.959 32.3%, 0.995 35.3%, 1.017 38%, 1.034 41%, 1.046 47.8%, 1.004 76.8%, 1);
+  }
+}
+/* Reduce Motion: springs keep their timing but lose the overshoot */
+@media (prefers-reduced-motion: reduce) {
+  :root { --spring-snappy: var(--ease-out); --spring-bouncy: var(--ease-out); }
+}
+
+/* Dynamic Type: the root takes the iOS body size for the user's text-size
+   setting (17px at the default). Touch devices only — desktop Safari also
+   knows -apple-system-body (13px) and would shrink everything. */
+@media (pointer: coarse) {
+  @supports (font: -apple-system-body) {
+    :root { font: -apple-system-body; }   /* :root, to outrank the 17px above */
+  }
+}

@@ -1,0 +1,26 @@
+/* Tile → title page zoom (lib/zoom.js). The route itself is the card
+   (transform + clip-path, keyframed there); these are the shared-element
+   overlay and the states the route carries while it runs. */
+
+/* the page shows through to the overlay under it; the real hero is hidden
+   while the overlay stands in for it */
+.route.zoom-card > .screen { background: transparent; }
+.route.zoom-hide .detail__hero,
+.route.zoom-hide .person__photo { visibility: hidden; }
+
+.zoom-art {
+  position: absolute; left: 0; top: 0;
+  pointer-events: none;
+}
+.zoom-art__clip { position: absolute; inset: 0; }
+.zoom-art__poster,
+.zoom-art__bd,
+.zoom-art__scrim {
+  position: absolute; left: 0; top: 0;
+  transform-origin: 0 0;
+  max-width: none;
+}
+.zoom-art__poster { background: var(--surface-2); overflow: hidden; }
+.zoom-art__poster > .art { position: absolute; inset: 0; }
+.zoom-art__bd { display: block; object-fit: fill; }
+.zoom-art__scrim { background: var(--scrim-hero); }

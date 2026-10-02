@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>Player — chapters · VibeReel</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&amp;display=swap">
+<link rel="stylesheet" href="../tokens.css">
+<link rel="stylesheet" href="../components.css">
+</head>
+<body class="proto">
+<div class="device device--landscape" data-component="DeviceFrame" style="width: 852px; height: 393px">
+<div class="player" data-component="Player">
+  <div class="player__video player__video--dim art" style="--a1: #c9d4d8; --a2: #1a2630; --a3: #3a5566"></div>
+  <section class="panel panel--narrow" role="dialog" aria-label="Chapters" data-component="ChapterPicker">
+    <div class="panel__head">
+      <h2 class="panel__title">Chapters</h2>
+      <a class="closebtn" href="12-player--controls.html" aria-label="Close"><svg class="i" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18"></path></svg></a>
+    </div>
+    <div class="panel__body">
+      <button class="option" type="button" data-component="ChapterOption"><span class="option__thumb"><span class="art" style="--a1: #8a9aa0; --a2: #10161a"></span></span><span class="option__main"><span class="option__title">Chapter 1</span><span class="option__sub">Opening</span></span><span class="option__time">0:00</span></button>
+      <button class="option" type="button"><span class="option__thumb"><span class="art" style="--a1: #b0bcc0; --a2: #182228"></span></span><span class="option__main"><span class="option__title">Chapter 2</span><span class="option__sub">Arrival</span></span><span class="option__time">3:56</span></button>
+      <button class="option option--selected" type="button" aria-current="true"><span class="option__thumb"><span class="art" style="--a1: #c9d4d8; --a2: #1a2630"></span><div class="progress tile__progress" style="--p: .4; left: 4px; right: 4px; bottom: 4px"><div class="progress__fill"></div></div></span><span class="option__main"><span class="option__title">Chapter 3</span><span class="option__sub">The Woods · now playing</span></span><span class="option__time">11:50</span></button>
+      <button class="option" type="button"><span class="option__thumb"><span class="art" style="--a1: #d8a060; --a2: #2a1a10"></span></span><span class="option__main"><span class="option__title">Chapter 4</span><span class="option__sub">Camp</span></span><span class="option__time">20:12</span></button>
+      <button class="option" type="button"><span class="option__thumb"><span class="art" style="--a1: #9a7050; --a2: #180f0a"></span></span><span class="option__main"><span class="option__title">Chapter 5</span><span class="option__sub">The Lodge</span></span><span class="option__time">31:03</span></button>
+    </div>
+  </section>
+</div>
+<div class="device__island"></div>
+<div class="device__home"></div>
+</div>
+</body>
+</html>

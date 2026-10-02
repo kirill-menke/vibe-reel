@@ -1,0 +1,282 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="dark">
+<title>VibeReel Phone · frame</title>
+<link rel="icon" type="image/png" href="/icons/favicon-64.png">
+<!-- DEV SERVER ONLY: served at /__frame by phone/dev/plugin.js. See phone/DEV-CHROME.md.
+     Query: device=393|375|430  land=1  safe=0  chrome=0  rm=1  offline=1  allowplay=1  scale=1|fit  ui=0
+            path=/  (the app URL inside the frame) -->
+<style>
+  :root { --stage: #1c1c1f; --bezel: #0d0d0f; --rim: #3a3a40; --ui: #2a2a2f; --ui-2: #34343a; --text: #f2f2f4; --dim: #9a9aa2; --gold: #e6b450; }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; background: var(--stage); color: var(--text); font: 13px/1.3 -apple-system, system-ui, "Segoe UI", Roboto, sans-serif; overflow: hidden; }
+  body { display: grid; place-items: center; }
+  .holder { position: relative; }
+  .device { position: relative; overflow: hidden; isolation: isolate; background: #0a0a0c; border-radius: 55px;
+    box-shadow: 0 0 0 11px var(--bezel), 0 0 0 12px var(--rim), 0 40px 80px rgba(0,0,0,.5); transform-origin: 50% 50%; }
+  .device.se { border-radius: 4px; box-shadow: 0 0 0 14px var(--bezel), 0 0 0 15px var(--rim), 0 40px 80px rgba(0,0,0,.5); }
+  .device iframe { display: block; width: 100%; height: 100%; border: 0; background: #0a0a0c; }
+  .ov { position: absolute; z-index: 10; pointer-events: none; }
+  .island { top: 11px; left: 50%; width: 126px; height: 37px; margin-left: -63px; border-radius: 999px; background: #000; }
+  .land .island { top: 50%; left: 11px; width: 37px; height: 126px; margin: -63px 0 0 0; }
+  .status { top: 0; left: 0; right: 0; height: 54px; display: flex; align-items: center; justify-content: space-between;
+    padding: 4px 30px 0 52px; font: 600 16px/1 -apple-system, system-ui, sans-serif; letter-spacing: -.01em; color: #fff; }
+  .w430 .status { padding: 4px 34px 0 58px; }
+  .se .status { height: 20px; padding: 0 8px; font-size: 12px; justify-content: center; }
+  .se .status .glyphs { position: absolute; right: 8px; top: 4px; }
+  .glyphs { display: flex; align-items: center; gap: 6px; }
+  .glyphs svg { height: 12px; width: auto; fill: #fff; }
+  .se .glyphs svg { height: 10px; }
+  .land .status { display: none; }
+  .home { bottom: 8px; left: 50%; width: 139px; height: 5px; margin-left: -69.5px; border-radius: 999px; background: rgba(255,255,255,.9); }
+  .land .home { bottom: 7px; width: 200px; margin-left: -100px; }
+  .se .island, .se .home, .nochrome .ov { display: none; }
+
+  /* debug button + panel — outside the device, never in a device screenshot */
+  .fab { position: fixed; right: 16px; bottom: 16px; z-index: 50; width: 40px; height: 40px; border-radius: 50%; border: 1px solid var(--ui-2);
+    background: var(--ui); color: var(--gold); font: 700 14px/1 system-ui, sans-serif; cursor: pointer; }
+  .fab:hover { background: var(--ui-2); }
+  .panel { position: fixed; right: 16px; bottom: 64px; z-index: 50; width: 264px; max-height: calc(100vh - 80px); overflow: auto; padding: 12px;
+    border-radius: 12px; background: var(--ui); border: 1px solid var(--ui-2); box-shadow: 0 12px 40px rgba(0,0,0,.5); }
+  .panel[hidden] { display: none; }
+  .panel h3 { margin: 10px 0 6px; font: 600 11px/1 system-ui, sans-serif; letter-spacing: .06em; text-transform: uppercase; color: var(--dim); }
+  .panel h3:first-child { margin-top: 0; }
+  .row { display: flex; flex-wrap: wrap; gap: 6px; }
+  .panel button { flex: 1 1 auto; padding: 7px 8px; border-radius: 8px; border: 1px solid var(--ui-2); background: #1f1f23; color: var(--text); font: inherit; cursor: pointer; }
+  .panel button:hover { border-color: #55555d; }
+  .panel button.on { border-color: var(--gold); color: var(--gold); }
+  .panel .note { margin-top: 10px; color: var(--dim); font-size: 11px; }
+  .panel a { color: var(--gold); }
+</style>
+</head>
+<body>
+<div class="holder" id="holder">
+  <div class="device" id="device">
+    <iframe id="app" title="VibeReel phone app" allow="autoplay; fullscreen; picture-in-picture"></iframe>
+    <div class="ov island"></div>
+    <div class="ov status"><span>9:41</span><span class="glyphs"><svg viewBox="0 0 18 12"><rect x="0" y="8" width="3" height="4" rx="1"></rect><rect x="5" y="5.5" width="3" height="6.5" rx="1"></rect><rect x="10" y="3" width="3" height="9" rx="1"></rect><rect x="15" y="0" width="3" height="12" rx="1"></rect></svg><svg viewBox="0 0 27 12"><rect x=".5" y=".5" width="23" height="11" rx="3.3" fill="none" stroke="#fff" stroke-opacity=".45"></rect><rect x="2" y="2" width="17" height="8" rx="2"></rect><path d="M25 4v4c.8-.3 1.5-1.1 1.5-2S25.8 4.3 25 4z" fill-opacity=".45"></path></svg></span></div>
+    <div class="ov home"></div>
+  </div>
+</div>
+
+<button class="fab" id="fab" type="button" title="Dev options (d)" aria-label="Dev options">dev</button>
+<div class="panel" id="panel" hidden>
+  <h3>Device</h3>
+  <div class="row" data-group="device">
+    <button type="button" data-v="375">SE 375</button>
+    <button type="button" data-v="393">15 · 393</button>
+    <button type="button" data-v="430">Max 430</button>
+  </div>
+  <div class="row" style="margin-top:6px">
+    <button type="button" id="rot">Rotate (r)</button>
+    <button type="button" id="scale">Scale</button>
+  </div>
+  <h3>Environment</h3>
+  <div class="row">
+    <button type="button" id="safe">Safe areas</button>
+    <button type="button" id="chrome">Status bar</button>
+  </div>
+  <div class="row" style="margin-top:6px">
+    <button type="button" id="rm">Reduced motion</button>
+    <button type="button" id="off">Offline</button>
+  </div>
+  <div class="row" style="margin-top:6px">
+    <button type="button" id="play" title="Off: PlaybackInfo / Sessions/Playing answer 403, so nothing is recorded on the server">Allow real Jellyfin playback</button>
+  </div>
+  <h3>Gestures</h3>
+  <div class="row">
+    <button type="button" id="g-back">Edge swipe back</button>
+  </div>
+  <div class="row" style="margin-top:6px">
+    <button type="button" id="g-pin">Pinch in (−)</button>
+    <button type="button" id="g-pout">Pinch out (+)</button>
+  </div>
+  <h3>App</h3>
+  <div class="row">
+    <button type="button" id="reload">Reload</button>
+    <button type="button" id="login">Dev login</button>
+  </div>
+  <p class="note">Right-click = long-press · mouse drag = touch drag.<br><a href="/" target="_blank" rel="noopener">Open the app without the frame</a></p>
+</div>
+
+<script>
+(() => {
+  /* Device table: CSS px and the insets iOS reports (portrait / landscape). */
+  const DEVICES = {
+    375: { w: 375, h: 667, port: [20, 0, 0, 0], land: [0, 0, 0, 0], cls: 'se' },
+    393: { w: 393, h: 852, port: [59, 0, 34, 0], land: [0, 59, 21, 59], cls: 'w393' },
+    430: { w: 430, h: 932, port: [59, 0, 34, 0], land: [0, 59, 21, 59], cls: 'w430' }
+  };
+  const q = new URLSearchParams(location.search);
+  const st = {
+    device: DEVICES[q.get('device')] ? q.get('device') : '393',
+    land: q.get('land') === '1',
+    safe: q.get('safe') !== '0',
+    chrome: q.get('chrome') !== '0',
+    rm: q.get('rm') === '1',
+    offline: q.get('offline') === '1',
+    allowplay: q.get('allowplay') === '1',
+    scale: q.get('scale') === '1' ? '1' : 'fit',
+    ui: q.get('ui') !== '0',
+    path: q.get('path') || '/'
+  };
+  const $ = (id) => document.getElementById(id);
+  const dev = $('device');
+  const frame = $('app');
+  const panel = $('panel');
+  const fab = $('fab');
+  if (!st.ui) fab.hidden = true;
+
+  const insets = () => {
+    const d = DEVICES[st.device];
+    return st.safe ? (st.land ? d.land : d.port) : [0, 0, 0, 0];
+  };
+  const app = () => {
+    try {
+      return frame.contentWindow && frame.contentWindow.__reelDev;
+    } catch {
+      return null;
+    }
+  };
+
+  function syncUrl() {
+    const p = new URLSearchParams();
+    if (st.device !== '393') p.set('device', st.device);
+    if (st.land) p.set('land', '1');
+    if (!st.safe) p.set('safe', '0');
+    if (!st.chrome) p.set('chrome', '0');
+    if (st.rm) p.set('rm', '1');
+    if (st.offline) p.set('offline', '1');
+    if (st.allowplay) p.set('allowplay', '1');
+    if (st.scale === '1') p.set('scale', '1');
+    if (!st.ui) p.set('ui', '0');
+    if (st.path !== '/') p.set('path', st.path);
+    const s = p.toString();
+    history.replaceState(null, '', location.pathname + (s ? '?' + s : ''));
+  }
+
+  function fit() {
+    const d = DEVICES[st.device];
+    const w = st.land ? d.h : d.w;
+    const h = st.land ? d.w : d.h;
+    dev.style.width = w + 'px';
+    dev.style.height = h + 'px';
+    let k = 1;
+    if (st.scale === 'fit') k = Math.min(1, (innerHeight - 56) / (h + 24), (innerWidth - 56) / (w + 24));
+    dev.style.transform = k < 1 ? `scale(${k})` : '';
+    $('holder').style.width = w * k + 'px';
+    $('holder').style.height = h * k + 'px';
+    dev.style.position = 'absolute';
+    dev.style.left = (w * k - w) / 2 + 'px';
+    dev.style.top = (h * k - h) / 2 + 'px';
+    $('scale').textContent = st.scale === 'fit' ? (k < 1 ? `Fit (${Math.round(k * 100)} %)` : 'Fit (100 %)') : '100 %';
+  }
+
+  function render() {
+    const d = DEVICES[st.device];
+    dev.className = 'device ' + d.cls + (st.land ? ' land' : '') + (st.chrome ? '' : ' nochrome');
+    for (const b of panel.querySelectorAll('[data-group="device"] button')) b.classList.toggle('on', b.dataset.v === st.device);
+    $('rot').classList.toggle('on', st.land);
+    $('safe').classList.toggle('on', st.safe);
+    $('chrome').classList.toggle('on', st.chrome);
+    $('rm').classList.toggle('on', st.rm);
+    $('off').classList.toggle('on', st.offline);
+    $('play').classList.toggle('on', st.allowplay);
+    fit();
+    syncUrl();
+  }
+
+  function pushEnv() {
+    const a = app();
+    if (!a) return;
+    a.setSafe(insets());
+    a.setReducedMotion(st.rm ? true : null);
+    a.setOffline(st.offline);
+    a.setAllowPlay(st.allowplay);
+  }
+
+  function appUrl(extra) {
+    const p = new URLSearchParams();
+    p.set('safe', insets().join(','));
+    if (st.rm) p.set('rm', '1');
+    if (st.offline) p.set('offline', '1');
+    if (st.allowplay) p.set('allowplay', '1');
+    if (extra) p.set(extra, '');
+    const [path, pq] = st.path.split('?');
+    const base = new URLSearchParams(pq || '');
+    for (const [k, v] of p) base.set(k, v);
+    return path + '?' + base.toString().replace(/=(&|$)/g, '$1');
+  }
+
+  async function load(forceLogin) {
+    let login = !!forceLogin;
+    if (!login) {
+      let token = null;
+      try {
+        token = localStorage.getItem('reel.token');
+      } catch {}
+      if (!token) {
+        try {
+          login = (await fetch('/__devcreds', { cache: 'no-store' })).ok;
+        } catch {}
+      }
+    }
+    frame.src = appUrl(login ? 'devlogin' : null);
+  }
+  frame.addEventListener('load', pushEnv);
+
+  const set = (k, v) => {
+    st[k] = v;
+    render();
+    pushEnv();
+  };
+  panel.querySelector('[data-group="device"]').addEventListener('click', (e) => {
+    const b = e.target.closest('button');
+    if (b) set('device', b.dataset.v);
+  });
+  $('rot').onclick = () => set('land', !st.land);
+  $('scale').onclick = () => set('scale', st.scale === 'fit' ? '1' : 'fit');
+  $('safe').onclick = () => set('safe', !st.safe);
+  $('chrome').onclick = () => set('chrome', !st.chrome);
+  $('rm').onclick = () => set('rm', !st.rm);
+  $('off').onclick = () => set('offline', !st.offline);
+  $('play').onclick = () => set('allowplay', !st.allowplay);
+  $('g-back').onclick = () => app()?.swipeBack();
+  $('g-pin').onclick = () => app()?.pinch('in');
+  $('g-pout').onclick = () => app()?.pinch('out');
+  $('reload').onclick = () => frame.contentWindow.location.reload();
+  $('login').onclick = () => load(true);
+  fab.onclick = () => (panel.hidden = !panel.hidden);
+
+  addEventListener('keydown', (e) => {
+    if (e.ctrlKey || e.metaKey || e.altKey) return;
+    if (e.key === 'r') set('land', !st.land);
+    else if (e.key === 'd' && st.ui) panel.hidden = !panel.hidden;
+    else if (e.key === '+' || e.key === '=') app()?.pinch('out');
+    else if (e.key === '-') app()?.pinch('in');
+  });
+  addEventListener('resize', fit);
+
+  /* For scripts (javascript_tool / CDP) driving the frame from the top page. */
+  window.reelFrame = {
+    get app() {
+      return frame.contentWindow;
+    },
+    get dev() {
+      return app();
+    },
+    set: (k, v) => set(k, v),
+    state: () => ({ ...st, insets: insets() }),
+    reload: () => frame.contentWindow.location.reload(),
+    login: () => load(true)
+  };
+
+  render();
+  load(false);
+})();
+</script>
+</body>
+</html>

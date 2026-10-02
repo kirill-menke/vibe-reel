@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>Sign in · VibeReel</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&amp;display=swap">
+<link rel="stylesheet" href="../tokens.css">
+<link rel="stylesheet" href="../components.css">
+</head>
+<body class="proto">
+<div class="device" data-component="DeviceFrame" style="width: 393px; height: 852px">
+<div class="app">
+  <main class="screen screen--no-tabbar" data-component="LoginScreen">
+    <div class="login">
+      <div class="login__brand">
+        <p class="wordmark wordmark--xl" data-component="Wordmark">Vibe<span class="wordmark__accent">Reel</span></p>
+        <p class="login__tag">Sign in to your Jellyfin server</p>
+      </div>
+
+      <section data-component="RememberedAccounts">
+        <p class="group__label" style="padding-left: var(--s-4)">On this iPhone</p>
+        <div class="list" style="margin: 0">
+          <a class="row row--inset-sep" href="02-home.html" data-component="AccountRow">
+            <span class="avatar" style="--av: #e6b450">A</span>
+            <span class="row__main"><span class="row__title">Alice</span><span class="row__sub">nas.example.ts.net</span></span>
+            <span class="row__trail"><svg class="i i--sm" viewBox="0 0 24 24"><path d="m9 5 7 7-7 7"></path></svg></span>
+          </a>
+          <a class="row row--inset-sep" href="02-home.html" data-component="AccountRow">
+            <span class="avatar" style="--av: #8fb8c9">L</span>
+            <span class="row__main"><span class="row__title">Lena</span><span class="row__sub">nas.example.ts.net</span></span>
+            <span class="row__trail"><svg class="i i--sm" viewBox="0 0 24 24"><path d="m9 5 7 7-7 7"></path></svg></span>
+          </a>
+        </div>
+      </section>
+
+      <p class="divider">or sign in</p>
+
+      <form class="form" data-component="LoginForm">
+        <label class="field" data-component="Field">
+          <span class="field__label">Server address</span>
+          <span class="field__box"><svg class="i i--sm" viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="7" rx="1.5"></rect><rect x="4" y="13" width="16" height="7" rx="1.5"></rect><path d="M7.5 7.5h.01M7.5 16.5h.01" stroke-width="2.5"></path></svg><input class="field__input" type="url" inputmode="url" autocapitalize="off" value="https://nas.example.ts.net:8920"></span>
+        </label>
+        <label class="field field--focus" data-component="Field">
+          <span class="field__label">Username</span>
+          <span class="field__box"><svg class="i i--sm" viewBox="0 0 24 24"><circle cx="12" cy="8.5" r="3.75"></circle><path d="M4.5 20a7.5 7.5 0 0 1 15 0"></path></svg><input class="field__input" type="text" autocapitalize="off" autocomplete="username" placeholder="Username"></span>
+        </label>
+        <label class="field" data-component="Field">
+          <span class="field__label">Password</span>
+          <span class="field__box"><svg class="i i--sm" viewBox="0 0 24 24"><rect x="5" y="10.5" width="14" height="10" rx="2"></rect><path d="M8 10.5V8a4 4 0 0 1 8 0v2.5"></path></svg><input class="field__input" type="password" autocomplete="current-password" placeholder="Password"><button class="search__clear" type="button" aria-label="Show password"><svg class="i i--sm" viewBox="0 0 24 24"><path d="M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12z"></path><circle cx="12" cy="12" r="3"></circle></svg></button></span>
+        </label>
+        <a class="btn btn--primary btn--block" href="02-home.html" style="margin-top: var(--s-2)"><span>Sign in</span></a>
+      </form>
+    </div>
+  </main>
+</div>
+<div class="device__island"></div>
+<div class="device__status"><span>9:41</span><span class="device__glyphs"><svg viewBox="0 0 18 12"><rect x="0" y="8" width="3" height="4" rx="1"></rect><rect x="5" y="5.5" width="3" height="6.5" rx="1"></rect><rect x="10" y="3" width="3" height="9" rx="1"></rect><rect x="15" y="0" width="3" height="12" rx="1"></rect></svg><svg viewBox="0 0 27 12"><rect x=".5" y=".5" width="23" height="11" rx="3.3" fill="none" stroke="#fff" stroke-opacity=".45"></rect><rect x="2" y="2" width="17" height="8" rx="2"></rect><path d="M25 4v4c.8-.3 1.5-1.1 1.5-2S25.8 4.3 25 4z" fill-opacity=".45"></path></svg></span></div>
+<div class="device__home"></div>
+</div>
+</body>
+</html>
