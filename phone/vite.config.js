@@ -133,7 +133,7 @@ export default defineConfig({
     licenses,
     swPrecache
   ],
-  define: { __PHONE__: true },
+  define: { __PHONE__: true, __WEB__: false },
   resolve: {
     alias: {
       $lib: tvLib,

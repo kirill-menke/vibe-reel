@@ -1,9 +1,13 @@
-/* Vitest for the shared framework-free logic in src/lib — two projects, one per build:
+/* Vitest for the shared framework-free logic in src/lib — three projects, one per build:
  *
  *   tv     __PHONE__ = false, src/lib as the TV build resolves it
  *   phone  __PHONE__ = true, with phone/vite.config.js's module redirects
  *          (nav.svelte.js → phone router shim, focus.js → focus-shim.js,
  *          lifecycle.js → phone lifecycle) and its $lib / $p aliases
+ *   web    the desktop web build's engine: __PHONE__ = true, __WEB__ = true,
+ *          built like the phone project (same redirects and aliases). Only
+ *          test/web/** — the shared suites assert phone/TV behaviour (a web
+ *          start feeds a MediaSource where the phone hands <video> the URL).
  *
  *   npx vitest run                 both projects
  *   npx vitest run --project tv    one project
@@ -86,6 +90,8 @@ export default defineConfig({
         'src/lib/header.svelte.js': { statements: 100, branches: 100, functions: 100, lines: 100 },
         'src/lib/homehide.js': { statements: 100, branches: 95.2, functions: 100, lines: 100 },
         'src/lib/icons.js': { statements: 100, branches: 100, functions: 100, lines: 100 },
+        // the web build's Jellyfin HLS feed (test/web/jfhls.test.js)
+        'src/lib/jfhls.js': { statements: 100, branches: 100, functions: 100, lines: 100 },
         'src/lib/landed.svelte.js': { statements: 99.3, branches: 94.5, functions: 100, lines: 100 },
         'src/lib/libview.svelte.js': { statements: 100, branches: 100, functions: 100, lines: 100 },
         'src/lib/lifecycle.js': { statements: 100, branches: 100, functions: 100, lines: 100 },
@@ -97,11 +103,11 @@ export default defineConfig({
         'src/lib/news.svelte.js': { statements: 100, branches: 96.5, functions: 100, lines: 100 },
         'src/lib/pendingplay.js': { statements: 100, branches: 98, functions: 100, lines: 100 },
         'src/lib/played.js': { statements: 100, branches: 100, functions: 100, lines: 100 },
-        'src/lib/player.svelte.js': { statements: 99.7, branches: 97.3, functions: 99.3, lines: 100 },
+        'src/lib/player.svelte.js': { statements: 99.7, branches: 97.5, functions: 99.3, lines: 100 },
         'src/lib/reconnect.js': { statements: 100, branches: 100, functions: 100, lines: 100 },
         'src/lib/refresh60.js': { statements: 100, branches: 100, functions: 100, lines: 100 },
         'src/lib/searchrank.js': { statements: 100, branches: 100, functions: 100, lines: 100 },
-        'src/lib/segfeed.js': { statements: 100, branches: 96.9, functions: 100, lines: 100 },
+        'src/lib/segfeed.js': { statements: 100, branches: 97.7, functions: 100, lines: 100 },
         'src/lib/segments.js': { statements: 98.9, branches: 97, functions: 100, lines: 100 },
         'src/lib/settings.svelte.js': { statements: 100, branches: 100, functions: 100, lines: 100 },
         'src/lib/toast.svelte.js': { statements: 100, branches: 100, functions: 100, lines: 100 },
@@ -151,6 +157,24 @@ export default defineConfig({
           provide: { project: 'phone' },
           include: ['test/phone/**/*.test.js', 'test/shared/**/*.test.js'],
           environmentOptions: { happyDOM: { url: 'http://phone.test/' } }
+        }
+      },
+      {
+        ...common,
+        root: repo,
+        plugins: [
+          plugin(phoneConfig, 'phone-module-redirects'),
+          svelte({ configFile: false }),
+          plugin(phoneConfig, 'lazy-libpgs')
+        ],
+        define: { ...phoneConfig.define, __WEB__: true },
+        resolve: { ...common.resolve, alias: { ...phoneConfig.resolve.alias } },
+        test: {
+          ...testCommon,
+          name: 'web',
+          provide: { project: 'web' },
+          include: ['test/web/**/*.test.js'],
+          environmentOptions: { happyDOM: { url: 'http://web.test/' } }
         }
       }
     ]

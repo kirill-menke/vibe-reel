@@ -44,7 +44,8 @@ export default defineConfig({
   plugins: [svelte(), stripCrossorigin, lazyLibpgs, licenses],
   // Shared src/lib code branches on __PHONE__ for the iPhone PWA (phone/vite.config.js
   // defines it true); here it is a constant false, so every phone branch is dropped.
-  define: { __PHONE__: 'false' },
+  // __WEB__ likewise: true only in the desktop web build (web/).
+  define: { __PHONE__: 'false', __WEB__: 'false' },
   base: './',
   build: {
     target: 'chrome120',

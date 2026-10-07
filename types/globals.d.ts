@@ -10,6 +10,12 @@
  * out of the TV app.js. */
 declare const __PHONE__: boolean;
 
+/** Build-time constant: true only in the desktop web build (web/, which also defines
+ * `__PHONE__` true — it runs the phone engine); vite.config.js defines it `'false'`,
+ * phone/vite.config.js `false`. Web-only code sits behind `__PHONE__ && __WEB__` (or
+ * `__WEB__` inside a phone branch), so both other bundles constant-fold it away. */
+declare const __WEB__: boolean;
+
 /** clearTimeout/clearInterval(null): the timer vars across the client start out `null`. WebIDL
  * converts the `optional long id = 0` argument, null → 0, which cancels nothing (HTML timers);
  * TypeScript's DOM lib only admits `number | undefined`. */
