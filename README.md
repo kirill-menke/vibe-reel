@@ -8,7 +8,7 @@
 
 <p align="center">
   A Jellyfin client for LG webOS TVs that plays through the TV's own media pipeline,<br>
-  with HDR, Dolby Vision and Atmos passthrough. Plus an optional iPhone app and an optional *arr backend.
+  with HDR, Dolby Vision and Atmos passthrough. Plus an optional iPhone app, an optional desktop web client and an optional *arr backend.
 </p>
 
 <p align="center">
@@ -45,6 +45,7 @@
 |:-:|---|---|---|
 | <img src="docs/readme/icon-tv.svg" width="36" alt=""> | **TV app**<br>`src/` `public/` | core | Svelte 5 + Vite, packaged as a webOS IPK (`com.kirill.reel`). Works with Jellyfin alone, on stock or rooted firmware. Rooted TVs can add the **companion service** (`service/`): a tiny root Node service on the TV that switches picture modes. |
 | <img src="docs/readme/icon-iphone.svg" width="36" alt=""> | **iPhone app**<br>`phone/` | optional | Svelte 5 PWA that reuses the TV's `src/lib` under a touch UI: offline downloads, AirPlay, push notifications. |
+| <img src="docs/readme/icon-web.svg" width="36" alt=""> | **Web client**<br>`web/` | optional | The iPhone app's screens and engine in a desktop layout for Chrome and Firefox (mouse and keyboard), streaming Jellyfin's HLS remux through Media Source Extensions. |
 | <img src="docs/readme/icon-server.svg" width="36" alt=""> | **reel-api**<br>`backend/` | optional | FastAPI service on the NAS in front of Sonarr, Radarr and qBittorrent: search and add, download progress inside the library, watch while downloading, trending and IMDb charts, trailers, new-season alerts. |
 
 ## Playback
@@ -94,6 +95,7 @@ Safari can't play MKV, TrueHD or DTS, so on the phone Jellyfin remuxes to HLS fM
 - [ ] **A Jellyfin server** (developed against 12.1). The TV app works with Jellyfin alone.
 - [ ] *Optional:* **the backend** with Sonarr, Radarr, Prowlarr and qBittorrent, for search/add, download activity, watch-while-downloading, trending, charts, trailers and news. See [`backend/README.md`](backend/README.md).
 - [ ] *For the iPhone app:* **an HTTPS origin** that serves the PWA with Jellyfin under `/jf` and the backend under `/ml` (one origin: no CORS, one service-worker scope). The author uses `tailscale serve` in front of nginx.
+- [ ] *For the web client:* the same kind of origin (`web/dist` at `/`, Jellyfin at `/jf`, the backend at `/ml`). No service worker, so plain HTTPS behind any reverse proxy works.
 - [ ] **Tooling:** Node 22 and ImageMagick, or `nix develop` (also brings `sshpass` and `jq`).
 
 ## Quick start
@@ -158,6 +160,18 @@ The server has to serve `phone/dist` at `/`, Jellyfin at `/jf` and the backend a
 
 </details>
 
+<details>
+<summary><b>Web client</b> (optional)</summary>
+
+```sh
+npx vite build --config web/vite.config.js      # → web/dist
+./web/deploy.sh                                 # rsync to the server (NAS= in .env.local), atomic swap, md5-verify
+```
+
+The server has to serve `web/dist` at `/` (unknown paths falling back to `index.html`: the app routes `/movie/<id>` and friends itself), Jellyfin at `/jf` and the backend at `/ml`. An optional `/net.json` answering `{"via":"lan"}` or `{"via":"tunnel"}` sets the default streaming quality. `web/deploy.sh` expects releases under `/var/lib/vibereel-web/` with a `current` symlink. Details in [`docs/web/ARCHITECTURE.md`](docs/web/ARCHITECTURE.md).
+
+</details>
+
 ## How it fits together
 
 <p align="center">
@@ -190,25 +204,26 @@ The server has to serve `phone/dist` at `/`, Jellyfin at `/jf` and the backend a
 ```sh
 npx vite dev                                    # TV app on http://127.0.0.1:8899 (HMR)
 npx vite --config phone/vite.config.js          # phone app on http://127.0.0.1:8900
+npx vite --config web/vite.config.js            # web client on http://127.0.0.1:8910
 ```
 
 The TV app runs in a desktop browser against the real server, because Jellyfin sends `Access-Control-Allow-Origin: *`. Arrow keys work as the D-pad, <kbd>Enter</kbd> is OK and <kbd>Esc</kbd> is Back. Video decode, HDR, audio passthrough and PGS only work on the TV, picture modes only on a rooted one. The app is inspectable, so attach Chrome DevTools to `http://<tv>:9998` to debug there.
 
-The phone dev server proxies `/jf` and `/ml` to the URLs in `.env.local`. [`phone/DEV-CHROME.md`](phone/DEV-CHROME.md) describes an iPhone frame for desktop Chrome (safe areas, touch emulation, rotation).
+The phone and web dev servers proxy `/jf` and `/ml` to the URLs in `.env.local`. [`phone/DEV-CHROME.md`](phone/DEV-CHROME.md) describes an iPhone frame for desktop Chrome (safe areas, touch emulation, rotation).
 
 ### Build checks
 
 Four suites, all offline (no real Jellyfin, TV or NAS):
 
 ```sh
-npx vitest run                                   # shared client logic, TV + phone projects
+npx vitest run                                   # shared client logic, TV + phone + web projects
 node types/check-ratchet.mjs                     # JSDoc types via svelte-check, strict, 0 errors
 (cd backend && uv run --frozen --group dev python tests/fetch_fixtures.py)   # once
 (cd backend && uv run --frozen --group dev pytest)                           # the backend
 node e2e/scripts/fetch-spec.mjs && node e2e/run.mjs   # both apps in headless Chrome against a fake server
 ```
 
-`npx vite build` and `npx vite build --config phone/vite.config.js` must both pass, and the TV bundle must not contain phone code:
+`npx vite build`, `npx vite build --config phone/vite.config.js` and `npx vite build --config web/vite.config.js` must all pass, and the TV bundle must not contain phone code:
 
 ```sh
 grep -c -e 'VibeReel Phone' -e main.m3u8 -e ManagedMediaSource dist/app.js   # → 0
@@ -225,7 +240,7 @@ and diffs its API against what the apps use — see
 - `src/style.css` is one global stylesheet for a fixed 1920×1080 layout.
 - D-pad focus is geometric and reads the live DOM: every focusable element needs `class="focus"` and a unique `data-focus` key.
 - Icons are inline SVG (`src/lib/icons.js`). The webOS fonts render several common symbols as tofu.
-- Code shared with the phone (`src/lib`) branches on `__PHONE__`, which is constant-folded, so the TV bundle stays free of phone code.
+- Code shared with the phone (`src/lib`) branches on `__PHONE__`, which is constant-folded, so the TV bundle stays free of phone code. The web build sets `__WEB__` too, and branches on it only inside `__PHONE__` ones, so the TV and phone bundles stay byte-identical.
 
 ### Repository layout
 
@@ -235,8 +250,10 @@ src/            TV app: lib/ (logic: player engine, device profile, D-pad focus,
 public/         shipped verbatim: appinfo.json, a 60p clip that resets the TV's refresh rate
 service/        TV companion service for rooted TVs (luna bus → picture settings, HTTP on 127.0.0.1:8791)
 phone/          iPhone PWA: src/ (UI), dev/ (dev-server tooling), public/ (icons, sw.js)
+web/            desktop web client: src/ (desktop shell, player, swaps for phone modules), dev/, deploy.sh
 backend/        reel-api (FastAPI) + Nix flake and NixOS module
 docs/ios/       iPhone architecture, media tests, UX audit, design spec and polish notes
+docs/web/       web client architecture: build, hosting, playback path
 build-ipk.sh, deploy.sh, deploy-service.sh, tv-ssh.sh, env.sh    packaging and install
 ```
 
@@ -246,6 +263,7 @@ build-ipk.sh, deploy.sh, deploy-service.sh, tv-ssh.sh, env.sh    packaging and i
 
 - [`backend/README.md`](backend/README.md): the reel-api backend, its Nix flake, NixOS module and environment variables
 - [`docs/ios/`](docs/ios/): iPhone architecture, media tests, UX audit, design spec and polish notes
+- [`docs/web/ARCHITECTURE.md`](docs/web/ARCHITECTURE.md): the desktop web client — build, hosting, playback path, dev server, deploy
 
 ## License
 
