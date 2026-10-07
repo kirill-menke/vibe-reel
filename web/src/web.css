@@ -1,0 +1,374 @@
+/* VibeReel Web — the desktop layer over the phone's stylesheets (tokens.css,
+   components.css and the workstream files, loaded first by main.js). Same
+   look — gold #e6b450 on near-black — re-proportioned for a 1280–2560 px
+   window driven by a mouse and a keyboard:
+
+     1. tokens        responsive token reassignments (the phone's are px for 393)
+     2. shell         top navigation, the stage under it, route fade
+     3. pages         tab roots, rails (◀ ▶), grids, Home hero, title pages
+     4. popovers      the phone's sheets as popovers / dialogs, confirm, toast
+     5. hover         pointer affordances (the phone has none by design)
+     6. player        the desktop player (web/src/player/WebPlayer.svelte)
+
+   Only tokens and layout move here; the phone files stay untouched. */
+
+/* ================================================================ 1. tokens */
+:root {
+  --wnav-h: 64px;
+  /* every phone page pads its top with --safe-top: here that is the bar's
+     height, so pages clear the navigation while heroes run under it */
+  --safe-top: var(--wnav-h);
+  --safe-bottom: 0px;
+  --safe-left: 0px;
+  --safe-right: 0px;
+  --page-bottom: var(--s-16);
+  --tu: 1px;
+  font-size: 16px;
+
+  --gutter: clamp(24px, 3.2vw, 64px);
+  --rail-gap: clamp(12px, 0.9vw, 18px);
+  --grid-gap: clamp(14px, 1.1vw, 22px);
+  --grid-row-gap: clamp(22px, 1.8vw, 32px);
+  --section-gap: clamp(28px, 2.4vw, 44px);
+  --poster-w-rail: clamp(148px, 10.4vw, 236px);
+  --thumb-w-rail: clamp(280px, 19vw, 420px);
+  --cast-w: clamp(92px, 6.4vw, 128px);
+  --still-w: clamp(200px, 14vw, 280px);
+  --grid-cols: 6;
+  --wgrid-cols: 6;
+  --hero-h: clamp(480px, min(68vh, 40vw), 940px);
+  --backdrop-h: clamp(480px, min(72vh, 42vw), 920px);
+  --content-max: 1560px;      /* text columns on title pages */
+  --catcard-h: 180px;
+  --toast-max-w: 480px;
+  --sheet-side-w: 620px;
+  --upnext-w: 380px;
+  --trick-w: 240px;
+  --trick-h: 135px;
+  --skip-raise: 132px;
+  --player-pad: 20px;
+
+  /* type, a step up for a screen at arm's length */
+  --t-hero:   400 clamp(48px, 3.6vw, 76px)/1.0 var(--font-display);
+  --t-title:  400 clamp(44px, 3.2vw, 68px)/1.02 var(--font-display);
+  --t-large:  400 clamp(36px, 2.4vw, 48px)/1.05 var(--font-display);
+  --t-headline: 600 calc(19 * var(--tu))/1.25 var(--font-ui);
+  --t-body:   400 calc(16 * var(--tu))/1.5 var(--font-ui);
+}
+@media (min-width: 1100px) { :root { --wgrid-cols: 7; } }
+@media (min-width: 1440px) { :root { --wgrid-cols: 8; } }
+@media (min-width: 1800px) { :root { --wgrid-cols: 9; } }
+@media (min-width: 2200px) { :root { --wgrid-cols: 10; --tu: 1.08px; } }
+@media (max-width: 900px) { :root { --wgrid-cols: 4; --poster-w-rail: 132px; } }
+/* poster grids (Library, Search results, charts): the phone's landscape rule
+   pins them at 6 */
+.wapp .lib, .wapp .srch, .wapp .chart, .wapp .person { --grid-cols: var(--wgrid-cols); }
+
+/* the phone's 380 / 420 px breakpoints set rail widths too: ours win */
+@media (min-width: 420px) {
+  :root { --poster-w-rail: clamp(148px, 10.4vw, 236px); --thumb-w-rail: clamp(280px, 19vw, 420px); --hero-h: clamp(480px, min(68vh, 40vw), 940px); --still-w: clamp(200px, 14vw, 280px); }
+}
+
+/* scrollbars: the phone hides them all (touch has no use for them); a mouse
+   wants the page's — thin, dark — while rails keep theirs hidden (◀ ▶) */
+.screen { scrollbar-width: thin; scrollbar-color: rgba(255, 255, 255, 0.18) transparent; }
+.screen::-webkit-scrollbar { display: block; width: 10px; }
+.screen::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.16); border-radius: 10px; border: 3px solid transparent; background-clip: padding-box; }
+.screen::-webkit-scrollbar-track { background: transparent; }
+
+/* text can be selected on a desktop (titles, overviews), not on controls */
+body { -webkit-user-select: text; user-select: text; }
+button, .tile, .chip, .pchip, .wnav, .rail__head, .player, .wplayer { -webkit-user-select: none; user-select: none; }
+
+/* ================================================================= 2. shell */
+html, body { overflow: hidden; }
+.wapp { position: fixed; inset: 0; background: var(--bg); }
+.wstage { position: absolute; inset: 0; }
+
+.route { contain: strict; }
+.route:not([hidden]) { animation: wroute-in 160ms var(--ease-out); }
+@keyframes wroute-in { from { opacity: 0; } to { opacity: 1; } }
+@media (prefers-reduced-motion: reduce) { .route:not([hidden]) { animation: none; } }
+/* a pushed page no longer has to cover a tab bar */
+.route--deep { z-index: auto; --page-bottom: var(--s-16); }
+
+.wnav {
+  position: fixed; top: 0; left: 0; right: 0; z-index: 30; height: var(--wnav-h);
+  display: flex; align-items: center; gap: clamp(16px, 2.4vw, 40px);
+  padding: 0 var(--gutter);
+  background: linear-gradient(180deg, rgba(10, 10, 12, 0.82) 0%, rgba(10, 10, 12, 0.35) 70%, rgba(10, 10, 12, 0) 100%);
+  transition: background-color var(--dur-base) var(--ease-out), box-shadow var(--dur-base) var(--ease-out);
+}
+.wnav::before {
+  content: ""; position: absolute; inset: 0; z-index: -1; opacity: 0;
+  background: var(--glass-bg-strong);
+  -webkit-backdrop-filter: var(--glass-blur); backdrop-filter: var(--glass-blur);
+  box-shadow: inset 0 -1px 0 var(--line);
+  transition: opacity var(--dur-base) var(--ease-out);
+}
+.wnav--solid::before { opacity: 1; }
+.wapp--player .wnav { visibility: hidden; }
+.wnav__mark { display: flex; align-items: baseline; gap: 10px; color: var(--text); text-decoration: none; flex: none; }
+.wnav__mark .wordmark--short { font-size: 30px; }
+.wnav__name { font: 400 26px/1 var(--font-display); letter-spacing: -0.01em; color: var(--text); }
+.wnav__tabs { display: flex; align-items: center; gap: 4px; }
+.wnav__tab {
+  display: inline-flex; align-items: center; gap: 6px;
+  height: 36px; padding: 0 14px; border-radius: var(--r-pill);
+  font: 600 15px/1 var(--font-ui); color: var(--text-dim); text-decoration: none;
+  transition: color var(--dur-fast) linear, background-color var(--dur-fast) linear;
+}
+.wnav__tab .i { width: 17px; height: 17px; }
+.wnav__tab--on { color: var(--text); background: rgba(255, 255, 255, 0.10); }
+.wnav__tab--on::after { content: ""; }
+.wnav__end { margin-left: auto; display: flex; align-items: center; gap: var(--s-2); }
+.wnav__btn--on { background: var(--gold-soft); border-radius: var(--r-pill); }
+.wnav .avatarbtn { border-radius: var(--r-pill); padding: 2px; }
+.wnav .iconbtn { color: var(--text); }
+
+/* the phone's top bars (TopBar variant: a large title only) */
+.wtopbar { padding: calc(var(--safe-top) + var(--s-4)) var(--gutter) var(--s-2); min-height: 0; }
+.wtopbar.topbar--overlay { position: static; }
+.wtopbar .topbar__title { font: var(--t-large); }
+/* the pushed pages' bar (back button, title once solid): its top padding is
+   --safe-top, so it sits right under the navigation */
+.navbar { padding-left: var(--gutter); padding-right: var(--gutter); }
+
+/* offline banner and toast sit bottom-centre */
+.banner { left: 50%; right: auto; width: 480px; margin-left: -240px; bottom: var(--s-6); }
+.toast { bottom: var(--s-8); }
+
+/* ================================================================= 3. pages */
+/* rails: the head carries ◀ ▶; the track hides its bar, snaps lightly */
+.rail__track { scroll-snap-type: x proximity; scroll-padding-inline: var(--gutter); overscroll-behavior-x: contain; }
+.wrail__wrap { position: relative; }
+.wrail__arrows { display: flex; gap: 6px; }
+.wrail__arrows[hidden] { display: none; }
+.wrail__btn {
+  display: grid; place-items: center; width: 34px; height: 34px; border-radius: var(--r-pill);
+  color: var(--text); background: var(--surface-2); box-shadow: inset 0 0 0 1px var(--line);
+  transition: background-color var(--dur-fast) linear, opacity var(--dur-fast) linear;
+}
+.wrail__btn .i { width: 18px; height: 18px; }
+.wrail__btn:disabled { opacity: 0.3; cursor: default; }
+/* edge paddles over the track, shown on hover (as streaming sites do) */
+.wrail__edge {
+  position: absolute; top: 0; bottom: 0; z-index: 2; width: var(--gutter); min-width: 36px;
+  display: grid; place-items: center; color: var(--text); opacity: 0;
+  transition: opacity var(--dur-fast) linear;
+}
+.wrail__edge--l { left: 0; background: linear-gradient(90deg, rgba(10, 10, 12, 0.9), rgba(10, 10, 12, 0)); }
+.wrail__edge--r { right: 0; background: linear-gradient(270deg, rgba(10, 10, 12, 0.9), rgba(10, 10, 12, 0)); }
+.wrail__edge .i { width: 28px; height: 28px; }
+.wrail__edge[hidden] { display: none; }
+@media (hover: hover) { .wrail__wrap:hover .wrail__edge { opacity: 1; } }
+
+/* Home hero: wider type column, actions in a row */
+.hero__body { max-width: min(760px, 52vw); padding-left: var(--gutter); padding-right: var(--gutter); }
+.hero__scrim {
+  background:
+    linear-gradient(90deg, rgba(10, 10, 12, 0.78) 0%, rgba(10, 10, 12, 0.35) 38%, rgba(10, 10, 12, 0) 62%),
+    linear-gradient(180deg, rgba(10, 10, 12, 0.5) 0%, rgba(10, 10, 12, 0) 18%, rgba(10, 10, 12, 0) 55%, rgba(10, 10, 12, 0.85) 88%, #0a0a0c 100%);
+}
+.hero__meta, .hero__overview { max-width: 640px; }
+
+/* Home hero paddles (lib/heroarrows.js): shown while the pointer is over it */
+.whero__btn {
+  position: absolute; top: 50%; z-index: 5; translate: 0 -50%;
+  display: grid; place-items: center; width: 52px; height: 52px; border-radius: var(--r-pill);
+  color: var(--text); background: var(--glass-bg-strong); box-shadow: inset 0 0 0 1px var(--glass-line);
+  opacity: 0; transition: opacity var(--dur-fast) linear, background-color var(--dur-fast) linear;
+}
+.whero__btn .i { width: 28px; height: 28px; }
+.whero__btn--l { left: max(12px, calc(var(--gutter) / 3)); }
+.whero__btn--r { right: max(12px, calc(var(--gutter) / 3)); }
+.homehero:hover .whero__btn, .whero__btn:focus-visible { opacity: 1; }
+@media (hover: hover) { .whero__btn:hover { background: rgba(40, 40, 46, 0.9); } }
+
+/* title pages: the backdrop is a wide hero; over its lower edge a text
+   column (title, meta, actions, overview) no wider than reads well, with the
+   primary button and the secondary actions in one row instead of stacked */
+.detail__hero .art img, .hero .art img { object-position: 50% 25%; }
+.detail__scrim {
+  background:
+    linear-gradient(90deg, rgba(10, 10, 12, 0.72) 0%, rgba(10, 10, 12, 0.25) 40%, rgba(10, 10, 12, 0) 65%),
+    var(--scrim-hero);
+}
+.detail__body {
+  flex-direction: row; flex-wrap: wrap; align-items: center; gap: var(--s-4) var(--s-3);
+  max-width: min(1080px, 100%);
+  margin-top: calc(var(--s-16) * -2.6);
+}
+.detail__body > * { flex: 1 1 100%; min-width: 0; }
+.detail__body > .btn--block, .detail__body > .btn--primary { flex: 0 0 auto; width: auto; min-width: 200px; padding: 0 var(--s-8); }
+.detail__body > .actions { flex: 0 1 auto; justify-content: flex-start; gap: var(--s-2); }
+.detail__buttons { flex-direction: row; flex-wrap: wrap; align-items: center; }
+.detail__buttons > .btn { flex: 0 0 auto; width: auto; min-width: 200px; padding: 0 var(--s-8); }
+.detail__note { text-align: left; }
+/* secondary actions as labelled pills (icon + word) */
+.action {
+  flex-direction: row; gap: 8px; min-width: 0; height: var(--btn-h); padding: 0 var(--s-5) 0 var(--s-2);
+  border-radius: var(--r-pill); background: var(--surface-2); color: var(--text);
+  font: 600 calc(15 * var(--tu))/1 var(--font-ui);
+  transition: background-color var(--dur-fast) linear;
+}
+.action__icon { width: 34px; height: 34px; background: none; }
+.action--on { background: var(--gold-soft); color: var(--gold); }
+.action--on .action__icon { background: none; }
+.detail__title { max-width: 18ch; }
+.detail__title--long { font-size: clamp(36px, 2.6vw, 54px); max-width: 24ch; }
+.detail__body .overview-wrap, .detail__body > p { max-width: 75ch; }
+/* "more" ends the clamped third line (the wrap is the text column, not the
+   page): a longer fade so no half-cut word peeks out before it */
+.overview__more--inline { padding-left: 64px; background: linear-gradient(90deg, transparent, var(--bg) 48px); }
+
+/* episodes as a two-column card list */
+.episodes.detail__episodes { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 620px), 1fr)); column-gap: var(--s-4); padding: 0 calc(var(--gutter) - var(--s-3)); }
+.detail__episodes .episode { grid-template-columns: var(--still-w) minmax(0, 1fr); grid-template-rows: auto 1fr; align-items: start; padding: var(--s-3); border-radius: var(--r-card); }
+.detail__episodes .episode__still { grid-row: 1 / span 2; }
+.detail__episodes .episode__head { padding-top: var(--s-1); }
+.detail__episodes .episode__overview { grid-column: 2; margin-top: 0; -webkit-line-clamp: 3; }
+
+/* search: the field doesn't need the full width (its sticky glass bar does) */
+.search__field { max-width: 760px; }
+.search__input:focus-visible { outline: none; }
+
+/* ============================================================ 4. popovers */
+.wscrim { position: fixed; inset: 0; z-index: 40; }
+.wscrim--dialog { background: var(--scrim); animation: wfade var(--dur-fast) linear; }
+.wsheethost { position: fixed; z-index: 50; pointer-events: none; }
+.wsheethost > .sheet { pointer-events: auto; }
+.wsheethost--popover { top: calc(var(--wnav-h) - 4px); right: var(--gutter); }
+.wsheethost--dialog { inset: 0; display: grid; place-items: center; }
+.wsheet {
+  position: relative; left: auto; right: auto; bottom: auto; top: auto;
+  width: min(420px, calc(100vw - 2 * var(--gutter)));
+  max-height: min(78vh, 760px);
+  border-radius: var(--r-sheet);
+  padding-bottom: 0;
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.6), inset 0 0 0 1px var(--line);
+  animation: wpop var(--dur-fast) var(--ease-out);
+  outline: none;
+}
+.wsheethost--dialog .wsheet { width: min(620px, calc(100vw - 2 * var(--gutter))); max-height: min(82vh, 860px); }
+.wsheet.sheet--large { top: auto; }
+.wsheet .sheet__head { padding: var(--s-4) var(--s-4) var(--s-2) var(--s-5); }
+.wsheet .sheet__body { padding-bottom: var(--s-3); }
+@keyframes wpop { from { opacity: 0; transform: translateY(-6px) scale(0.98); } to { opacity: 1; transform: none; } }
+@keyframes wfade { from { opacity: 0; } to { opacity: 1; } }
+@media (prefers-reduced-motion: reduce) { .wsheet, .wscrim--dialog { animation: none; } }
+
+/* the confirm (ActionSheet) reads as a centred dialog */
+.actsheet { position: fixed; }
+.actsheet__box { top: 50%; bottom: auto; max-width: 400px; translate: 0 -50%; }
+
+/* Login: a centred card instead of a phone screen */
+.wloginhost { --safe-top: 0px; }
+.wloginhost .login { max-width: 460px; margin: 0 auto; padding-top: max(var(--s-10), 14vh); }
+
+/* ================================================================ 5. hover */
+@media (hover: hover) and (pointer: fine) {
+  a, button, [role="button"], .tile, .row, .chip, .option, select { cursor: pointer; }
+  .wnav__tab:hover { color: var(--text); background: rgba(255, 255, 255, 0.06); }
+  .wnav__tab--on:hover { background: rgba(255, 255, 255, 0.12); }
+  .wnav .iconbtn:hover, .wnav .avatarbtn:hover { background: rgba(255, 255, 255, 0.08); border-radius: var(--r-pill); }
+
+  .tile .tile__frame { transition: transform var(--dur-base) var(--ease-out), box-shadow var(--dur-base) var(--ease-out); }
+  .tile:hover .tile__frame { transform: translateY(-3px); box-shadow: 0 0 0 2px var(--gold-line), var(--shadow-float); }
+  .tile:hover .tile__title { color: var(--gold); }
+  .tile:focus-visible .tile__frame { box-shadow: 0 0 0 2px var(--gold), var(--shadow-float); }
+
+  .btn { transition: filter var(--dur-fast) linear, background-color var(--dur-fast) linear; }
+  .btn:hover { filter: brightness(1.12); }
+  .row:hover, .option:hover, .episode:hover, .eprow:hover { background-color: rgba(255, 255, 255, 0.05); }
+  .chip:hover { filter: brightness(1.2); }
+  .pchip:hover, .wpbtn:hover, .iconbtn:hover, .closebtn:hover { background-color: rgba(255, 255, 255, 0.16); }
+  .wrail__btn:not(:disabled):hover { background: var(--surface-3); }
+  .skipchip:hover { background: #fff; }
+  .catcard:hover, .card:hover { filter: brightness(1.1); }
+}
+:focus-visible { outline: 2px solid var(--gold-line); outline-offset: 2px; }
+.wsheet:focus-visible, .wplayer:focus-visible, .wplayer:focus { outline: none; }
+
+/* =============================================================== 6. player */
+.wplayer {
+  position: fixed; inset: 0; z-index: 65; background: #000; color: var(--text); overflow: hidden;
+  --safe-top: 0px;
+  cursor: none;
+}
+.wplayer--ctl { cursor: default; }
+.wplayer[hidden] { display: none; }
+.wplayer__stage { position: absolute; inset: 0; }
+.wplayer__video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; background: #000; transition: opacity var(--dur-fast) linear; }
+.wplayer__video--dim { opacity: 0.5; }
+.wplayer .vr-cue { font-size: calc(clamp(22px, 2.3vw, 46px) * var(--sub-scale, 1)); }
+.wplayer .vr-subs--raised { transform: translateY(-120px); }
+
+.wplayer__chrome { position: absolute; inset: 0; z-index: 2; pointer-events: none; transition: opacity var(--dur-base) var(--ease-out); }
+.wplayer__chrome--hidden { opacity: 0; }
+.wplayer__chrome--hidden * { pointer-events: none !important; }
+.wplayer__chrome > * { pointer-events: auto; }
+.wplayer__chrome .player__scrim { pointer-events: none; }
+.wplayer__chrome .player__scrim--top { height: 160px; }
+.wplayer__chrome .player__scrim--bottom { height: 220px; }
+.wplayer__top {
+  position: absolute; top: var(--player-pad); left: var(--gutter); right: var(--gutter);
+  display: flex; align-items: center; gap: var(--s-3);
+}
+.wplayer__top--busy { z-index: 6; }
+.wplayer__top .player__ep { font: 600 clamp(18px, 1.3vw, 24px)/1.25 var(--font-ui); }
+.wplayer__bar {
+  position: absolute; left: var(--gutter); right: var(--gutter); bottom: var(--s-4);
+  display: flex; flex-direction: column; gap: var(--s-1);
+}
+.wplayer__row { display: flex; align-items: center; gap: var(--s-2); }
+.wpbtn {
+  display: grid; place-items: center; flex: none; width: 44px; height: 44px; border-radius: var(--r-pill);
+  color: #fff; transition: background-color var(--dur-fast) linear;
+}
+.wpbtn .i { width: 26px; height: 26px; }
+.wpbtn--on { color: var(--gold); }
+.wplayer__time { margin-left: var(--s-2); font: var(--t-num); font-size: 15px; font-variant-numeric: tabular-nums; color: var(--text); white-space: nowrap; }
+.wplayer__dur { color: var(--text-dim); }
+.pchip--on { box-shadow: inset 0 0 0 1px var(--gold-line); background: var(--gold-soft); }
+
+/* volume: a slider that opens beside the speaker on hover / focus */
+.wvol { display: flex; align-items: center; }
+.wvol__range {
+  -webkit-appearance: none; appearance: none; width: 0; opacity: 0; height: 24px; margin: 0;
+  background: transparent; cursor: pointer;
+  transition: width var(--dur-base) var(--ease-out), opacity var(--dur-fast) linear, margin var(--dur-base) var(--ease-out);
+}
+.wvol:hover .wvol__range, .wvol__range:focus-visible, .wvol:focus-within .wvol__range { width: 96px; opacity: 1; margin: 0 var(--s-2) 0 2px; }
+.wvol__range::-webkit-slider-runnable-track { height: 4px; border-radius: 4px; background: linear-gradient(90deg, #fff calc(var(--v) * 100%), var(--track-dim) 0); }
+.wvol__range::-moz-range-track { height: 4px; border-radius: 4px; background: var(--track-dim); }
+.wvol__range::-moz-range-progress { height: 4px; border-radius: 4px; background: #fff; }
+.wvol__range::-webkit-slider-thumb { -webkit-appearance: none; width: 14px; height: 14px; margin-top: -5px; border-radius: 50%; background: #fff; border: 0; }
+.wvol__range::-moz-range-thumb { width: 14px; height: 14px; border-radius: 50%; background: #fff; border: 0; }
+
+/* scrubber and hover preview */
+.wplayer .scrubber__time { font-size: 14px; }
+.wplayer .vr-scrub__hit:hover .scrubber__track { height: var(--scrub-h-active); }
+.wtrick { bottom: calc(100% - 4px); transform: translateX(-50%); z-index: 3; }
+.wtrick .trick__frame { background-color: #111; background-repeat: no-repeat; }
+
+/* side panels (tracks, chapters) under the top bar, over the video */
+.wplayer .panel { top: calc(var(--player-pad) + 56px); bottom: 120px; right: var(--gutter); z-index: 7; }
+.wplayer .panel .option { cursor: pointer; }
+
+/* skip chip and Up Next above the control bar */
+.wskipwrap .skipchip { right: var(--gutter); bottom: var(--skip-raise); height: 48px; font-size: 16px; }
+.wskipwrap.vr-skipwrap--low { transform: translateY(calc(var(--skip-raise) - 48px)); }
+.wupnext .upnext { right: var(--gutter); bottom: calc(var(--skip-raise) + 8px); z-index: 3; }
+.wplayer .pcard { z-index: 4; }
+.wplayer .pload__body { width: min(60%, 760px); }
+.wplayer .pload__title { font: var(--t-title); }
+
+/* context menus (right-click / long-press on a tile): a centred column at the
+   tile's height instead of the phone's gutter-to-gutter card */
+.ctx { position: fixed; }
+.ctx__stack { left: 50%; right: auto; width: min(400px, calc(100vw - 2 * var(--gutter))); translate: -50% 0; }
+.ctx__preview:not(.ctx__preview--card) { margin-left: 0 !important; align-self: center; max-width: 100%; }
+
+/* settings-like pages read as a column, not a 2560-px-wide list */
+.wapp .settings > *, .wapp .mylib > * { max-width: 900px; }
