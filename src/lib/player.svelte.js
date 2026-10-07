@@ -50,6 +50,7 @@ export const P = $state(/** @satisfies {VR.PlayerState} */ ({
   upNextOff: false,   // the Up Next card was dismissed with Back for this pass
   trick: null,        // trickplay sheet layout for this item (see lookUpTrickplay), or null
   scrub: null,        // pending scrubber target in seconds while previewing, or null
+  picSvc: null,       // the picture-mode companion service answered /health: null = not asked yet (probePictureService)
   pictureModes: [],
   pictureMode: null,
   picErr: false,
@@ -2006,6 +2007,24 @@ export function svcSetPicture(mode) {
   return fetch(PIC_SVC + '/picture?mode=' + encodeURIComponent(mode), {
     signal: AbortSignal.timeout(PIC_TIMEOUT)
   }).then((r) => r.json());
+}
+
+/* The companion service needs a rooted TV (service/: root, outside the webOS jail). On stock
+ * firmware nothing listens on 8791, so the OSD's Picture button only shows once /health has
+ * answered. Asked when a playback starts (Osd.svelte), not at boot: every fetch() costs main
+ * thread there. A yes holds for the session; a no is asked again on the next playback (the
+ * boot hook may simply not have started the service yet). Loopback refuses in milliseconds. */
+let picProbe = /** @type {Promise<void> | null} */ (null);
+export function probePictureService() {
+  if (__PHONE__ || P.picSvc || picProbe) return picProbe;
+  picProbe = fetch(PIC_SVC + '/health', { signal: AbortSignal.timeout(PIC_TIMEOUT) })
+    .then((r) => r.json())
+    .then((r) => (P.picSvc = !!(r && r.ok)))
+    .catch(() => (P.picSvc = false))
+    .then(() => {
+      picProbe = null;
+    });
+  return picProbe;
 }
 
 /** @type {Record<string, string>} */

@@ -292,7 +292,7 @@ describe('the player slice before anything plays', () => {
       item: null, source: null, pending: false, trailer: false, sessionId: '', audioIndex: -1, subIndex: -1,
       playMethod: 'DirectPlay', detailItem: null, series: null, seasons: null, panel: null, osdShown: false,
       spinner: false, paused: true, pos: 0, dur: 0, skips: [], skipped: null, credits: null, next: null,
-      upNextOff: false, trick: null, scrub: null, pictureModes: [], pictureMode: null, picErr: false,
+      upNextOff: false, trick: null, scrub: null, picSvc: null, pictureModes: [], pictureMode: null, picErr: false,
       picLoading: false, picPending: null, subOffset: 0, loading: false, loadingItem: null, loadingFrom: 0,
       downloadId: null, error: null, slowNet: null, link: null, chapters: []
     };

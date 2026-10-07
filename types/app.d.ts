@@ -331,6 +331,8 @@ declare namespace VR {
     trick: TrickLayout | null;
     /** Pending scrubber target in seconds while previewing. */
     scrub: number | null;
+    /** The picture-mode companion service answered `/health` (rooted TVs only); null = not asked yet. */
+    picSvc: boolean | null;
     /** Picture-mode ids the companion service offers for the live signal (`/modes`). */
     pictureModes: string[];
     pictureMode: string | null;

@@ -20,6 +20,7 @@ import { useClock } from '../helpers/time.js';
 
 const SVC = 'http://127.0.0.1:8791';
 const MODES = SVC + '/modes';
+const HEALTH = SVC + '/health';
 const pictureUrl = (m) => SVC + '/picture?mode=' + encodeURIComponent(m);
 
 async function load() {
@@ -55,6 +56,41 @@ describe('picture modes: labels', () => {
     expect(player.rangeLabel('hdrStandard')).toBe('HDR');
     expect(player.rangeLabel('cinema')).toBe('SDR');
     expect(player.rangeLabel(undefined)).toBe('SDR');
+  });
+});
+
+describe('probePictureService (the Picture button exists only on a rooted TV)', () => {
+  beforeAll(warmPlayer, 120000);
+
+  it('a /health answer turns the button on for the session: no second probe', async () => {
+    const h = await load();
+    expect(h.P.picSvc).toBe(null);
+    h.net.on('GET', HEALTH, { ok: true, name: 'com.webos.app.multiviewsettings-reel' });
+    await h.player.probePictureService();
+    expect(h.P.picSvc).toBe(true);
+    expect(h.clock.timeouts).toEqual([6000]);
+    await h.player.probePictureService();
+    expect(h.net.callsTo(HEALTH)).toHaveLength(1);
+  });
+
+  it('stock firmware (nothing on 8791) keeps it off, and the next playback asks again', async () => {
+    const h = await load();
+    h.net.on('GET', HEALTH, h.net.networkError());
+    await h.player.probePictureService();
+    expect(h.P.picSvc).toBe(false);
+    h.net.on('GET', HEALTH, { ok: true });
+    await h.player.probePictureService();
+    expect(h.P.picSvc).toBe(true);
+    expect(h.net.callsTo(HEALTH)).toHaveLength(2);
+  });
+
+  it('one probe at a time', async () => {
+    const h = await load();
+    h.net.on('GET', HEALTH, { ok: true });
+    const a = h.player.probePictureService();
+    const b = h.player.probePictureService();
+    await Promise.all([a, b]);
+    expect(h.net.callsTo(HEALTH)).toHaveLength(1);
   });
 });
 

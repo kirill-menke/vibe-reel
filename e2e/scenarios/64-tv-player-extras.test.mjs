@@ -124,6 +124,25 @@ test('tv picture: with the service down the panel offers "Picture control unavai
   await page.waitFor(() => document.getElementById('player-menu').contains(document.activeElement) && document.activeElement.dataset.focus === 'pm-pic-filmMaker', { what: 'focus moved onto the current mode', timeout: 3000 });
 });
 
+test('tv picture: stock firmware (nothing on 127.0.0.1:8791) has no Picture button; the next playback asks /health again', { fast: false, timeout: 60000, allowErrors: [/Failed to load resource: net::ERR_\w+ http:\/\/127\.0\.0\.1:8791\/health/] }, async (t) => {
+  const { page, srv } = t;
+  const down = srv.fault({ origin: 'pic' }, { drop: true });
+  const { s0 } = await playing(t);
+  if (!(await page.eval(() => document.getElementById('osd')?.classList.contains('show')))) await page.key('Down', { settle: 150 });
+  await until(() => down.hits > 0, 'asked /health at playback start', 5000);
+  assert.equal(await page.eval(() => !!document.querySelector('[data-focus="c-pic"]')), false, 'no Picture button');
+  assert(!srv.log.some((e) => e.origin === 'pic' && e.path !== '/health'), 'nothing but /health asked');
+  assert.deepEqual(await checkFocusInvariants(page), [], 'OSD row still navigable');
+  await exitWithBack(t, s0);
+  // the boot hook may start the service late: a later playback asks again and shows it
+  down.remove();
+  const movie = t.srv.world.list('Movie')[1];
+  await openMovieDetail(t, movie);
+  await startAndPlay(t, movie);
+  if (!(await page.eval(() => document.getElementById('osd')?.classList.contains('show')))) await page.key('Down', { settle: 150 });
+  await page.waitFor(() => !!document.querySelector('[data-focus="c-pic"]'), { what: 'Picture button once /health answers', timeout: 5000 });
+});
+
 test('tv trailer: the trailer job answers error → toast, YouTube app launched through PalmServiceBridge (luna applicationManager/launch), back on the Trailer button; nothing leaves loopback', { fast: false, timeout: 60000 }, async (t) => {
   const { page, srv } = t;
   const w = srv.world;

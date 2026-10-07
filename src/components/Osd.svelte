@@ -1,13 +1,18 @@
 <script>
-  import { tick } from 'svelte';
+  import { tick, untrack } from 'svelte';
   import Icon from './Icon.svelte';
   import { fmtTime } from '../lib/format.js';
   import { focusEl } from '../lib/focus.js';
   import { S } from '../lib/nav.svelte.js';
   import {
     P, seekBy, seekTo, togglePause, showOsd, closePanel,
-    osdTechSummary, endsAt, loadPictureModes, trickAt, playNext, SEEK_BACK, SEEK_FWD
+    osdTechSummary, endsAt, loadPictureModes, probePictureService, trickAt, playNext, SEEK_BACK, SEEK_FWD
   } from '../lib/player.svelte.js';
+
+  /* The Picture button only exists where the companion service runs (a rooted TV). */
+  $effect(() => {
+    if (S.screen === 'player') untrack(probePictureService);
+  });
 
   let dragging = $state(false);
   let dragFrac = $state(0);
@@ -247,6 +252,7 @@
           onclick={() => openPanel('subs', 'c-subs')}><Icon name="subs" /></button
         >
         {/if}
+        {#if P.picSvc}
         <button
           class="pillbtn focus"
           class:on={P.panel === 'picture'}
@@ -255,6 +261,7 @@
           title="Picture"
           onclick={() => openPanel('picture', 'c-pic')}><Icon name="picture" /></button
         >
+        {/if}
       </div>
     </div>
   </div>

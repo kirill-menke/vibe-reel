@@ -2,18 +2,18 @@
   <picture>
     <source media="(prefers-color-scheme: dark)" srcset="docs/readme/hero-dark.svg">
     <source media="(prefers-color-scheme: light)" srcset="docs/readme/hero-light.svg">
-    <img src="docs/readme/hero-light.png" width="100%" alt="VibeReel: a Jellyfin client for LG webOS that plays the original file">
+    <img src="docs/readme/hero-light.png" width="100%" alt="VibeReel: a Jellyfin client for LG webOS">
   </picture>
 </p>
 
 <p align="center">
-  A Jellyfin client for a <b>rooted</b> LG webOS TV that plays the original file, with no transcoding,<br>
-  through the TV's own media pipeline. Plus an optional iPhone app and an optional *arr backend.
+  A Jellyfin client for LG webOS TVs that plays through the TV's own media pipeline,<br>
+  with HDR, Dolby Vision and Atmos passthrough. Plus an optional iPhone app and an optional *arr backend.
 </p>
 
 <p align="center">
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-e6b450?style=flat-square&labelColor=131316" alt="License: MIT"></a>
-  <img src="https://img.shields.io/badge/LG%20webOS-rooted-e6b450?style=flat-square&labelColor=131316" alt="LG webOS, rooted">
+  <img src="https://img.shields.io/badge/LG%20webOS-stock%20or%20rooted-e6b450?style=flat-square&labelColor=131316" alt="LG webOS, stock or rooted">
   <img src="https://img.shields.io/badge/Jellyfin-12.1-e6b450?style=flat-square&labelColor=131316" alt="Jellyfin 12.1">
   <img src="https://img.shields.io/badge/Svelte-5-e6b450?style=flat-square&labelColor=131316" alt="Svelte 5">
 </p>
@@ -36,8 +36,6 @@
 </p>
 </details>
 
-<p align="center"><sub>Screenshots use a demo library of public-domain films and TV episodes and Blender Foundation open movies (CC BY).</sub></p>
-
 > [!NOTE]
 > A personal project, built for and tested on one setup: an LG C4 (webOS 10.3.1), a Jellyfin 12.1 server on a NixOS NAS, and an iPhone. It will probably need adjusting for anything else. Not affiliated with Jellyfin or LG.
 
@@ -45,24 +43,24 @@
 
 | | Part | | What it is |
 |:-:|---|---|---|
-| <img src="docs/readme/icon-tv.svg" width="36" alt=""> | **TV app**<br>`src/` `public/` | core | Svelte 5 + Vite, packaged as a webOS IPK (`com.kirill.reel`). Works with Jellyfin alone. Ships with a **companion service** (`service/`): a tiny root Node service on the TV that switches picture modes. |
+| <img src="docs/readme/icon-tv.svg" width="36" alt=""> | **TV app**<br>`src/` `public/` | core | Svelte 5 + Vite, packaged as a webOS IPK (`com.kirill.reel`). Works with Jellyfin alone, on stock or rooted firmware. Rooted TVs can add the **companion service** (`service/`): a tiny root Node service on the TV that switches picture modes. |
 | <img src="docs/readme/icon-iphone.svg" width="36" alt=""> | **iPhone app**<br>`phone/` | optional | Svelte 5 PWA that reuses the TV's `src/lib` under a touch UI: offline downloads, AirPlay, push notifications. |
 | <img src="docs/readme/icon-server.svg" width="36" alt=""> | **reel-api**<br>`backend/` | optional | FastAPI service on the NAS in front of Sonarr, Radarr and qBittorrent: search and add, download progress inside the library, watch while downloading, trending and IMDb charts, trailers, new-season alerts. |
 
-## Why: no transcoding
+## Playback
 
-The device profile has no transcoding profiles. The original file goes to the TV's own pipeline through `<video>` Direct Play, so HDR passes straight through and DD+, AC3 and DTS reach your soundbar untouched.
+The TV plays through its own media pipeline via `<video>`, so HDR passes straight through and DD+, AC3 and DTS reach your soundbar untouched.
 
 | | How |
 |---|---|
 | **Video** | H.265 / H.264 / AV1 via Direct Play |
 | **HDR** | HDR10 / HLG / Dolby Vision, passed straight through from the stream |
 | **Audio** | DD+/E-AC3 · Atmos, AC3 and DTS passthrough; AAC/Opus → PCM. DD+ is preferred over a container-default TrueHD; anime defaults to the Japanese track |
-| **Subtitles** | SRT / ASS as VTT; PGS decoded client-side by libpgs onto a canvas. VobSub / DVB are the one exception: burned in via a one-off HLS transcode |
+| **Subtitles** | SRT / ASS as VTT; PGS decoded client-side by libpgs onto a canvas. VobSub / DVB are burned in via a one-off HLS transcode |
 | **Skip Intro / Recap** | Jellyfin Media Segments (Intro Skipper plugin), named chapters, and the crowdsourced IntroDB |
 | **Up Next** | at the credits, a card with a 10 s countdown rolls on to the next episode |
 | **Trickplay** | scrubbing previews from Jellyfin's thumbnail sheets; the real seek happens once you stop |
-| **Picture mode** | Filmmaker / Cinema / … per signal (SDR, HDR10, Dolby Vision), switched from the OSD via the companion service |
+| **Picture mode** | *rooted TVs:* Filmmaker / Cinema / … per signal (SDR, HDR10, Dolby Vision), switched from the OSD via the companion service. On stock firmware the button doesn't appear |
 | **Also** | audio/subtitle picks carry over to later episodes (matched by language); resume and watched state sync to Jellyfin |
 
 > [!NOTE]
@@ -90,7 +88,8 @@ Safari can't play MKV, TrueHD or DTS, so on the phone Jellyfin remuxes to HLS fM
 
 ## Will it work for me?
 
-- [ ] **A rooted LG webOS TV** with ssh as root (RootMyTV / Homebrew Channel). `deploy.sh` unpacks the app straight into the TV's app directory instead of relying on a Developer Mode session, and the companion service starts from a Homebrew Channel boot hook.
+- [ ] **An LG webOS TV** (developed on an LG C4, webOS 10.3.1). Stock firmware works: install the IPK through Developer Mode.
+- [ ] *Optional:* **root** (RootMyTV / Homebrew Channel) with ssh as root. It adds the picture-mode switch (the companion service starts from a Homebrew Channel boot hook), and `deploy.sh` then installs over ssh, without a Developer Mode session.
 - [ ] **TV audio output set to Pass Through / Bitstream (eARC)**, so DD+/AC3/DTS reach the soundbar instead of being downmixed.
 - [ ] **A Jellyfin server** (developed against 12.1). The TV app works with Jellyfin alone.
 - [ ] *Optional:* **the backend** with Sonarr, Radarr, Prowlarr and qBittorrent, for search/add, download activity, watch-while-downloading, trending, charts, trailers and news. See [`backend/README.md`](backend/README.md).
@@ -112,14 +111,29 @@ Vite builds the `VITE_*` values into the TV app as defaults; the deploy scripts 
 ```sh
 nix develop                   # or: have node 22 + imagemagick on PATH
 npm install
+```
+
+On a **stock TV**, turn on Developer Mode (LG's Developer Mode app), then package and install the IPK:
+
+```sh
+./build-ipk.sh                                     # icons + build → out/com.kirill.reel_*.ipk
+npx ares-setup-device                              # once: add the TV (passphrase from the Developer Mode app)
+npx ares-install --device <name> out/com.kirill.reel_*.ipk
+```
+
+webOS removes Developer Mode apps when the Developer Mode session expires, so extend it in the app from time to time.
+
+On a **rooted TV**:
+
+```sh
 ./deploy.sh                   # icons + build + IPK, install on the TV, relaunch, md5-verify
-./deploy-service.sh           # install/restart the picture-mode companion service
+./deploy-service.sh           # optional: install/restart the picture-mode companion service
 ```
 
 **3. Sign in** with Quick Connect (approve the code in Jellyfin), or press <kbd>▼</kbd> for username and password.
 
 <details>
-<summary>What <code>deploy.sh</code> does</summary>
+<summary>What <code>deploy.sh</code> does (rooted TVs)</summary>
 
 It wakes the TV over Wake-on-LAN if it's off, stages the new build next to the installed one and swaps it in only once complete, then relaunches the app and checks that the new build is actually running. The first install of a brand-new app goes through webOS's `dev/install` once. `./build-ipk.sh` alone just produces `out/*.ipk`.
 
@@ -157,14 +171,14 @@ The server has to serve `phone/dist` at `/`, Jellyfin at `/jf` and the backend a
 ## Things you should know
 
 > [!WARNING]
-> VibeReel needs a **rooted TV**, runs a **root service outside the webOS jail**, and its backend's only login is your Jellyfin one. It also leans on yt-dlp and undocumented IMDb and Radarr endpoints. Read every point below before you install it.
+> On a rooted TV, VibeReel's picture-mode switch runs a **root service outside the webOS jail**. Its backend's only login is your Jellyfin one, and it leans on yt-dlp and undocumented IMDb and Radarr endpoints. Read every point below before you install it.
 
 - **What gets downloaded is up to you.** The backend automates your own Sonarr, Radarr and qBittorrent, and knows no indexer itself: it never searches or adds a torrent on its own, and what Sonarr and Radarr fetch depends entirely on the indexers you give them (e.g. through Prowlarr). Only use it for content you have the right to download. The NixOS module also runs FlareSolverr, which gets Prowlarr through Cloudflare challenges on indexers that use them.
 - **The backend trusts every Jellyfin user to add titles.** Each request must carry the access token of a user signed in to your Jellyfin (the apps send theirs; the backend asks Jellyfin who it belongs to), and the Host and browser Origin must name your server, which stops DNS-rebinding and cross-site requests from web pages opened on your LAN. Jellyfin administrators may do everything. Any other user can add titles (up to 10 movies and 10 series at a time, configurable), and can cancel, undo or delete — files included — only the titles they added. Anyone signed in can stream the files being downloaded, so keep it on your LAN (or a tailnet). It stores each push subscriber's Jellyfin access token and who added which title in its state directory.
 - **Trailers are downloaded from YouTube with yt-dlp.** That is against YouTube's terms of service and breaks whenever YouTube changes something, until yt-dlp catches up. When it fails, the TV opens the trailer in the YouTube app instead.
 - **Trending and the IMDb charts use IMDb's internal GraphQL endpoint**, called with the header of IMDb's own web client. It is undocumented and unsupported and can stop working at any time. The franchise rail likewise reads Radarr's metadata service (`api.radarr.video`) directly, which is Radarr's backend rather than a public API.
-- **The TV app needs a rooted TV.** Root comes with a root ssh server (webosbrew's default password is `alpine`: install a key or change it), and since a firmware update can remove root, rooted TVs usually have updates blocked, security fixes included.
-- **The companion service runs as root** outside the webOS jail and registers on the luna bus as `com.webos.app.multiviewsettings-reel`, so the bus grants it the settings permission of LG's own Multi-View Settings app. That deliberately bypasses webOS's permission model, and a bug in the service is a root bug. It listens only on `127.0.0.1:8791`, with `Access-Control-Allow-Origin: *`, so any app or web page on the TV can read and switch the picture mode through it; that is all it exposes.
+- **Root is optional, and has a cost.** The TV app runs on stock firmware; root only adds the picture-mode switch and the ssh deploy. Root comes with a root ssh server (webosbrew's default password is `alpine`: install a key or change it), and since a firmware update can remove root, rooted TVs usually have updates blocked, security fixes included.
+- **The companion service (rooted TVs only) runs as root** outside the webOS jail and registers on the luna bus as `com.webos.app.multiviewsettings-reel`, so the bus grants it the settings permission of LG's own Multi-View Settings app. That deliberately bypasses webOS's permission model, and a bug in the service is a root bug. It listens only on `127.0.0.1:8791`, with `Access-Control-Allow-Origin: *`, so any app or web page on the TV can read and switch the picture mode through it; that is all it exposes.
 
 ## Development
 
@@ -178,7 +192,7 @@ npx vite dev                                    # TV app on http://127.0.0.1:889
 npx vite --config phone/vite.config.js          # phone app on http://127.0.0.1:8900
 ```
 
-The TV app runs in a desktop browser against the real server, because Jellyfin sends `Access-Control-Allow-Origin: *`. Arrow keys work as the D-pad, <kbd>Enter</kbd> is OK and <kbd>Esc</kbd> is Back. Video decode, HDR, audio passthrough, PGS and picture modes only work on the TV. The app is inspectable, so attach Chrome DevTools to `http://<tv>:9998` to debug there.
+The TV app runs in a desktop browser against the real server, because Jellyfin sends `Access-Control-Allow-Origin: *`. Arrow keys work as the D-pad, <kbd>Enter</kbd> is OK and <kbd>Esc</kbd> is Back. Video decode, HDR, audio passthrough and PGS only work on the TV, picture modes only on a rooted one. The app is inspectable, so attach Chrome DevTools to `http://<tv>:9998` to debug there.
 
 The phone dev server proxies `/jf` and `/ml` to the URLs in `.env.local`. [`phone/DEV-CHROME.md`](phone/DEV-CHROME.md) describes an iPhone frame for desktop Chrome (safe areas, touch emulation, rotation).
 
@@ -219,7 +233,7 @@ and diffs its API against what the apps use — see
 src/            TV app: lib/ (logic: player engine, device profile, D-pad focus, api),
                 screens/, components/, style.css
 public/         shipped verbatim: appinfo.json, a 60p clip that resets the TV's refresh rate
-service/        TV companion service (luna bus → picture settings, HTTP on 127.0.0.1:8791)
+service/        TV companion service for rooted TVs (luna bus → picture settings, HTTP on 127.0.0.1:8791)
 phone/          iPhone PWA: src/ (UI), dev/ (dev-server tooling), public/ (icons, sw.js)
 backend/        reel-api (FastAPI) + Nix flake and NixOS module
 docs/ios/       iPhone architecture, media tests, UX audit, design spec and polish notes
