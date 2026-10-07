@@ -435,3 +435,13 @@ html, body { overflow: hidden; }
    everything jumped up when the real hero replaced it. A hero, skeleton or
    not, runs under the navigation. */
 .wapp .home.screen--below-topbar:has(> .hero) { padding-top: 0; }
+
+/* Home hero paddles in a narrow window: the text column starts at twice the
+   gutter (58 px at 900), and the 52-px paddle reached 64 — it sat on the
+   eyebrow and the title. A smaller one stays in the margin. */
+@media (max-width: 1000px) {
+  .whero__btn { width: 44px; height: 44px; }
+  .whero__btn .i { width: 24px; height: 24px; }
+  .whero__btn--l { left: 8px; }
+  .whero__btn--r { right: 8px; }
+}
