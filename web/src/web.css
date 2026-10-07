@@ -445,3 +445,9 @@ html, body { overflow: hidden; }
   .whero__btn--l { left: 8px; }
   .whero__btn--r { right: 8px; }
 }
+
+/* the quick-add "+" on a poster (Trending, Search, charts) answers the
+   pointer before the click: gold, like the action it starts */
+@media (hover: hover) and (pointer: fine) {
+  .tile__add:not([aria-disabled]):hover { background: var(--gold); color: var(--text-on-gold); box-shadow: none; }
+}

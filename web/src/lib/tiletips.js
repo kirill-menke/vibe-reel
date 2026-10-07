@@ -4,7 +4,9 @@
  * the pointer enters a tile whose title (or sub) is actually clipped, the tile
  * gets a `title` with the whole caption; one that fits gets none, so a short
  * title never shows a redundant tooltip. Measured on entry only (two layout
- * reads, already clean by then), never on scroll. */
+ * reads, already clean by then), never on scroll. The quick-add "+" gets its
+ * label as a tooltip too ("Add Dune to library", "Adding Dune") — a bare "+"
+ * on a poster doesn't say what it does. */
 
 /** @param {Element | null} el */
 const clipped = (el) => !!el && el.scrollWidth > el.clientWidth + 1;
@@ -12,7 +14,11 @@ const clipped = (el) => !!el && el.scrollWidth > el.clientWidth + 1;
 /** @param {PointerEvent} e */
 function onOver(e) {
   if (e.pointerType && e.pointerType !== 'mouse') return;
-  const tile = /** @type {HTMLElement | null} */ (e.target instanceof Element ? e.target.closest('.tile') : null);
+  const t = e.target instanceof Element ? e.target : null;
+  // the quick-add "+" says what it does ("Add Dune to library")
+  const add = /** @type {HTMLElement | null | undefined} */ (t?.closest('.tile__add'));
+  if (add) add.title = add.getAttribute('aria-label') || '';
+  const tile = /** @type {HTMLElement | null | undefined} */ (t?.closest('.tile'));
   if (!tile || tile.contains(/** @type {Node | null} */ (e.relatedTarget))) return;
   const title = tile.querySelector('.tile__title');
   const sub = tile.querySelector('.tile__sub');
