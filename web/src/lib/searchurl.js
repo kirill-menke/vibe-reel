@@ -1,4 +1,5 @@
-/* The Search query in the address bar: /search?q=dune.
+/* The Search query in the address bar (/search?q=dune), and Search's
+ * keyboard (/ to search from anywhere, Esc to clear — see onKey).
  *
  * The phone's Search screen keeps its query in its own state (the field is
  * `bind:value`), so this works at the DOM edge, without touching it:
@@ -13,6 +14,7 @@
  *   tab links  urlsync.svelte.js asks for the current query whenever it
  *              writes the Search root's URL (setSearchQuery) */
 import { setSearchQuery } from './urlsync.svelte.js';
+import { R, switchTab } from '$p/lib/router.svelte.js';
 
 const FIELD = '.route[data-route="search"] .search__input';
 
@@ -60,8 +62,60 @@ function restoreFromUrl() {
   waiting.observe(document.body, { childList: true, subtree: true });
 }
 
+/* ---- the keyboard ----
+ *   /        from anywhere (not while typing, nor with the player, Login, a
+ *            sheet or a menu up): Search, with the cursor in the field — the
+ *            web's usual shortcut. On a chart page it goes back to the root.
+ *   Esc      in the field: clears the query (Chrome does that natively for
+ *            type=search, Firefox doesn't — now both do, and both update
+ *            ?q=); on an empty field it leaves it, which ends search mode.
+ *   the nav  a click on the Search link from another section puts the cursor
+ *            in the field too, so typing can start at once. */
+const typing = (/** @type {EventTarget | null} */ t) => t instanceof Element && !!t.closest('input, textarea, select, [contenteditable]');
+
+/* the field once the Search root is the visible route (a few frames after a
+ * tab switch: Svelte mounts / un-hides it first) */
+function focusField(tries = 10) {
+  const f = field();
+  if (f && f.closest('.route:not([hidden])')) {
+    f.focus({ preventScroll: true });
+    return;
+  }
+  if (tries > 0) requestAnimationFrame(() => focusField(tries - 1));
+}
+
+/** @param {KeyboardEvent} e */
+function onKey(e) {
+  if (e.defaultPrevented || e.altKey || e.ctrlKey || e.metaKey) return;
+  if (e.key === 'Escape' && /** @type {Element} */ (e.target).matches?.(FIELD)) {
+    const f = /** @type {HTMLInputElement} */ (e.target);
+    e.preventDefault();
+    if (f.value) {
+      f.value = '';
+      f.dispatchEvent(new Event('input', { bubbles: true }));
+    } else f.blur();
+    return;
+  }
+  if (e.key !== '/' || typing(e.target)) return;
+  if (R.modal || R.sheet || document.querySelector('.ctx, .actsheet:not([inert])')) return;
+  e.preventDefault();
+  if (R.tab !== 'search' || R.stacks.search.length > 1) switchTab('search');
+  focusField();
+}
+
 export function initSearchUrl() {
   setSearchQuery(current);
+  document.addEventListener('keydown', onKey);
+  // capture: WebNav's own click handler switches the tab before a bubbling
+  // listener would see which tab it came from
+  document.addEventListener(
+    'click',
+    (e) => {
+      if (e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+      if (/** @type {Element} */ (e.target).closest?.('.wnav__tab[href="/search"]') && R.tab !== 'search') setTimeout(() => focusField(), 0);
+    },
+    true
+  );
   document.addEventListener('input', (e) => {
     if (/** @type {Element} */ (e.target).matches?.(FIELD)) write();
   });
