@@ -884,6 +884,44 @@ declare namespace VR {
     pollMs?: number;
   }
 
+  /** Web build: what the browser decodes through MediaSource (tracks.js webCaps(); MP3 as a
+   * progressive file), the HEVC level ceiling, and whether the display is HDR
+   * (`video-dynamic-range: high`). `dv8`/`dv5`: a dvh1 sample entry of that profile is playable. */
+  interface WebCaps {
+    h264: boolean;
+    hevc: boolean;
+    hevc10: boolean;
+    hevcLevel: number;
+    av1: boolean;
+    av1_10: boolean;
+    vp9: boolean;
+    vp9_10: boolean;
+    aac: boolean;
+    mp3: boolean;
+    opus: boolean;
+    flac: boolean;
+    ac3: boolean;
+    eac3: boolean;
+    dv8: boolean;
+    dv5: boolean;
+    hdr: boolean;
+  }
+
+  /** createJfFeed() options (jfhls.js, web build): Jellyfin's `main.m3u8` URL (absolute, with
+   * its ApiKey query), the start position until the first seek lands, and the player's hooks. */
+  interface JfFeedOptions {
+    url: string;
+    position: () => number;
+    jump?: ((t: number) => void) | null;
+    onFail: (e: ApiError) => void;
+    media?: HTMLMediaElement | null;
+    bitrate?: number;
+    /** The display is HDR (webCaps().hdr): keep an HDR stream copy instead of an SDR variant. */
+    hdr?: boolean;
+    /** Retry waits for a failed segment (ms); default jfhls.js SEG_RETRY_MS. */
+    retryMs?: number[];
+  }
+
   /** homehide.js (localStorage `reel.homeHidden.<userId>`): Continue Watching item id → the
    * LastPlayedDate stamp it was hidden at; Next Up series id → the episode id hidden. */
   interface HomeHidden {

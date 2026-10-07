@@ -471,7 +471,7 @@ export function tileTechBadge(item) {
  * @returns {Jf.DeviceProfile}
  */
 export function deviceProfile(burn, maxBitrate) {
-  if (__PHONE__) return phoneProfile(burn, maxBitrate);
+  if (__PHONE__) return __WEB__ ? webProfile(burn, maxBitrate) : phoneProfile(burn, maxBitrate);
   /** @type {Jf.DeviceProfile} */
   const p = {
     MaxStreamingBitrate: 400000000,
@@ -696,5 +696,183 @@ function phoneProfile(burn, maxBitrate) {
       { Format: 'pgs', Method: 'External' }
     ],
     ResponseProfiles: [{ Type: 'Video', Container: 'm4v', MimeType: 'video/mp4' }]
+  };
+}
+
+/* ================= desktop browser (web build) device profile =================
+ * The web build (`__PHONE__ && __WEB__`: the phone engine in desktop Chrome /
+ * Firefox) plays like the phone — Jellyfin's HLS fMP4 remux, video copied
+ * wherever the browser decodes it — except that the browser is never handed
+ * the playlist: player.svelte.js appends the segments to a MediaSource itself
+ * (jfhls.js). So capabilities are probed with MediaSource.isTypeSupported, not
+ * canPlayType: what counts is what an fMP4 SourceBuffer takes. Measured on a
+ * Linux desktop (2026-10-07): Chrome 154 — H.264, AV1 8/10-bit, VP9, AAC, Opus,
+ * FLAC; no HEVC, no AC-3/E-AC-3, no Dolby Vision. Firefox 156 — the same plus
+ * HEVC Main/Main 10 (4K too); it refuses a dvh1 sample entry outright, which
+ * jfhls.js rewrites to hvc1 (DV profile 8 then plays as its base layer).
+ *   - DirectPlay: progressive MP4/M4V only, with the probed video codecs and
+ *     AAC/MP3/Opus/FLAC (+ AC-3/E-AC-3 where probed). An HEVC MP4 must be tagged
+ *     hvc1/hev1 — a dvh1 file is refused, so the remux takes it and retags it.
+ *     A multi-audio file direct-plays only for its default track: desktop
+ *     browsers have no audioTracks, so play() turns DirectPlay off for any
+ *     other pick (fileDefaultAudio).
+ *   - HLS: H.264 listed first, so a forced transcode (HEVC on Chrome, the
+ *     quality cap, burn-in) encodes H.264 — what every browser decodes, and the
+ *     NAS's cheapest QSV encode (PHONE_CAP_BOX). Audio AAC (+ Opus/FLAC copied,
+ *     + AC-3/E-AC-3 where probed), at most 6 channels: DTS/TrueHD/E-AC-3 become
+ *     AAC 5.1 and the browser downmixes.
+ *   - HDR is claimed only on an HDR display (`video-dynamic-range: high`). On an
+ *     SDR one an HDR source is tone-mapped by Jellyfin (a real transcode)
+ *     rather than left as PQ to a browser that may not tone-map it (Firefox
+ *     washes it out). Jellyfin 12.1 still lists the HDR stream copy first in
+ *     master.m3u8 then (VideoRangeTypeNotSupported), its SDR re-encodes after
+ *     it — jfhls.js chooseVariant() takes the SDR H.264 one.
+ *     DV profile 8 plays as its HDR10/HLG/SDR base; DV 5 (no base layer) only
+ *     where dvh1.05 is playable, else Jellyfin tone-maps it.
+ *   - The quality cap is the phone's (PHONE_CAP_BOX, getQualityCap). */
+/** @type {VR.WebCaps | null} */
+let webCapsCache = null;
+
+/* What this browser decodes through MediaSource (MP3 only as a progressive
+ * file). Probed once per page; exported for the UI's diagnostics. */
+/** @returns {VR.WebCaps} */
+export function webCaps() {
+  if (webCapsCache) return webCapsCache;
+  const MS = window.MediaSource || window.ManagedMediaSource;
+  const mse = (/** @type {string} */ kind, /** @type {string} */ codecs) => {
+    try {
+      return !!MS && MS.isTypeSupported(kind + '/mp4; codecs="' + codecs + '"');
+    } catch {
+      return false;
+    }
+  };
+  let mp3 = false;
+  try {
+    mp3 = !!document.createElement('video').canPlayType('audio/mpeg').replace(/no/, '');
+  } catch {}
+  let hdr = false;
+  try {
+    hdr = matchMedia('(video-dynamic-range: high)').matches;
+  } catch {}
+  const hevc10 = mse('video', 'hvc1.2.4.L153.B0');
+  webCapsCache = {
+    h264: mse('video', 'avc1.640028'),
+    hevc: hevc10 || mse('video', 'hvc1.1.6.L120.90'),
+    hevc10,
+    hevcLevel: mse('video', 'hvc1.2.4.L186.B0') ? 186 : mse('video', 'hvc1.2.4.L183.B0') ? 183 : 153,
+    av1: mse('video', 'av01.0.08M.08'),
+    av1_10: mse('video', 'av01.0.08M.10'),
+    vp9: mse('video', 'vp09.00.10.08'),
+    vp9_10: mse('video', 'vp09.02.10.10'),
+    aac: mse('audio', 'mp4a.40.2'),
+    mp3,
+    opus: mse('audio', 'opus'),
+    flac: mse('audio', 'flac'),
+    ac3: mse('audio', 'ac-3'),
+    eac3: mse('audio', 'ec-3'),
+    dv8: mse('video', 'dvh1.08.06'),
+    dv5: mse('video', 'dvh1.05.06'),
+    hdr
+  };
+  return webCapsCache;
+}
+
+/* The audio track a browser plays from a progressive file: the one flagged
+ * default, else the first (Jellyfin lists streams in index order). */
+/** @param {VR.PlayerSource | null | undefined} src @returns {number} its stream index, -1 = no audio */
+export function fileDefaultAudio(src) {
+  const a = ((src && src.MediaStreams) || []).filter((s) => s.Type === 'Audio');
+  const d = a.find((s) => s.IsDefault) || a[0];
+  return d && d.Index != null ? d.Index : -1;
+}
+
+/**
+ * @param {boolean} burn
+ * @param {number} [maxBitrate]
+ * @returns {Jf.DeviceProfile}
+ */
+function webProfile(burn, maxBitrate) {
+  const c = webCaps();
+  const br = maxBitrate || 200000000;
+  const box = PHONE_CAP_BOX[br] || null;
+  const stereo = !!box && br <= 4000000;
+  const on = (/** @type {Array<string | false>} */ l) => l.filter(Boolean).join(',');
+  const vcodecs = on(['h264', c.hevc && 'hevc', c.av1 && 'av1', c.vp9 && 'vp9']);
+  const surround = [c.eac3 && 'eac3', c.ac3 && 'ac3'];
+  const ranges = c.hdr
+    ? 'SDR|HDR10|HDR10Plus|HLG|DOVIWithHDR10|DOVIWithHLG|DOVIWithSDR|DOVIWithHDR10Plus' + (c.dv5 ? '|DOVI' : '')
+    : 'SDR|DOVIWithSDR';
+  /** @param {boolean} ten @returns {Jf.ProfileCondition[]} */
+  const depth = (ten) => (ten ? [] : [cond('LessThanEqual', 'VideoBitDepth', '8')]);
+  /** @type {Jf.CodecProfile[]} */
+  const codecProfiles = [
+    {
+      Type: 'Video',
+      Codec: 'h264',
+      Conditions: [
+        cond('EqualsAny', 'VideoProfile', 'high|main|baseline|constrained baseline'),
+        cond('EqualsAny', 'VideoRangeType', 'SDR'),
+        cond('LessThanEqual', 'VideoLevel', '52'),
+        cond('NotEquals', 'IsInterlaced', 'true')
+      ]
+    }
+  ];
+  if (c.hevc) {
+    codecProfiles.push(
+      {
+        Type: 'Video',
+        Codec: 'hevc',
+        Conditions: [
+          cond('EqualsAny', 'VideoProfile', c.hevc10 ? 'main|main 10' : 'main'),
+          cond('EqualsAny', 'VideoRangeType', ranges),
+          cond('LessThanEqual', 'VideoLevel', String(c.hevcLevel)),
+          cond('NotEquals', 'IsInterlaced', 'true')
+        ]
+      },
+      {
+        Type: 'Video',
+        Codec: 'hevc',
+        Container: 'mp4,m4v',
+        Conditions: [cond('EqualsAny', 'VideoCodecTag', c.dv8 ? 'hvc1|hev1|dvh1|dvhe' : 'hvc1|hev1', true)]
+      }
+    );
+  }
+  if (c.av1) codecProfiles.push({ Type: 'Video', Codec: 'av1', Conditions: [cond('EqualsAny', 'VideoRangeType', ranges), ...depth(c.av1_10)] });
+  if (c.vp9) codecProfiles.push({ Type: 'Video', Codec: 'vp9', Conditions: [cond('EqualsAny', 'VideoRangeType', c.hdr ? 'SDR|HDR10|HLG' : 'SDR'), ...depth(c.vp9_10)] });
+  return {
+    Name: 'VibeReel Web',
+    MaxStreamingBitrate: br,
+    MaxStaticBitrate: br,
+    MusicStreamingTranscodingBitrate: 384000,
+    DirectPlayProfiles: [
+      { Type: 'Video', Container: 'mp4,m4v', VideoCodec: vcodecs, AudioCodec: on(['aac', c.mp3 && 'mp3', c.opus && 'opus', c.flac && 'flac', ...surround]) }
+    ],
+    TranscodingProfiles: [
+      {
+        Type: 'Video',
+        Container: 'mp4',          // HLS with fMP4 segments, appended to a MediaSource by jfhls.js
+        Protocol: 'hls',
+        Context: 'Streaming',
+        VideoCodec: vcodecs,       // H.264 first: the encode target of any forced transcode
+        AudioCodec: stereo ? 'aac' : on(['aac', c.opus && 'opus', c.flac && 'flac', ...surround]),
+        MaxAudioChannels: stereo ? '2' : '6',
+        MinSegments: 1,
+        // segments start on keyframes: a SourceBuffer can only start decoding at one
+        BreakOnNonKeyFrames: false,
+        ...(box ? { Conditions: [cond('LessThanEqual', 'Width', String(box[0])), cond('LessThanEqual', 'Height', String(box[1]))] } : {})
+      },
+      { Type: 'Video', Container: 'mp4', Protocol: 'http', Context: 'Static', VideoCodec: 'h264', AudioCodec: 'aac' }
+    ],
+    ContainerProfiles: [],
+    CodecProfiles: codecProfiles,
+    // as on the phone: text → VTT <track>, PGS → libpgs, VobSub/DVB burn in
+    SubtitleProfiles: [
+      { Format: 'vtt', Method: 'External' },
+      { Format: 'srt', Method: 'External' },
+      { Format: 'subrip', Method: 'External' },
+      { Format: 'mov_text', Method: 'External' },
+      { Format: 'pgssub', Method: 'External' },
+      { Format: 'pgs', Method: 'External' }
+    ]
   };
 }
