@@ -80,7 +80,7 @@
 </script>
 
 <Sheet title="Accounts">
-  <p class="group__label">On this iPhone · {here}</p>
+  <p class="group__label">{__WEB__ ? 'In this browser' : 'On this iPhone'} · {here}</p>
   <List role="radiogroup">
     {#each list as a (a.server + a.userId)}
       {@const me = isCurrent(a)}

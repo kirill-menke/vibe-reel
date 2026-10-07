@@ -67,7 +67,7 @@ export const cfg = {
 };
 
 if (!cfg.deviceId) {
-  cfg.deviceId = (PHONE ? 'reelphone-' : 'reel-') + Math.random().toString(36).slice(2) + Date.now().toString(36);
+  cfg.deviceId = (PHONE ? (__WEB__ ? 'reelweb-' : 'reelphone-') : 'reel-') + Math.random().toString(36).slice(2) + Date.now().toString(36);
   set('reel.deviceId', cfg.deviceId);
 }
 

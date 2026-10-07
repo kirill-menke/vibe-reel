@@ -27,8 +27,10 @@ export const GRID_FIELDS = 'UserData,ProductionYear,PremiereDate,MediaSources';
 
 /** @returns {string} */
 function authHeader() {
-  const dev = typeof __PHONE__ !== 'undefined' && __PHONE__ ? 'iPhone' : 'LG webOS TV';
-  let h = `MediaBrowser Client="Reel", Device="${dev}", DeviceId="${cfg.deviceId}", Version="0.1.0"`;
+  // the web build (`__WEB__`, only ever inside a phone build) lists as "VibeReel Web" on "Web"
+  const phone = typeof __PHONE__ !== 'undefined' && __PHONE__;
+  const dev = phone ? (__WEB__ ? 'Web' : 'iPhone') : 'LG webOS TV';
+  let h = `MediaBrowser Client="${phone && __WEB__ ? 'VibeReel Web' : 'Reel'}", Device="${dev}", DeviceId="${cfg.deviceId}", Version="0.1.0"`;
   if (cfg.token) h += `, Token="${cfg.token}"`;
   return h;
 }

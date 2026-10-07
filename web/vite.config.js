@@ -5,6 +5,7 @@ import { rmSync } from 'node:fs';
 import path from 'node:path';
 import { webDev } from './dev/plugin.js';
 import { licenses } from '../vite.licenses.js';
+import { svelteConsts } from '../vite.svelte-consts.js';
 
 /* VibeReel Web — the desktop browser build (Chrome, Firefox; mouse + keyboard).
  *
@@ -15,7 +16,12 @@ import { licenses } from '../vite.licenses.js';
  * layer: the phone's module redirects (nav → phone router shim, focus → no-op
  * shim, lifecycle → web/src/lib/lifecycle.js) plus a few phone modules swapped
  * for desktop variants (WEB_SWAPS below). `__PHONE__` and `__WEB__` are both
- * true here; the TV and phone builds never see `__WEB__` code paths. */
+ * true here; the TV and phone builds never see `__WEB__` code paths. Shared
+ * code says what differs on the desktop in `__WEB__` branches inside its
+ * `__PHONE__` ones (src/lib/api.js and config.js: Jellyfin lists this client as
+ * "VibeReel Web" on "Web", DeviceIds start `reelweb-`); in Svelte markup a
+ * `{__WEB__ ? '…' : '…'}` folds to plain text before compiling
+ * (vite.svelte-consts.js), so the phone bundle stays byte-identical. */
 
 const here = path.dirname(fileURLToPath(import.meta.url)); // web/
 const repo = path.resolve(here, '..');
@@ -57,40 +63,6 @@ const moduleRedirects = {
     const r = await this.resolve(source, importer, { ...options, skipSelf: true });
     if (!r) return null;
     return REDIRECTS.get(r.id.split('?')[0]) || null;
-  }
-};
-
-/* Source patches for this build only — exact literals, replaced at transform
- * time; the build fails loudly if one is ever missing, so a change upstream
- * can't silently drop it. The TV and phone bundles stay byte-for-byte what
- * they were (the phone build never runs this).
- *
- *   identity   Jellyfin lists this client as "VibeReel Web" on "Web", and its
- *              DeviceIds start `reelweb-` (src/lib/api.js, config.js carry the
- *              phone's values inside their `__PHONE__` branches). Once
- *              `__WEB__` is defined for every build (TV/phone `false`), these
- *              can become `__WEB__` branches in the source instead.
- *   wording    the phone UI's "On this iPhone" / "Is Tailscale on?" lines. */
-const PATCHES = [
-  [path.join(tvLib, 'api.js'), [["__PHONE__ ? 'iPhone' : 'LG webOS TV'", "__PHONE__ ? 'Web' : 'LG webOS TV'"], ['MediaBrowser Client="Reel"', 'MediaBrowser Client="VibeReel Web"']]],
-  [path.join(tvLib, 'config.js'), [["(PHONE ? 'reelphone-' : 'reel-')", "(PHONE ? 'reelweb-' : 'reel-')"]]],
-  [path.join(phone, 'screens/Login.svelte'), [['>On this iPhone<', '>In this browser<']]],
-  [path.join(phone, 'sheets/Accounts.svelte'), [['On this iPhone · {here}', 'In this browser · {here}']]],
-  [path.join(phone, 'components/OfflineBanner.svelte'), [['Is Tailscale on?', 'Check your connection.']]]
-];
-const webPatches = {
-  name: 'web-patches',
-  enforce: /** @type {const} */ ('pre'),
-  /** @param {string} code @param {string} id */
-  transform(code, id) {
-    const hit = PATCHES.find(([f]) => f === id.split('?')[0]);
-    if (!hit) return null;
-    let out = code;
-    for (const [from, to] of /** @type {[string, string][]} */ (hit[1])) {
-      if (!out.includes(from)) this.error(`web-patches: "${from}" not found in ${path.relative(repo, /** @type {string} */ (hit[0]))} — update web/vite.config.js`);
-      out = out.replace(from, to);
-    }
-    return { code: out, map: null };
   }
 };
 
@@ -139,7 +111,7 @@ export default defineConfig({
   envDir: repo,
   base: '/',
   publicDir: path.join(repo, 'phone/public'),
-  plugins: [moduleRedirects, webPatches, svelte({ configFile: false }), lazyLibpgs, webDev(), licenses, prunePublic],
+  plugins: [moduleRedirects, svelteConsts({ __WEB__: true }), svelte({ configFile: false }), lazyLibpgs, webDev(), licenses, prunePublic],
   define: { __PHONE__: true, __WEB__: true },
   resolve: {
     alias: {

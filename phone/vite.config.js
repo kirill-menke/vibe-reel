@@ -6,6 +6,7 @@ import { createHash } from 'node:crypto';
 import path from 'node:path';
 import { phoneDev } from './dev/plugin.js';
 import { licenses } from '../vite.licenses.js';
+import { svelteConsts } from '../vite.svelte-consts.js';
 
 /* VibeReel Phone — the iPhone PWA build. See docs/ios/ARCHITECTURE.md.
  *
@@ -125,6 +126,7 @@ export default defineConfig({
   publicDir: path.join(here, 'public'),
   plugins: [
     moduleRedirects,
+    svelteConsts({ __WEB__: false }), // `{__WEB__ ? '…' : '…'}` in shared markup folds to the phone's text
     // No svelte.config.js for the phone: runes are Svelte 5's default and
     // nothing here needs a preprocessor (the repo root's config is the TV's).
     svelte({ configFile: false }),

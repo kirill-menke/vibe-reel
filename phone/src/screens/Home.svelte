@@ -802,7 +802,7 @@
     <LoadError
       title={failed.status === 401 || failed.status === 403 ? 'Jellyfin didn’t accept this sign-in' : 'Couldn’t reach the server'}
       reason={failed.network || /** @type {number} */ (failed.status) >= 502
-        ? new URL(cfg.server, location.href).host + ' didn’t answer. Check that Tailscale is on, then try again.'
+        ? new URL(cfg.server, location.href).host + (__WEB__ ? ' didn’t answer. Check your connection, then try again.' : ' didn’t answer. Check that Tailscale is on, then try again.')
         : ''}
       error={failed}
       {retry}

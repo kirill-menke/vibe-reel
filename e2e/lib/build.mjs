@@ -17,7 +17,7 @@ const here = path.dirname(fileURLToPath(import.meta.url));
 export const REPO = path.resolve(here, '..', '..');
 export const BUILD_DIR = path.join(REPO, 'e2e', '.build');
 
-const INPUTS = ['src', 'public', 'phone/src', 'phone/public', 'phone/index.html', 'phone/vite.config.js', 'index.html', 'vite.config.js', 'svelte.config.js', 'vite.licenses.js', 'package-lock.json'];
+const INPUTS = ['src', 'public', 'phone/src', 'phone/public', 'phone/index.html', 'phone/vite.config.js', 'index.html', 'vite.config.js', 'svelte.config.js', 'vite.licenses.js', 'vite.svelte-consts.js', 'package-lock.json'];
 
 function hashInputs(root = REPO) {
   const h = createHash('sha256');

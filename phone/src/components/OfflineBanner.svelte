@@ -16,7 +16,7 @@
 {#if conn.offline}
   <div class="banner {raised ? '' : 'banner--low'}" role="status">
     <span class="banner__icon"><Icon name="cloud-off" /></span>
-    <span class="banner__text"><span class="banner__title">Not connected to your server</span>Is Tailscale on?{homeSnap.shown ? ' Showing what was loaded last.' : saved ? ' Your downloads still play.' : ''}</span>
+    <span class="banner__text"><span class="banner__title">Not connected to your server</span>{__WEB__ ? 'Check your connection.' : 'Is Tailscale on?'}{homeSnap.shown ? ' Showing what was loaded last.' : saved ? ' Your downloads still play.' : ''}</span>
     {#if saved && top()?.name !== 'downloads'}<button class="btn btn--text dl__go" type="button" onclick={() => push('downloads')}><span>Downloads</span></button>{/if}
     <button class="btn btn--text" type="button" disabled={conn.checking || undefined} onclick={() => checkServer()}><span>{conn.checking ? 'Checking…' : 'Retry'}</span></button>
   </div>

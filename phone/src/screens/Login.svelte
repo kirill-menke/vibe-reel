@@ -115,7 +115,7 @@
           shake(pwEl);
           pwEl?.select();
         } else if (e.network || e.status >= 502 || e.status === 404) {
-          serverErr = 'Couldn’t reach the server. Check the address and that Tailscale is on.';
+          serverErr = __WEB__ ? 'Couldn’t reach the server. Check the address and your connection.' : 'Couldn’t reach the server. Check the address and that Tailscale is on.';
           showServer = true;
           tick().then(() => shake(srvEl));
         } else {
@@ -153,7 +153,7 @@
 
     {#if others.length}
       <section>
-        <p class="group__label" style="padding-left: var(--s-4)">On this iPhone</p>
+        <p class="group__label" style="padding-left: var(--s-4)">{__WEB__ ? 'In this browser' : 'On this iPhone'}</p>
         <div class="list" style="margin: 0">
           {#each others as a (a.server + a.userId)}
             <button type="button" class="row row--inset-sep" onclick={() => switchTo(a)}>

@@ -147,7 +147,7 @@ export function createTrailerSource(id, { onFail, onInfo, onSubs, position, jump
     let lastStatus = Date.now();
 
     const mime = 'video/mp4; codecs="' + (st.codecs || (st.vcodec || 'avc1.640028') + ',mp4a.40.2') + '"';
-    if (!(__PHONE__ ? MS : MediaSource).isTypeSupported(mime)) throw new Error((__PHONE__ ? 'this iPhone refuses ' : 'the TV refuses ') + mime);
+    if (!(__PHONE__ ? MS : MediaSource).isTypeSupported(mime)) throw new Error((__PHONE__ ? (__WEB__ ? 'this browser refuses ' : 'this iPhone refuses ') : 'the TV refuses ') + mime);
     if (st.duration) ms.duration = st.duration;
     const sb = ms.addSourceBuffer(mime);
 
