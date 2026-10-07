@@ -277,9 +277,22 @@ html, body { overflow: hidden; }
 .actsheet { position: fixed; }
 .actsheet__box { top: 50%; bottom: auto; max-width: 400px; translate: 0 -50%; }
 
-/* Login: a centred card instead of a phone screen */
-.wloginhost { --safe-top: 0px; }
-.wloginhost .login { max-width: 460px; margin: 0 auto; padding-top: max(var(--s-10), 14vh); }
+/* Login: a card centred in the window instead of a phone screen at the top
+   of an empty page — a faint gold glow behind it, as the hero art would be */
+.wloginhost {
+  --safe-top: 0px;
+  background:
+    radial-gradient(ellipse 60% 50% at 50% 0%, rgba(230, 180, 80, 0.08), rgba(230, 180, 80, 0) 70%),
+    var(--bg);
+}
+.wloginhost .screen { display: flex; flex-direction: column; padding: var(--s-8) var(--s-4); }
+.wloginhost .login {
+  width: 100%; max-width: 460px; margin: auto; /* auto: centred, and still scrolls when taller than the window */
+  padding: var(--s-10) var(--s-8) var(--s-8);
+  background: var(--surface-1); border-radius: var(--r-sheet);
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.5), inset 0 0 0 1px var(--line);
+}
+.wloginhost .login .list { background: var(--surface-2); }
 
 /* ================================================================ 5. hover */
 @media (hover: hover) and (pointer: fine) {
