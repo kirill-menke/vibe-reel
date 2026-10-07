@@ -2,8 +2,8 @@
 /* types/check-ratchet.mjs — the type-check lane's gate. Type-only tooling: nothing
  * here is imported by the app or reaches a bundle.
  *
- *   node types/check-ratchet.mjs              both projects (TV + phone)
- *   node types/check-ratchet.mjs --only tv    one project (tv | phone)
+ *   node types/check-ratchet.mjs              every project (TV + phone + web)
+ *   node types/check-ratchet.mjs --only tv    one project (tv | phone | web)
  *   node types/check-ratchet.mjs --list       also print every diagnostic
  *   node types/check-ratchet.mjs --update     lower the ceilings in ratchet.json to the
  *                                             current counts (never raises them)
@@ -17,8 +17,12 @@
  *                                `./nav.svelte.js` etc. are typed against the TV modules
  *                                in both projects; types/tests/phone/module-redirects.js
  *                                guards the shims' export lists instead.
+ *   web    web/jsconfig.json     web/src (the desktop build: phone screens + web variants),
+ *                                with web/vite.config.js's redirects mapped as `paths`.
  *   A diagnostic the phone run reports outside phone/ (in src/lib, reached through $lib)
  *   is the TV project's — unless the TV run does not have it, then it counts for phone.
+ *   The web run counts only what it reports under web/ (src/lib and phone/src are the
+ *   other two projects').
  *
  * Fails when:
  *   - a project's diagnostic count is above its ceiling (types/ratchet.json `max`), or
@@ -52,10 +56,12 @@ const LIST = args.includes('--list');
 const UPDATE = args.includes('--update');
 
 const PROJECTS = {
-  tv: { config: 'jsconfig.json', owns: (f) => !f.startsWith('phone/') && !f.startsWith('types/tests/phone/'),
+  tv: { config: 'jsconfig.json', owns: (f) => !f.startsWith('phone/') && !f.startsWith('web/') && !f.startsWith('types/tests/phone/'),
         exclude: ['src/vendor/libpgs.js'], mustInclude: ['src/**/*.js', 'src/**/*.svelte'], jsRoot: 'src' },
   phone: { config: 'phone/jsconfig.json', owns: (f) => f.startsWith('phone/') || f.startsWith('types/tests/phone/'),
-        exclude: ['dist', 'dev', 'public', 'scripts'], mustInclude: ['src/**/*.js', 'src/**/*.svelte'], jsRoot: 'phone/src' }
+        exclude: ['dist', 'dev', 'public', 'scripts'], mustInclude: ['src/**/*.js', 'src/**/*.svelte'], jsRoot: 'phone/src' },
+  web: { config: 'web/jsconfig.json', owns: (f) => f.startsWith('web/'),
+        exclude: ['dist', 'dev'], mustInclude: ['src/**/*.js', 'src/**/*.svelte'], jsRoot: 'web/src' }
 };
 const STRICT_FLAGS = ['noImplicitAny', 'strictNullChecks', 'strict'];
 const STRICT_MEMBERS = ['noImplicitAny', 'noImplicitThis', 'alwaysStrict', 'strictNullChecks', 'strictFunctionTypes',
@@ -133,7 +139,7 @@ function walk(dir) {
 /* ---------- source rules ---------- */
 function sourceRules(ratchet) {
   let counted = 0;
-  const files = [...walk(path.join(repo, 'src')), ...walk(path.join(repo, 'phone/src')), ...walk(path.join(repo, 'types'))]
+  const files = [...walk(path.join(repo, 'src')), ...walk(path.join(repo, 'phone/src')), ...walk(path.join(repo, 'web/src')), ...walk(path.join(repo, 'types'))]
     .filter((f) => /\.(js|mjs|svelte|ts)$/.test(f) && f !== 'src/vendor/libpgs.js' && f !== 'types/check-ratchet.mjs');
   for (const f of files) {
     if (/\.ts$/.test(f) && !/\.d\.ts$/.test(f) && !f.startsWith('types/')) fail(`${f}: no .ts sources — JSDoc in .js only`);
@@ -149,7 +155,7 @@ function sourceRules(ratchet) {
     });
   }
   const max = ratchet.max.suppressions;
-  if (counted > max) fail(`suppressions: ${counted} @ts-ignore/@ts-expect-error in src/ + phone/src, ceiling ${max}`);
+  if (counted > max) fail(`suppressions: ${counted} @ts-ignore/@ts-expect-error in src/ + phone/src + web/src, ceiling ${max}`);
   else if (counted < max && !UPDATE) fail(`suppressions: ${counted} < ceiling ${max} — run --update and commit the lower ceiling`);
   else ok(`suppressions: ${counted} (ceiling ${max})`);
   return counted;
@@ -185,7 +191,7 @@ ratchetFloor = ratchet.config || null;
 for (const [name, flags] of Object.entries(ratchetFloor || {}))
   for (const f of flags) if (!PROJECTS[name] || !STRICT_MEMBERS.concat('strict').includes(f)) fail(`ratchet.json config.${name}: unknown project or flag ${f}`);
 for (const [name, p] of Object.entries(PROJECTS)) if (!only || only === name) checkConfig(name, p);
-if (only && !PROJECTS[only]) throw new Error('--only tv|phone');
+if (only && !PROJECTS[only]) throw new Error('--only tv|phone|web');
 
 const runs = {};
 for (const name of Object.keys(PROJECTS)) if (!only || only === name) runs[name] = svelteCheck(PROJECTS[name].config);
@@ -222,5 +228,5 @@ if (UPDATE) {
   if (changed) { writeFileSync(RATCHET, JSON.stringify(ratchet, null, 2) + '\n'); console.log('updated types/ratchet.json (ceilings lowered) — commit it'); }
 }
 
-console.log(failed ? 'RATCHET FAIL' : `RATCHET PASS (tv ${counts.tv ?? '-'}, phone ${counts.phone ?? '-'}, suppressions ${supp})`);
+console.log(failed ? 'RATCHET FAIL' : `RATCHET PASS (tv ${counts.tv ?? '-'}, phone ${counts.phone ?? '-'}, web ${counts.web ?? '-'}, suppressions ${supp})`);
 process.exit(failed ? 1 : 0);

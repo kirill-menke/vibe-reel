@@ -2,6 +2,7 @@
   "max": {
     "tv": 0,
     "phone": 0,
+    "web": 0,
     "suppressions": 0
   },
   "config": {
@@ -9,6 +10,15 @@
       "strict"
     ],
     "phone": [
+      "noImplicitAny",
+      "noImplicitThis",
+      "alwaysStrict",
+      "strictFunctionTypes",
+      "strictBindCallApply",
+      "useUnknownInCatchVariables",
+      "strictBuiltinIteratorReturn"
+    ],
+    "web": [
       "noImplicitAny",
       "noImplicitThis",
       "alwaysStrict",
@@ -35,7 +45,8 @@
       "src/screens/PendingDetail.svelte",
       "src/screens/Person.svelte",
       "src/screens/SeriesDetail.svelte",
-      "phone/src/"
+      "phone/src/",
+      "web/src/"
     ],
     "strictNullChecks": [
       "src/lib/",
@@ -71,7 +82,8 @@
       "phone/src/screens/Person.svelte",
       "phone/src/screens/Search.svelte",
       "phone/src/screens/SeriesDetail.svelte",
-      "phone/src/screens/Settings.svelte"
+      "phone/src/screens/Settings.svelte",
+      "web/src/"
     ],
     "strict": [
       "src/lib/",
@@ -107,7 +119,8 @@
       "phone/src/screens/Person.svelte",
       "phone/src/screens/Search.svelte",
       "phone/src/screens/SeriesDetail.svelte",
-      "phone/src/screens/Settings.svelte"
+      "phone/src/screens/Settings.svelte",
+      "web/src/"
     ]
   }
 }
