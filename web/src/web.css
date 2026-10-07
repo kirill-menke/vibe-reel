@@ -372,3 +372,60 @@ html, body { overflow: hidden; }
 
 /* settings-like pages read as a column, not a 2560-px-wide list */
 .wapp .settings > *, .wapp .mylib > * { max-width: 900px; }
+
+/* ========================================================== lane: browse */
+/* Home, Library, Search, Chart: tiles, rails and grids under a mouse and a
+   keyboard. */
+
+/* Grids: one step denser in a narrow window. At ≤ 900 px four columns made
+   each poster ~200 px wide — bigger than at 1000 px (6 columns, ~144 px). */
+@media (max-width: 900px) { :root { --wgrid-cols: 5; } }
+@media (max-width: 720px) { :root { --wgrid-cols: 4; } }
+
+/* The hover lift + ring and the focus ring sit outside the art frame. Two
+   things clipped them:
+   - grid tiles carry the phone's constant `content-visibility: auto`, whose
+     paint containment cut the ring on three sides (Chrome and Firefox alike).
+     A desktop lays a grid out cheaply; `visible` is just as constant, so the
+     Chromium leak on a *switching* content-visibility doesn't apply.
+   - a rail's track clips vertically (overflow-x: auto); room above and
+     below, taken back by a negative margin, keeps the tiles where they were. */
+.wapp :is(.lib__grid, .chart__grid, .srch__grid) > .tile { content-visibility: visible; }
+.wapp .rail__track { padding-block: 12px; margin-block: -12px; }
+
+/* Keyboard focus on a tile: a gold ring on the art (with a dark gap so it
+   reads on a gold poster too) and a gold title — not the square, half-
+   transparent outline around art + caption the generic rule drew. */
+.tile:focus-visible { outline: none; }
+.tile:focus-visible .tile__frame { box-shadow: 0 0 0 2px var(--bg), 0 0 0 4px var(--gold), var(--shadow-float); }
+.tile:focus-visible .tile__title { color: var(--gold); }
+.catcard:focus-visible { outline-offset: 3px; }
+
+/* Continue Watching / Next Up tiles play on a click (the others open a page):
+   say so with a play button over the art on hover and on keyboard focus.
+   It lives in the frame's ::before (the press veil), whose look stays fixed
+   so only its opacity fades — swapping the background on hover flashed the
+   phone's black veil on the way out. */
+.home__cell:is([data-cell^="cw-"], [data-cell^="nextup-"]) .tile__frame::before {
+  background:
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 56 56'%3E%3Ccircle cx='28' cy='28' r='28' fill='%23e6b450'/%3E%3Cpath d='M22 17.5v21a1.2 1.2 0 0 0 1.8 1l16.6-10.5a1.2 1.2 0 0 0 0-2L23.8 16.5a1.2 1.2 0 0 0-1.8 1z' fill='%230a0a0c'/%3E%3C/svg%3E") center / clamp(44px, 16%, 60px) no-repeat,
+    rgba(10, 10, 12, 0.32);
+}
+.home__cell:is([data-cell^="cw-"], [data-cell^="nextup-"]) .tile:focus-visible .tile__frame::before { opacity: 1; }
+@media (hover: hover) and (pointer: fine) {
+  .home__cell:is([data-cell^="cw-"], [data-cell^="nextup-"]) .tile:hover .tile__frame::before { opacity: 1; }
+}
+
+/* Search's browse categories: the phone's 2–3 columns made 590-px cards with a
+   58-px poster fan in the middle of each. Columns follow the window instead
+   (4 at 900, 5 at 1280, 6 at 1920, 7 at 2560), and the fan grows a little. */
+.wapp .srch .catgrid { grid-template-columns: repeat(auto-fill, minmax(clamp(200px, 13.5vw, 300px), 1fr)); gap: var(--grid-gap); }
+.wapp .srch .catcard { --catcard-poster-w: 64px; }
+@media (hover: hover) and (pointer: fine) {
+  .catcard { transition: transform var(--dur-base) var(--ease-out), filter var(--dur-fast) linear, box-shadow var(--dur-fast) linear; }
+  .catcard:hover { box-shadow: inset 0 0 0 1px var(--gold-line); }
+}
+
+/* Chart: the All / Not in library / In library control is three words, not
+   a 1800-px bar */
+.wapp .chart__seg :is(.seg, .skel) { max-width: 520px; }
