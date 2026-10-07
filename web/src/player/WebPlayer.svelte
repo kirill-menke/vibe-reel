@@ -8,13 +8,21 @@
    * this file maps a mouse and a keyboard onto it.
    *
    *   mouse     moving shows the controls (the engine hides them after its
-   *             idle timeout while playing; the cursor goes with them); a
-   *             click on the picture toggles pause; a double click toggles
-   *             full screen (on this layer, so the controls come along)
-   *   keyboard  Space / K play-pause · ← → / J L ∓10 s · ↑ ↓ volume ·
-   *             M mute · C subtitles on/off · F full screen · Esc closes a
-   *             panel, else leaves full screen, else the player
-   *   pieces    the phone's Scrubber (trickplay while dragging, plus a hover
+ *             idle timeout while playing, and we hide them when the pointer
+ *             leaves the window; the cursor goes with them, but stays over a
+ *             loading / error card); a click on the picture toggles pause; a
+ *             double click toggles full screen (on this layer, so the
+ *             controls come along); a click outside an open panel closes it
+ *             (on the picture: without pausing); the wheel over the speaker
+ *             sets the volume
+ *   keyboard  shortcuts.js maps keys to actions (Space / K, ← → / J L, 0–9,
+ *             ↑ ↓, M, C, S, Shift+N, F, P, ?, Esc); "?" lists them. Each
+ *             action that changes nothing visible in the bar answers with a
+ *             flash on the picture (play/pause, ∓10 s that adds up while the
+ *             key repeats, volume %, the time a digit jumped to). Esc closes
+ *             the shortcut list, else a panel, else leaves full screen, else
+ *             the player
+ *   pieces    the phone's Scrubber (trickplay while dragging, plus a hover
    *             preview here), UpNextCard, ChapterPanel, TrackPanel (as the
    *             right-hand panels), the skip chip, loading / buffering /
    *             error cards; volume slider, Picture in Picture (where the
@@ -39,11 +47,9 @@
     skipVisible, skipSegment, upNextVisible, playNext, retryPlayback, exitPlayer, closePanel, pmSetSub, pmSetQuality, QUALITY_CAPS
   } from '$lib/player.svelte.js';
   import { markQualityChosen } from '../lib/net.js';
+  import { SEEK_STEP, VOL_STEP, SHORTCUTS, keyAction, clampVolume, loadVolume, saveVolume } from './shortcuts.js';
 
-  const SEEK_STEP = 10;
-  const VOL_STEP = 0.05;
   const SPIN_DELAY = 450;
-  const VOL_KEY = 'reel.web.volume';
 
   /** @type {{ open?: boolean }} */
   let { open: openProp = false } = $props();
@@ -88,13 +94,48 @@
   const skip = $derived(open && !busy && !scrubbing ? skipVisible() : null);
   const upNext = $derived(open && !busy && upNextVisible());
 
+  let help = $state(false); // the "?" keyboard-shortcut list
+
   $effect(() => {
     if (!open) {
       scrubbing = false;
       overControls = false;
+      help = false;
       if (document.fullscreenElement) document.exitFullscreen().catch(() => {});
     }
   });
+
+  /* ---------------- feedback flashes on the picture ----------------
+   *   seek  ∓N s on the side it went, adding up while the key repeats
+   *   icon  play / pause, as the picture was clicked or Space pressed
+   *   vol   the speaker, a level bar and the % (or Muted)
+   *   text  e.g. the time a digit key jumped to */
+  /** @typedef {{ kind: 'seek' | 'icon' | 'vol' | 'text', side?: 'left' | 'right', total?: number, icon?: string, text?: string, n: number }} Flash */
+  let flash = $state(/** @type {Flash | null} */ (null));
+  let flashN = 0;
+  /** @type {ReturnType<typeof setTimeout> | undefined} */
+  let flashT;
+  /** @param {Omit<Flash, 'n'>} f @param {number} [ms] */
+  function showFlash(f, ms = 650) {
+    flash = { ...f, n: ++flashN };
+    clearTimeout(flashT);
+    flashT = setTimeout(() => {
+      flash = null;
+    }, ms);
+  }
+  /** @param {number} sec */
+  function flashSeek(sec) {
+    const side = sec < 0 ? 'left' : 'right';
+    const total = flash && flash.kind === 'seek' && flash.side === side ? (flash.total || 0) + sec : sec;
+    showFlash({ kind: 'seek', side, total }, 800);
+  }
+  /* play/pause with the icon of what it does: the video's own paused flag,
+   * not P.paused — play() resolves later */
+  function pauseWithFlash() {
+    const willPlay = !video || video.paused;
+    togglePause();
+    showFlash({ kind: 'icon', icon: willPlay ? 'play' : 'pause' });
+  }
 
   /* ---------------- titles ---------------- */
   /** @type {Partial<VR.PlayerItem>} */
@@ -230,10 +271,8 @@
   let volume = $state(1);
   let muted = $state(false);
   onMount(() => {
-    try {
-      const v = Number(localStorage.getItem(VOL_KEY));
-      if (Number.isFinite(v) && v >= 0 && v <= 1 && localStorage.getItem(VOL_KEY) != null) volume = v;
-    } catch {}
+    const v = loadVolume();
+    if (v != null) volume = v;
   });
   /* the engine unmutes at every start (a DevTools mute once silenced every
    * later film on the TV); our own mute and volume are put back on top */
@@ -252,19 +291,36 @@
       v.removeEventListener('loadedmetadata', sync);
     };
   });
-  /** @param {number} v */
-  function setVolume(v) {
-    volume = Math.max(0, Math.min(1, Math.round(v * 100) / 100));
+  /** @param {number} v @param {boolean} [show] flash the level on the picture */
+  function setVolume(v, show = false) {
+    volume = clampVolume(v);
     if (volume > 0) muted = false;
-    try {
-      localStorage.setItem(VOL_KEY, String(volume));
-    } catch {}
+    saveVolume(volume);
+    if (show) showFlash({ kind: 'vol' });
   }
-  function toggleMute() {
+  /** @param {boolean} [show] */
+  function toggleMute(show = false) {
     muted = !muted;
     if (!muted && volume === 0) setVolume(0.5);
+    if (show) showFlash({ kind: 'vol' });
   }
   const volIcon = $derived(muted || volume === 0 ? 'mute' : volume < 0.5 ? 'low' : 'high');
+  /* the wheel over the speaker / slider: one notch = one step (a non-passive
+   * listener, so the page behind the player doesn't scroll as well) */
+  let volEl = $state(/** @type {HTMLDivElement | null} */ (null));
+  $effect(() => {
+    const el = volEl;
+    if (!el) return;
+    /** @param {WheelEvent} e */
+    const onWheel = (e) => {
+      if (!e.deltaY) return;
+      e.preventDefault();
+      setVolume(volume + (e.deltaY < 0 ? VOL_STEP : -VOL_STEP), true);
+      showOsd();
+    };
+    el.addEventListener('wheel', onWheel, { passive: false });
+    return () => el.removeEventListener('wheel', onWheel);
+  });
 
   /* ---------------- full screen, Picture in Picture ---------------- */
   let full = $state(false);
@@ -279,18 +335,25 @@
   }
 
   let pip = $state(false);
-  /* Chrome has the Picture-in-Picture API; Firefox has only its own built-in
-   * PiP toggle (no API), so the button shows only where the API is real */
+  /* The button (and P) only where the Picture-in-Picture API is real:
+   * Chrome, and Firefox 156 (older Firefox has only its own toggle). Where we
+   * have the button, the <video> carries disablePictureInPicture while not in
+   * PiP: Firefox otherwise lays its "Pop out this video" toggle over the
+   * picture, beside our controls. It is lifted just before our own request
+   * (a request on a disabled element throws), and comes back on leaving. */
   const pipOk = typeof document !== 'undefined' && !!document.pictureInPictureEnabled && typeof HTMLVideoElement.prototype.requestPictureInPicture === 'function';
   async function togglePip() {
     if (!video) return;
+    const v = video;
     try {
       if (document.pictureInPictureElement) await document.exitPictureInPicture();
       else {
         if (pgsActive) toast('Image subtitles (PGS) aren’t shown in Picture in Picture');
-        await video.requestPictureInPicture();
+        v.disablePictureInPicture = false;
+        await v.requestPictureInPicture();
       }
     } catch (e) {
+      if (document.pictureInPictureElement !== v) v.disablePictureInPicture = true;
       console.warn('PiP failed:', e);
       toast('Picture in Picture isn’t available right now');
     }
@@ -422,8 +485,25 @@
     if (!open) return;
     showOsd();
   }
+  /* the pointer left the window: hide the controls now rather than after the
+   * idle timeout, unless they are held (paused, a panel, a drag) */
+  function onLeave() {
+    overControls = false;
+    hover = null;
+    if (open && video && !video.paused && !P.panel && !scrubbing && P.scrub == null) hideOsd();
+  }
   /** @param {Element | null} el */
-  const isControl = (el) => !!el?.closest?.('button, a, input, select, .scrubber, .upnext, .skipchip, .panel, .pcard, .wplayer__bar, .wplayer__top');
+  const isControl = (el) => !!el?.closest?.('button, a, input, select, .scrubber, .upnext, .skipchip, .panel, .pcard, .wplayer__bar, .wplayer__top, .wkeys');
+  /* a click anywhere outside an open panel closes it (its own toggles
+   * excepted); on the picture the click does nothing else, on a control it
+   * goes on to that control */
+  /** @param {MouseEvent} e */
+  function onClickOutside(e) {
+    const t = /** @type {Element} */ (e.target);
+    if (!open || !P.panel || t?.closest?.('.panel, [data-ptoggle]')) return;
+    closePanel();
+    if (!isControl(t)) e.stopPropagation();
+  }
   /** @param {MouseEvent} e */
   function onStageClick(e) {
     if (!open || isControl(/** @type {Element} */ (e.target))) return;
@@ -432,8 +512,7 @@
       return;
     }
     if (busy) return;
-    togglePause();
-    showOsd();
+    pauseWithFlash();
   }
   /** @param {MouseEvent} e */
   function onStageDbl(e) {
@@ -441,8 +520,10 @@
     toggleFull();
   }
 
-  /* hover preview over the scrubber (the phone's shows only while dragging) */
-  let hover = $state(/** @type {{ x: number, w: number, at: number } | null} */ (null));
+  /* hover preview over the scrubber (the phone's shows only while dragging),
+   * and a lighter fill up to the pointer (--hov on the bar, drawn by the
+   * track's ::before in web.css) */
+  let hover = $state(/** @type {{ x: number, w: number, at: number, f: number } | null} */ (null));
   /** @param {PointerEvent} e */
   function onBarMove(e) {
     const hit = /** @type {Element} */ (e.target).closest?.('.vr-scrub__hit');
@@ -454,7 +535,7 @@
     const r = track.getBoundingClientRect();
     const host = /** @type {HTMLElement} */ (e.currentTarget).getBoundingClientRect();
     const f = Math.max(0, Math.min(1, (e.clientX - r.left) / (r.width || 1)));
-    hover = { x: r.left - host.left + f * r.width, w: host.width, at: f * P.dur };
+    hover = { x: r.left - host.left + f * r.width, w: host.width, at: f * P.dur, f };
   }
   const hoverTp = $derived(hover && P.trick ? trickAt(hover.at) : null);
   const HW = 240;
@@ -467,39 +548,75 @@
     return c;
   });
 
+  const nextTip = $derived.by(() => {
+    const n = P.next;
+    if (!n) return '';
+    const code = n.IndexNumber != null ? (n.ParentIndexNumber != null ? 'S' + n.ParentIndexNumber + ' · ' : '') + 'E' + n.IndexNumber : '';
+    return 'Next: ' + [code, n.Name].filter(Boolean).join(' · ') + ' (Shift+N)';
+  });
+
+  /* the bar's clock: elapsed, or (a click on it) time left */
+  let remain = $state(false);
+  const shownPos = $derived(P.scrub ?? P.pos);
+
   /* ---------------- keyboard ---------------- */
   /** @param {KeyboardEvent} e */
   function onKey(e) {
-    if (!open || e.defaultPrevented || e.ctrlKey || e.metaKey || e.altKey) return;
+    if (!open || e.defaultPrevented) return;
     const t = /** @type {HTMLElement} */ (e.target);
     if (t && (t.tagName === 'INPUT' && /** @type {HTMLInputElement} */ (t).type !== 'range')) return;
-    const k = e.key.length === 1 ? e.key.toLowerCase() : e.key;
+    const a = keyAction(e);
+    if (!a) return;
+    // arrows inside an open panel's list move through it instead
+    if (P.panel && (e.key === 'ArrowUp' || e.key === 'ArrowDown') && t?.closest?.('.panel')) return;
     const live = !P.error && !P.loading;
+    const arg = a.arg || 0;
     /** @type {(() => void) | null} */
     let act = null;
-    if (k === 'Escape') {
-      act = () => {
-        if (P.panel) closePanel();
-        else if (document.fullscreenElement) document.exitFullscreen().catch(() => {});
-        else exitPlayer();
-      };
-    } else if ((k === ' ' || k === 'k') && live) {
-      // a focused button would also click on Space: the key is ours
-      act = () => {
-        togglePause();
-        showOsd();
-      };
-    } else if ((k === 'ArrowLeft' || k === 'j') && live) act = () => (seekBy(-SEEK_STEP), showOsd());
-    else if ((k === 'ArrowRight' || k === 'l') && live) act = () => (seekBy(SEEK_STEP), showOsd());
-    else if (k === 'ArrowUp') act = () => (setVolume(volume + VOL_STEP), showOsd());
-    else if (k === 'ArrowDown') act = () => (setVolume(volume - VOL_STEP), showOsd());
-    else if (k === 'm') act = () => (toggleMute(), showOsd());
-    else if (k === 'c' && live) act = toggleSubs;
-    else if (k === 'f') act = toggleFull;
-    else if (k === 'n' && e.shiftKey && P.next && !P.trailer) act = () => playNext(true);
+    switch (a.act) {
+      case 'close':
+        act = () => {
+          if (help) help = false;
+          else if (P.panel) closePanel();
+          else if (document.fullscreenElement) document.exitFullscreen().catch(() => {});
+          else exitPlayer();
+        };
+        break;
+      case 'pause': // a focused button would also click on Space: the key is ours
+        if (live) act = pauseWithFlash;
+        break;
+      case 'seek':
+        if (live) act = () => (seekBy(arg), flashSeek(arg));
+        break;
+      case 'jump':
+        if (live && P.dur) act = () => (seekTo(arg * P.dur), showFlash({ kind: 'text', text: fmtTime(arg * P.dur) }));
+        break;
+      case 'volume':
+        act = () => setVolume(volume + arg, true);
+        break;
+      case 'mute':
+        act = () => toggleMute(true);
+        break;
+      case 'subs':
+        if (live && hasSubs) act = toggleSubs;
+        break;
+      case 'skip':
+        if (skip) act = skipSegment;
+        break;
+      case 'full':
+        act = toggleFull;
+        break;
+      case 'pip':
+        if (pipOk && live) act = togglePip;
+        break;
+      case 'next':
+        if (P.next && !P.trailer) act = () => playNext(true);
+        break;
+      case 'help':
+        act = () => (help = !help);
+        break;
+    }
     if (!act) return;
-    // arrows inside an open panel's list move through it instead
-    if (P.panel && (k === 'ArrowUp' || k === 'ArrowDown') && t?.closest?.('.panel')) return;
     e.preventDefault();
     e.stopPropagation();
     act();
@@ -519,6 +636,7 @@
   class:wplayer--ctl={ctl}
   class:wplayer--full={full}
   class:wplayer--trailer={P.trailer}
+  class:wplayer--pointer={busy || help}
   hidden={!open}
   bind:this={rootEl}
   tabindex="-1"
@@ -526,27 +644,55 @@
   aria-label="Video player"
   style:--sub-scale={(SET.subSize || 100) / 100}
   onpointermove={onMove}
+  onpointerleave={onLeave}
+  onclickcapture={onClickOutside}
   data-component="WebPlayer"
 >
   <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
   <div class="wplayer__stage" onclick={onStageClick} ondblclick={onStageDbl}>
     <!-- svelte-ignore a11y_media_has_caption -->
-    <video class="wplayer__video" class:wplayer__video--dim={!!P.panel} playsinline preload="auto" bind:this={video}></video>
+    <video class="wplayer__video" class:wplayer__video--dim={!!P.panel} playsinline preload="auto" disablepictureinpicture={pipOk && !pip} bind:this={video}></video>
     <canvas class="vr-pgs" bind:this={canvas}></canvas>
     <div class="vr-subs-top" bind:this={subsTopEl}></div>
     <div class="vr-subs" class:vr-subs--raised={ctl} bind:this={subsEl}></div>
   </div>
+
+  {#if flash && !busy}
+    {#if flash.kind === 'seek'}
+      <div class="wflash wflash--{flash.side}" role="status" aria-label="{(flash.total || 0) < 0 ? 'Back' : 'Forward'} {Math.abs(flash.total || 0)} seconds" out:fade={{ duration: 200 }}>
+        {#key flash.n}
+          <span class="seekflash__chev vr-chevwave" class:vr-flip={flash.side === 'left'}><Icon name="play" fill /><Icon name="play" fill /><Icon name="play" fill /></span>
+        {/key}
+        <span class="wflash__text">{(flash.total || 0) < 0 ? '−' : '+'}{Math.abs(flash.total || 0)} s</span>
+      </div>
+    {:else}
+      {#key flash.n}
+        <div class="wflash wflash--{flash.kind}" role="status" out:fade={{ duration: 200 }}>
+          {#if flash.kind === 'icon'}
+            <Icon name={flash.icon || 'play'} fill />
+          {:else if flash.kind === 'vol'}
+            {@render speaker(volIcon)}
+            <span class="wflash__level" style="--v: {muted ? 0 : volume}"></span>
+            <span class="wflash__text">{muted ? 'Muted' : Math.round(volume * 100) + ' %'}</span>
+          {:else}
+            <span class="wflash__text">{flash.text}</span>
+          {/if}
+        </div>
+      {/key}
+    {/if}
+  {/if}
 
   <!-- ============ controls ============ -->
   <div class="wplayer__chrome" class:wplayer__chrome--hidden={!ctl} aria-hidden={!ctl}>
     <div class="player__scrim player__scrim--top"></div>
     <div class="player__scrim player__scrim--bottom"></div>
     <div class="wplayer__top" onpointerenter={() => (overControls = true)} onpointerleave={() => (overControls = false)} role="toolbar" tabindex="-1">
-      <button class="iconbtn" type="button" aria-label={P.trailer ? 'Close trailer' : 'Close player'} title="Close (Esc)" onclick={() => exitPlayer()}><Icon name="chevron-left" /></button>
+      <button class="iconbtn" type="button" aria-label={P.trailer ? 'Close trailer' : 'Close player'} data-tip="Close (Esc)" onclick={() => exitPlayer()}><Icon name="chevron-left" /></button>
       <div class="player__titles">
         {#if showLine}<p class="player__show">{showLine}</p>{/if}
         <p class="player__ep">{epLine}</p>
       </div>
+      <button class="iconbtn wkeysbtn" type="button" aria-label="Keyboard shortcuts" data-tip="Keyboard shortcuts (?)" onclick={() => (help = !help)}>?</button>
     </div>
 
     <!-- svelte-ignore a11y_no_static_element_interactions -->
@@ -558,6 +704,8 @@
         hover = null;
       }}
       onpointermove={onBarMove}
+      class:wplayer__bar--hover={!!hover && !scrubbing}
+      style:--hov={hover ? hover.f : 0}
     >
       {#if hover && !scrubbing}
         <div class="trick wtrick" style="left: {Math.max(HW / 2 + 8, Math.min(hover.w - HW / 2 - 8, hover.x))}px">
@@ -575,17 +723,12 @@
       {/if}
       <Scrubber onscrubbing={(/** @type {boolean} */ v) => (scrubbing = v)} />
       <div class="wplayer__row">
-        <button class="wpbtn" type="button" aria-label={P.paused ? 'Play' : 'Pause'} title={P.paused ? 'Play (k)' : 'Pause (k)'} onclick={() => togglePause()}><Icon name={P.paused ? 'play' : 'pause'} /></button>
-        <button class="wpbtn" type="button" aria-label="Back {SEEK_STEP} seconds" title="Back {SEEK_STEP} s (←)" onclick={() => seekBy(-SEEK_STEP)}><Icon name="back-10" /></button>
-        <button class="wpbtn" type="button" aria-label="Forward {SEEK_STEP} seconds" title="Forward {SEEK_STEP} s (→)" onclick={() => seekBy(SEEK_STEP)}><Icon name="fwd-10" /></button>
-        <div class="wvol">
-          <button class="wpbtn" type="button" aria-label={muted ? 'Unmute' : 'Mute'} title="{muted ? 'Unmute' : 'Mute'} (m)" onclick={toggleMute}>
-            <svg class="i" viewBox="0 0 24 24" aria-hidden="true">
-              <path d="M4 9.5h3.2L12 5.5v13l-4.8-4H4z" />
-              {#if volIcon === 'mute'}<path d="M16 9.5l5 5M21 9.5l-5 5" />
-              {:else if volIcon === 'low'}<path d="M15.5 9.5a3.5 3.5 0 0 1 0 5" />
-              {:else}<path d="M15.5 9.5a3.5 3.5 0 0 1 0 5M18 7a7 7 0 0 1 0 10" />{/if}
-            </svg>
+        <button class="wpbtn" type="button" aria-label={P.paused ? 'Play' : 'Pause'} data-tip={P.paused ? 'Play (K)' : 'Pause (K)'} onclick={() => togglePause()}><Icon name={P.paused ? 'play' : 'pause'} /></button>
+        <button class="wpbtn" type="button" aria-label="Back {SEEK_STEP} seconds" data-tip="Back {SEEK_STEP} s (←)" onclick={() => seekBy(-SEEK_STEP)}><Icon name="back-10" /></button>
+        <button class="wpbtn" type="button" aria-label="Forward {SEEK_STEP} seconds" data-tip="Forward {SEEK_STEP} s (→)" onclick={() => seekBy(SEEK_STEP)}><Icon name="fwd-10" /></button>
+        <div class="wvol" bind:this={volEl}>
+          <button class="wpbtn" type="button" aria-label={muted ? 'Unmute' : 'Mute'} data-tip="{muted ? 'Unmute' : 'Mute'} (M)" onclick={() => toggleMute()}>
+            {@render speaker(volIcon)}
           </button>
           <input
             class="wvol__range"
@@ -599,25 +742,27 @@
             oninput={(e) => setVolume(Number(e.currentTarget.value))}
           />
         </div>
-        <span class="wplayer__time">{fmtTime(P.scrub ?? P.pos)} <span class="wplayer__dur">/ {fmtTime(P.dur)}</span></span>
+        <button class="wplayer__time" type="button" data-tip={remain ? 'Show time played' : 'Show time left'} onclick={() => (remain = !remain)}>
+          {remain ? '−' + fmtTime(Math.max(0, (P.dur || 0) - shownPos)) : fmtTime(shownPos)} <span class="wplayer__dur">/ {fmtTime(P.dur)}</span>
+        </button>
         <span class="player__spacer"></span>
         {#if P.chapters.length && !P.trailer}
-          <button class="pchip" class:pchip--on={P.panel === 'chapters'} type="button" onclick={openChapters}><Icon name="chapters" />Chapters</button>
+          <button class="pchip" class:pchip--on={P.panel === 'chapters'} type="button" data-ptoggle data-tip="Chapters" onclick={openChapters}><Icon name="chapters" />Chapters</button>
         {/if}
         {#if hasAudioChoice}
-          <button class="pchip" type="button" onclick={() => openTracks('audio')}><Icon name="audio" />{audioChip.main} {#if audioChip.dim}<span class="pchip__dim">{audioChip.dim}</span>{/if}</button>
+          <button class="pchip" class:pchip--on={P.panel === 'tracks' && trackTab === 'audio'} type="button" data-ptoggle data-tip="Audio track" onclick={() => openTracks('audio')}><Icon name="audio" />{audioChip.main} {#if audioChip.dim}<span class="pchip__dim">{audioChip.dim}</span>{/if}</button>
         {/if}
         {#if hasSubs}
-          <button class="pchip" type="button" title="Subtitles (c)" onclick={() => openTracks('subs')}><Icon name="subtitles" />{subChip.main} {#if subChip.dim}<span class="pchip__dim">{subChip.dim}</span>{/if}</button>
+          <button class="pchip" class:pchip--on={P.panel === 'tracks' && trackTab === 'subs'} type="button" data-ptoggle data-tip="Subtitles (C on / off)" onclick={() => openTracks('subs')}><Icon name="subtitles" />{subChip.main} {#if subChip.dim}<span class="pchip__dim">{subChip.dim}</span>{/if}</button>
         {/if}
         {#if quality}
-          <button class="pchip" type="button" aria-label="Streaming quality: {quality.label}" onclick={() => openTracks('quality')}><Icon name="settings" />{quality.reduced ? quality.res || 'Reduced' : 'Original'} <span class="pchip__dim">{quality.reduced ? quality.mbit + ' Mbit/s' : 'fits ' + quality.mbit + ' Mbit/s'}</span></button>
+          <button class="pchip" class:pchip--on={P.panel === 'tracks' && trackTab === 'quality'} type="button" data-ptoggle data-tip="Streaming quality" aria-label="Streaming quality: {quality.label}" onclick={() => openTracks('quality')}><Icon name="settings" />{quality.reduced ? quality.res || 'Reduced' : 'Original'} <span class="pchip__dim">{quality.reduced ? quality.mbit + ' Mbit/s' : 'fits ' + quality.mbit + ' Mbit/s'}</span></button>
         {/if}
         {#if P.next && !P.trailer}
-          <button class="wpbtn" type="button" aria-label="Next episode" title="Next episode (Shift+N)" onclick={() => playNext(true)}><Icon name="skip" /></button>
+          <button class="wpbtn" type="button" aria-label="Next episode" data-tip={nextTip} onclick={() => playNext(true)}><Icon name="skip" /></button>
         {/if}
-        {#if pipOk}<button class="wpbtn" class:wpbtn--on={pip} type="button" aria-label="Picture in Picture" title="Picture in Picture" onclick={togglePip}><Icon name="pip" /></button>{/if}
-        <button class="wpbtn" type="button" aria-label={full ? 'Exit full screen' : 'Full screen'} title="{full ? 'Exit full screen' : 'Full screen'} (f)" onclick={toggleFull}>
+        {#if pipOk}<button class="wpbtn" class:wpbtn--on={pip} type="button" aria-label="Picture in Picture" data-tip={pip ? 'Leave Picture in Picture (P)' : 'Picture in Picture (P)'} onclick={togglePip}><Icon name="pip" /></button>{/if}
+        <button class="wpbtn" type="button" aria-label={full ? 'Exit full screen' : 'Full screen'} data-tip="{full ? 'Exit full screen' : 'Full screen'} (F)" onclick={toggleFull}>
           <svg class="i" viewBox="0 0 24 24" aria-hidden="true">
             {#if full}<path d="M9 4v5H4M15 4v5h5M9 20v-5H4M15 20v-5h5" />{:else}<path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5" />{/if}
           </svg>
@@ -629,7 +774,7 @@
   <!-- ============ always on top ============ -->
   <div class="vr-skipwrap wskipwrap" class:vr-skipwrap--low={!ctl}>
     {#if skip}
-      <button class="skipchip" type="button" onclick={skipSegment} transition:fade={{ duration: 160 }} data-component="SkipChip">
+      <button class="skipchip" type="button" data-tip="Shortcut: S" onclick={skipSegment} transition:fade={{ duration: 160 }} data-component="SkipChip">
         <Icon name="skip" /><span>Skip {skip.kind === 'intro' ? 'Intro' : skip.kind === 'recap' ? 'Recap' : skip.kind === 'preview' ? 'Preview' : skip.kind}</span>
       </button>
     {/if}
@@ -680,7 +825,7 @@
 
   {#if busy}
     <div class="wplayer__top wplayer__top--busy">
-      <button class="iconbtn" type="button" aria-label="Cancel and close" onclick={() => exitPlayer()}><Icon name="x" /></button>
+      <button class="iconbtn" type="button" aria-label="Cancel and close" data-tip="Close (Esc)" onclick={() => exitPlayer()}><Icon name="x" /></button>
     </div>
   {/if}
 
@@ -689,4 +834,35 @@
   {:else if P.panel === 'chapters'}
     <ChapterPanel onclose={closePanel} />
   {/if}
+
+  {#if help}
+    <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
+    <div class="wkeys" onclick={(e) => e.target === e.currentTarget && (help = false)} transition:fade={{ duration: 120 }}>
+      <div class="wkeys__card" role="dialog" aria-modal="true" aria-labelledby="wkeys-title" data-component="ShortcutList">
+        <div class="wkeys__head">
+          <h2 class="wkeys__title" id="wkeys-title">Keyboard shortcuts</h2>
+          <button class="closebtn" type="button" aria-label="Close" onclick={() => (help = false)}><Icon name="x" size="sm" /></button>
+        </div>
+        <dl class="wkeys__list">
+          {#each SHORTCUTS.filter(([k]) => pipOk || k[0] !== 'P') as [keys, what] (what)}
+            <div class="wkeys__row">
+              <dt>
+                {#each keys as k, i (k)}{#if i}<span class="wkeys__or">/</span>{/if}{#each k.split('+') as part, j (j)}{#if j}<span class="wkeys__plus">+</span>{/if}<kbd>{part}</kbd>{/each}{/each}
+              </dt>
+              <dd>{what}</dd>
+            </div>
+          {/each}
+        </dl>
+      </div>
+    </div>
+  {/if}
 </div>
+
+{#snippet speaker(/** @type {string} */ kind)}
+  <svg class="i" viewBox="0 0 24 24" aria-hidden="true">
+    <path d="M4 9.5h3.2L12 5.5v13l-4.8-4H4z" />
+    {#if kind === 'mute'}<path d="M16 9.5l5 5M21 9.5l-5 5" />
+    {:else if kind === 'low'}<path d="M15.5 9.5a3.5 3.5 0 0 1 0 5" />
+    {:else}<path d="M15.5 9.5a3.5 3.5 0 0 1 0 5M18 7a7 7 0 0 1 0 10" />{/if}
+  </svg>
+{/snippet}

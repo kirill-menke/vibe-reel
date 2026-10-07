@@ -428,3 +428,99 @@ html, body { overflow: hidden; }
      in, or the two cards stood two gutters (up to 128 px) apart */
   .wsettings__col + .wsettings__col { margin-left: calc(var(--s-6) - var(--gutter)); }
 }
+
+/* lane: player ====================================================== */
+/* (web/src/player/WebPlayer.svelte; overrides section 6 where it says so) */
+
+/* the cursor hides only over a playing, idle picture: it stays over the
+   loading / error card (Retry, Close) and the shortcut list */
+.wplayer--pointer { cursor: default; }
+
+/* the scrubber: the bar's own clock (elapsed / total, a click flips it to
+   time left) replaces the phone's times either side of the track; a lighter
+   fill runs up to the pointer while it hovers (--hov from WebPlayer) */
+.wplayer .scrubber > .scrubber__time { display: none; }
+.wplayer .scrubber__track::before {
+  content: ""; position: absolute; left: 0; top: 0; bottom: 0; border-radius: inherit; pointer-events: none;
+  width: calc(var(--hov, 0) * 100%); background: rgba(255, 255, 255, 0.3);
+  opacity: 0; transition: opacity var(--dur-fast) linear;
+}
+.wplayer__bar--hover .scrubber__track::before { opacity: 1; }
+.wtrick { gap: 8px; }
+.wtrick .trick__time, .wtrick .trick__chapter {
+  padding: 5px 9px; border-radius: 6px; background: rgba(18, 18, 22, 0.9); text-shadow: none;
+  max-width: 320px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.wtrick .trick__time { font-size: 14px; }
+.wplayer__time {
+  position: relative; padding: 6px 8px; margin-left: 0; border-radius: 8px;
+  transition: background-color var(--dur-fast) linear;
+}
+.wkeysbtn { margin-left: auto; font: 700 18px/1 var(--font-ui); }
+
+/* tooltips with the key (data-tip): above the bottom row, below the top bar,
+   edge-aligned at either end of a row so they stay inside the window */
+.wpbtn { position: relative; }
+.wplayer [data-tip]::before {
+  content: attr(data-tip); position: absolute; z-index: 8; left: 50%; bottom: calc(100% + 10px); translate: -50% 0;
+  padding: 6px 10px; border-radius: 8px; white-space: nowrap;
+  font: 600 13px/1.2 var(--font-ui); letter-spacing: 0; text-transform: none; color: #fff;
+  background: rgba(18, 18, 22, 0.94); box-shadow: inset 0 0 0 1px var(--glass-line), 0 4px 16px rgba(0, 0, 0, 0.4);
+  opacity: 0; transform: translateY(4px); pointer-events: none;
+  transition: opacity var(--dur-fast) linear, transform var(--dur-fast) var(--ease-out);
+}
+.wplayer__top [data-tip]::before { bottom: auto; top: calc(100% + 10px); transform: translateY(-4px); }
+.wplayer__row > [data-tip]:first-child::before, .wplayer__top > [data-tip]:first-child::before { left: 0; translate: none; }
+.wplayer__row > [data-tip]:last-child::before, .wplayer__top > [data-tip]:last-child::before, .wplayer .skipchip[data-tip]::before { left: auto; right: 0; translate: none; }
+.wplayer [data-tip]:focus-visible::before { opacity: 1; transform: none; }
+@media (hover: hover) {
+  .wplayer [data-tip]:hover::before { opacity: 1; transform: none; transition-delay: 400ms; }
+  .wplayer__time:hover { background-color: rgba(255, 255, 255, 0.1); }
+}
+
+/* Audio / Subtitles / Quality and Chapters: a popover over the right end of
+   the bar, as tall as its lists (it scrolls past the top bar's line), not a
+   full-height side panel */
+.wplayer .panel { top: auto; bottom: 112px; max-height: calc(100% - 112px - var(--player-pad) - 64px); }
+
+/* feedback flashes (keys, a click on the picture, the wheel on the speaker) */
+.wflash {
+  position: absolute; z-index: 1; top: 50%; left: 50%; translate: -50% -50%;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px;
+  min-width: 104px; min-height: 104px; padding: 16px 20px; border-radius: 52px;
+  background: rgba(0, 0, 0, 0.55); color: #fff; pointer-events: none;
+  font: 700 17px/1 var(--font-ui); font-variant-numeric: tabular-nums;
+}
+.wflash .i { width: 40px; height: 40px; }
+.wflash--left { left: 22%; }
+.wflash--right { left: 78%; }
+.wflash .seekflash__chev .i { width: 22px; height: 22px; margin: 0 -5px; }
+.wflash--icon { border-radius: 50%; animation: wflash-pop 650ms var(--ease-out) both; }
+.wflash--icon .i { margin-left: 4px; }
+.wflash--vol, .wflash--text { top: 16%; flex-direction: row; gap: 12px; min-height: 0; padding: 12px 20px; border-radius: var(--r-pill); }
+.wflash--vol .i { width: 26px; height: 26px; margin: 0; }
+.wflash--vol .wflash__text { min-width: 64px; text-align: right; }
+.wflash__level { width: 120px; height: 4px; border-radius: 4px; background: linear-gradient(90deg, #fff calc(var(--v, 0) * 100%), var(--track-dim) 0); }
+@keyframes wflash-pop { from { opacity: 1; transform: scale(0.85); } to { opacity: 0; transform: scale(1.2); } }
+@media (prefers-reduced-motion: reduce) { .wflash--icon { animation: none; } }
+
+/* the "?" list of keyboard shortcuts */
+.wkeys { position: absolute; inset: 0; z-index: 9; display: grid; place-items: center; padding: 24px; background: rgba(0, 0, 0, 0.55); }
+.wkeys__card {
+  width: min(560px, 100%); max-height: 100%; overflow-y: auto; padding: 4px 24px 16px;
+  border-radius: var(--r-sheet); background: var(--glass-bg-strong);
+  -webkit-backdrop-filter: var(--glass-blur); backdrop-filter: var(--glass-blur);
+  box-shadow: inset 0 0 0 1px var(--glass-line), var(--shadow-float);
+}
+.wkeys__head { display: flex; align-items: center; justify-content: space-between; padding: 16px 0 10px; }
+.wkeys__title { font: var(--t-headline); letter-spacing: var(--t-headline-ls); }
+.wkeys__list { margin: 0; }
+.wkeys__row { display: grid; grid-template-columns: 170px minmax(0, 1fr); align-items: center; gap: 16px; padding: 7px 0; border-top: 1px solid var(--line); }
+.wkeys__row dt { display: flex; align-items: center; flex-wrap: wrap; gap: 4px; }
+.wkeys__row dd { margin: 0; font: 500 14px/1.3 var(--font-ui); color: var(--text-dim); }
+.wkeys kbd {
+  display: inline-grid; place-items: center; min-width: 28px; height: 26px; padding: 0 7px; border-radius: 6px;
+  font: 600 13px/1 var(--font-ui); color: var(--text);
+  background: rgba(255, 255, 255, 0.1); box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.14), inset 0 -2px 0 rgba(255, 255, 255, 0.08);
+}
+.wkeys__or, .wkeys__plus { padding: 0 2px; font-size: 12px; color: var(--text-faint); }
