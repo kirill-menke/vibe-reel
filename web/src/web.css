@@ -429,3 +429,9 @@ html, body { overflow: hidden; }
 /* Chart: the All / Not in library / In library control is three words, not
    a 1800-px bar */
 .wapp .chart__seg :is(.seg, .skel) { max-width: 520px; }
+
+/* Home while loading: the page counts as hero-less (`screen--below-topbar`,
+   for the error / empty cards), which pushed the skeleton hero 116 px down —
+   everything jumped up when the real hero replaced it. A hero, skeleton or
+   not, runs under the navigation. */
+.wapp .home.screen--below-topbar:has(> .hero) { padding-top: 0; }
