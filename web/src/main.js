@@ -16,6 +16,7 @@ import { initUrl } from './lib/urlsync.svelte.js';
 import { initQualityDefault } from './lib/net.js';
 import { initSearchUrl } from './lib/searchurl.js';
 import { initHeroArrows } from './lib/heroarrows.js';
+import { initTileTips } from './lib/tiletips.js';
 
 /* Cloudflare Access: an expired session turns API calls into network errors
  * — wrap fetch first, before anything can fetch (lib/access.js). */
@@ -34,5 +35,6 @@ initUrl(); // the stacks from the URL / history.state, before the first mount
 initQualityDefault(); // 8 Mbit/s through the tunnel, Original at home (unless picked)
 initSearchUrl(); // /search?q=…
 initHeroArrows(); // ◀ ▶ and ←/→ for Home's hero carousel
+initTileTips(); // the whole title of a cut-off tile caption on hover
 
 export default mount(App, { target: /** @type {HTMLElement} */ (document.getElementById('app')) });
