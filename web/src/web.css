@@ -268,7 +268,8 @@ html, body { overflow: hidden; }
 
 /* ================================================================ 5. hover */
 @media (hover: hover) and (pointer: fine) {
-  a, button, [role="button"], .tile, .row, .chip, .option, select { cursor: pointer; }
+  a, button, [role="button"], .tile, .row, .chip, .option, select, label:has(> input[type="checkbox"]) { cursor: pointer; }
+  button:disabled, [aria-disabled="true"], .row[disabled] { cursor: default; }
   .wnav__tab:hover { color: var(--text); background: rgba(255, 255, 255, 0.06); }
   .wnav__tab--on:hover { background: rgba(255, 255, 255, 0.12); }
   .wnav .iconbtn:hover, .wnav .avatarbtn:hover { background: rgba(255, 255, 255, 0.08); border-radius: var(--r-pill); }
@@ -276,7 +277,6 @@ html, body { overflow: hidden; }
   .tile .tile__frame { transition: transform var(--dur-base) var(--ease-out), box-shadow var(--dur-base) var(--ease-out); }
   .tile:hover .tile__frame { transform: translateY(-3px); box-shadow: 0 0 0 2px var(--gold-line), var(--shadow-float); }
   .tile:hover .tile__title { color: var(--gold); }
-  .tile:focus-visible .tile__frame { box-shadow: 0 0 0 2px var(--gold), var(--shadow-float); }
 
   .btn { transition: filter var(--dur-fast) linear, background-color var(--dur-fast) linear; }
   .btn:hover { filter: brightness(1.12); }
@@ -287,8 +287,21 @@ html, body { overflow: hidden; }
   .skipchip:hover { background: #fff; }
   .catcard:hover, .card:hover { filter: brightness(1.1); }
 }
-:focus-visible { outline: 2px solid var(--gold-line); outline-offset: 2px; }
+/* keyboard focus: a solid gold ring (the half-alpha --gold-line one all but
+   vanished over posters and the bright hero). A tile rings its artwork, not
+   the box around artwork + caption — inside the artwork's edge, because a
+   tile's `content-visibility: auto` clips anything drawn outside its box
+   (an outer ring showed only along the caption side), on the frame's ::after
+   hairline layer, which paints over the positioned artwork (an outline on
+   the frame itself paints under it). A field rings its box. */
+:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
 .wsheet:focus-visible, .wplayer:focus-visible, .wplayer:focus { outline: none; }
+/* Firefox makes every scroll container a Tab stop (the page's .screen comes
+   right after the avatar): a ring round the whole page says nothing */
+.screen:focus-visible { outline: none; }
+.tile:focus-visible { outline: none; }
+.tile:focus-visible .tile__frame::after { box-shadow: inset 0 0 0 3px var(--gold), inset 0 0 0 4px rgba(0, 0, 0, 0.5); }
+.field__input:focus-visible { outline: none; }
 
 /* =============================================================== 6. player */
 .wplayer {
