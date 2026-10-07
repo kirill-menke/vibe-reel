@@ -47,7 +47,7 @@
   /* Keyboard: with a tile focused, ← / → step to the neighbouring tile (Tab
    * still walks everything; ↑ / ↓ keep scrolling the page). The track glides
    * to it — a bare focus() would jump, and land it flush against the edge
-   * instead of inside the gutter (scroll-padding). Home and Search wrap a
+   * instead of inside the gutter. Home and Search wrap a
    * tile in a cell (.home__cell); the cells are the track's children. */
   /** @param {KeyboardEvent} e */
   function onKey(e) {
@@ -62,8 +62,15 @@
     const to = /** @type {HTMLElement | null | undefined} */ (next?.matches('.tile') ? next : next?.querySelector('.tile'));
     e.preventDefault();
     if (i < 0 || !to) return;
-    to.focus({ preventScroll: true });
-    to.scrollIntoView({ block: 'nearest', inline: 'nearest', behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'instant' : 'smooth' });
+    to.focus({ preventScroll: true, focusVisible: true }); // a key moved it: the ring shows
+    // inside the gutter (the track's scroll-padding): measured here, because
+    // Firefox's scrollIntoView({ inline: 'nearest' }) left a tile that stuck
+    // out past the padding where it was
+    const tr = t.getBoundingClientRect();
+    const r = to.getBoundingClientRect();
+    const pad = parseFloat(getComputedStyle(t).scrollPaddingInlineStart) || 0;
+    const dx = r.left < tr.left + pad ? r.left - tr.left - pad : r.right > tr.right - pad ? r.right - tr.right + pad : 0;
+    if (dx) t.scrollBy({ left: dx, behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'instant' : 'smooth' });
   }
 </script>
 
@@ -78,7 +85,9 @@
     </div>
   </div>
   <div class="wrail__wrap">
-    <div class="rail__track" bind:this={track} onkeydown={onKey} role="presentation">{@render children?.()}</div>
+    <!-- tabindex -1: Firefox makes a scrolling track a Tab stop of its own (an
+         empty one between the ◀ ▶ and the first tile); the tiles are the stops -->
+    <div class="rail__track" bind:this={track} onkeydown={onKey} role="presentation" tabindex="-1">{@render children?.()}</div>
     <button type="button" class="wrail__edge wrail__edge--l" tabindex="-1" aria-hidden="true" hidden={atStart} onclick={() => page(-1)}><Icon name="chevron-left" /></button>
     <button type="button" class="wrail__edge wrail__edge--r" tabindex="-1" aria-hidden="true" hidden={atEnd} onclick={() => page(1)}><Icon name="chevron-right" /></button>
   </div>
