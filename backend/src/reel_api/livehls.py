@@ -1,8 +1,8 @@
 """Watch-while-downloading for the iPhone: the growing download as HLS fMP4.
 
-  POST /api/downloads/{gid}/hls?audio=N        start (or join) -> status
-  GET  /api/downloads/{gid}/hls?audio=N        status
-  GET  /api/downloads/{gid}/hls/{audio}/{file} index.m3u8 | init.mp4 | sNNNNN.m4s
+  POST /api/downloads/{gid}/hls?audio=N[&codec=aac]        start (or join) -> status
+  GET  /api/downloads/{gid}/hls?audio=N[&codec=aac]        status
+  GET  /api/downloads/{gid}/hls/{audio}/{file}[?codec=aac] index.m3u8 | init.mp4 | sNNNNN.m4s
 
 status: { id, audio, state, segments, buffered_s, duration, complete,
 codecs, video, error, progress }; state is probing | remuxing | done | error.
@@ -15,6 +15,11 @@ when the phone can take it (AAC, AC-3, E-AC-3), else converted like Jellyfin
 does for the phone (DTS/TrueHD/FLAC/Opus… -> AC-3 5.1 640k, or AAC for
 stereo) — into an HLS *event* playlist of fMP4 segments that grows with the
 download (-hls_playlist_type event; #EXT-X-ENDLIST once the file is complete).
+
+`codec=aac` is the desktop web client's: Chrome and Firefox decode no AC-3 or
+E-AC-3, so only AAC is copied and everything else is encoded to AAC (5.1 at
+384k for more than two channels, else stereo at 256k). It is a job of its own
+(key and directory), so the same download in the default mode is not reused.
 
 The phone does not hand this playlist to Safari's HLS player: a growing event
 playlist is "live" to it (starts near the end, infinite duration). It feeds
@@ -63,6 +68,7 @@ HEADER_BYTES = 8 << 20
 FILE = re.compile(r"index\.m3u8|init\.mp4|s[0-9]{5}\.m4s")
 GID = re.compile(r"[0-9a-fA-F]{40}")
 COPY_AUDIO = {"aac", "ac3", "eac3"}
+CODEC_MODES = "^(auto|aac)$"   # ?codec=: auto (the phone's) | aac (desktop browsers)
 
 CTYPE = {".m3u8": "application/vnd.apple.mpegurl", ".mp4": "video/mp4", ".m4s": "video/iso.segment"}
 
@@ -106,11 +112,12 @@ def _aac(s: dict) -> str:
 
 
 class Job:
-    def __init__(self, gid: str, audio: int):
+    def __init__(self, gid: str, audio: int, aac: bool = False):
         self.gid = gid
         self.audio = audio
-        self.key = f"{gid}:{audio}"
-        self.dir = _root() / f"{gid}-{audio}"
+        self.aac = aac
+        self.key = f"{gid}:{audio}" + (":aac" if aac else "")
+        self.dir = _root() / (f"{gid}-{audio}" + ("-aac" if aac else ""))
         self.state = "probing"
         self.error: str | None = None
         self.duration: float | None = None
@@ -153,24 +160,24 @@ class LiveHls:
         self.jobs: dict[str, Job] = {}
         self.reaper: asyncio.Task | None = None
 
-    def get(self, gid: str, audio: int) -> Job | None:
-        j = self.jobs.get(f"{gid}:{audio}")
+    def get(self, gid: str, audio: int, aac: bool = False) -> Job | None:
+        j = self.jobs.get(f"{gid}:{audio}" + (":aac" if aac else ""))
         if j:
             j.touched = time.monotonic()
         return j
 
-    def start(self, qb, gid: str, audio: int) -> Job:
+    def start(self, qb, gid: str, audio: int, aac: bool = False) -> Job:
         if self.reaper is None:
             shutil.rmtree(_root(), ignore_errors=True)  # left over from before a restart
             self.reaper = asyncio.create_task(self._reap())
-        job = self.get(gid, audio)
+        job = self.get(gid, audio, aac)
         if job and job.state != "error":
             return job
-        # one job per download: another audio track replaces the running one
+        # one job per download: another audio track (or codec mode) replaces the running one
         for k, other in list(self.jobs.items()):
             if other.gid == gid:
                 self._drop(other)
-        job = Job(gid, audio)
+        job = Job(gid, audio, aac)
         self.jobs[job.key] = job
         job.task = asyncio.create_task(self._run(qb, job))
         return job
@@ -296,10 +303,14 @@ class LiveHls:
             ac = a.get("codec_name")
             ch = a.get("channels") or 2
             aargs = ["-map", f"0:{a['index']}"]
-            if ac in COPY_AUDIO:
+            if ac in ({"aac"} if job.aac else COPY_AUDIO):
                 aargs += ["-c:a", "copy"]
                 astr = {"aac": _aac(a), "ac3": "ac-3", "eac3": "ec-3"}[ac]
                 job.audio_out = ac
+            elif job.aac:
+                surround = ch > 2
+                aargs += ["-c:a", "aac", "-b:a", "384k" if surround else "256k", "-ac", "6" if surround else "2"]
+                astr, job.audio_out = "mp4a.40.2", "aac"
             elif ch > 2:
                 aargs += ["-c:a", "ac3", "-b:a", "640k", "-ac", "6"]
                 astr, job.audio_out = "ac-3", "ac3"
@@ -396,8 +407,8 @@ class LiveHls:
 
     # ---------------- HTTP ----------------
 
-    def file_response(self, gid: str, audio: int, name: str):
-        job = self.get(gid, audio)
+    def file_response(self, gid: str, audio: int, name: str, aac: bool = False):
+        job = self.get(gid, audio, aac)
         path = job.dir / name if job else None
         if job is None or path is None or not path.is_file():
             return JSONResponse(status_code=404, content={"error": "not_found", "detail": "no such segment (yet)"})
@@ -423,7 +434,7 @@ def _bad(detail: str, code: int = 400):
 
 
 @router.post("/api/downloads/{gid}/hls")
-async def hls_start(gid: str, audio: int = Query(-1, ge=-1, le=200)):
+async def hls_start(gid: str, audio: int = Query(-1, ge=-1, le=200), codec: str = Query("auto", pattern=CODEC_MODES)):
     if not GID.fullmatch(gid):
         return _bad("bad download id")
     qb = _qb_getter() if _qb_getter else None
@@ -436,19 +447,19 @@ async def hls_start(gid: str, audio: int = Query(-1, ge=-1, le=200)):
             content={"error": "temporarily_unavailable",
                      "detail": "download service temporarily unavailable, retry later"},
         )
-    return live.start(qb, gid.lower(), audio).status()
+    return live.start(qb, gid.lower(), audio, codec == "aac").status()
 
 
 @router.get("/api/downloads/{gid}/hls")
-async def hls_status(gid: str, audio: int = Query(-1, ge=-1, le=200)):
-    job = live.get(gid.lower(), audio) if GID.fullmatch(gid) else None
+async def hls_status(gid: str, audio: int = Query(-1, ge=-1, le=200), codec: str = Query("auto", pattern=CODEC_MODES)):
+    job = live.get(gid.lower(), audio, codec == "aac") if GID.fullmatch(gid) else None
     if job is None:
         return JSONResponse(status_code=404, content={"error": "not_found", "detail": "not started"})
     return job.status()
 
 
 @router.get("/api/downloads/{gid}/hls/{audio}/{name}")
-async def hls_file(gid: str, audio: int, name: str):
+async def hls_file(gid: str, audio: int, name: str, codec: str = Query("auto", pattern=CODEC_MODES)):
     if not GID.fullmatch(gid) or not FILE.fullmatch(name):
         return JSONResponse(status_code=404, content={"error": "not_found", "detail": "no such file"})
-    return live.file_response(gid.lower(), audio, name)
+    return live.file_response(gid.lower(), audio, name, codec == "aac")

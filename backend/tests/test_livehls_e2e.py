@@ -206,6 +206,29 @@ async def test_flac_51_is_converted_to_ac3(api, qbit, download, tmp_path):
     assert a["codec_name"] == "ac3" and a["channels"] == 6 and int(a["bit_rate"]) == 640_000
 
 
+@pytest.mark.slow
+@pytest.mark.ffmpeg
+@pytest.mark.parametrize("audio,channels", [(1, 6), (2, 2)])   # E-AC-3 5.1, AC-3 2.0
+async def test_codec_aac_turns_dolby_audio_into_aac(api, qbit, download, tmp_path, audio, channels):
+    """The desktop web client (codec=aac): Chrome/Firefox decode no (E-)AC-3."""
+    h = download.hash
+    download.g.complete()
+    r = await api.post(f"/api/downloads/{h}/hls", params={"audio": audio, "codec": "aac"})
+    assert r.status_code == 200
+    job = livehls.live.jobs[f"{h}:{audio}:aac"]
+    await asyncio.wait_for(job.task, 60)
+    assert job.state == "done", job.error
+    assert job.codecs.endswith(",mp4a.40.2") and job.audio_out == "aac"
+    files = f"/api/downloads/{h}/hls/{audio}/"
+    init = await api.get(files + "init.mp4", params={"codec": "aac"})
+    seg = await api.get(files + "s00000.m4s", params={"codec": "aac"})
+    assert init.status_code == seg.status_code == 200
+    remux = tmp_path / "remux-aac.mp4"
+    remux.write_bytes(init.content + seg.content)
+    a = next(s for s in ffprobe(remux)["streams"] if s["codec_type"] == "audio")
+    assert a["codec_name"] == "aac" and a["channels"] == channels
+
+
 # ---------------------------------------------------------------- one job per download
 
 

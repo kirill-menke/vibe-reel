@@ -482,3 +482,94 @@ async def test_start_after_an_error_restarts_the_job(api, qbit):
     r = await api.post(f"/api/downloads/{GID}/hls")
     assert r.json()["state"] == "probing"
     assert livehls.live.jobs[f"{GID}:-1"] is not first
+
+
+# ---------------------------------------------------------------- codec=aac (desktop browsers)
+
+
+def test_aac_mode_is_a_job_of_its_own():
+    j = livehls.Job(GID, 2, aac=True)
+    assert j.aac is True
+    assert j.key == f"{GID}:2:aac"
+    assert j.dir.name == f"{GID}-2-aac"
+    plain = job(audio=2)
+    assert plain.aac is False and plain.key == f"{GID}:2" and plain.dir.name == f"{GID}-2"
+
+
+def test_aac_mode_copies_aac(fake_ffmpeg):
+    j = livehls.Job(GID, -1, aac=True)
+    a = args_of(j, H264, aud(1, "aac", 6, default=True, profile="HE-AAC"))
+    assert a[a.index("-c:a") + 1] == "copy"
+    assert "-b:a" not in a
+    assert j.audio_out == "aac" and j.codecs == "avc1.640028,mp4a.40.5"
+
+
+@pytest.mark.parametrize("codec,channels", [("eac3", 6), ("ac3", 6), ("truehd", 8), ("dts", 6), ("opus", 3)])
+def test_aac_mode_encodes_surround_to_aac_51_384k(fake_ffmpeg, codec, channels):
+    j = livehls.Job(GID, -1, aac=True)
+    a = args_of(j, H264, aud(1, codec, channels))
+    i = a.index("-c:a")
+    assert a[i:i + 6] == ["-c:a", "aac", "-b:a", "384k", "-ac", "6"]
+    assert j.audio_out == "aac" and j.codecs == "avc1.640028,mp4a.40.2"
+
+
+@pytest.mark.parametrize("codec,channels", [("ac3", 2), ("eac3", 2), ("flac", 1), ("mp3", None)])
+def test_aac_mode_encodes_stereo_to_aac_256k(fake_ffmpeg, codec, channels):
+    j = livehls.Job(GID, -1, aac=True)
+    a = args_of(j, H264, aud(1, codec, channels))
+    i = a.index("-c:a")
+    assert a[i:i + 6] == ["-c:a", "aac", "-b:a", "256k", "-ac", "2"]
+    assert j.codecs.endswith(",mp4a.40.2")
+
+
+def test_aac_mode_leaves_the_video_alone(fake_ffmpeg):
+    j = livehls.Job(GID, -1, aac=True)
+    a = args_of(j, HEVC, aud(1, "eac3", 6))
+    assert opt(a, "-c:v") == "copy" and opt(a, "-tag:v") == "hvc1"
+    assert j.codecs == "hvc1.2.4.L153.B0,mp4a.40.2"
+
+
+async def test_aac_mode_files_are_served_from_their_own_job(api):
+    plain = job(audio=1)
+    write_job_files(plain)
+    aac = livehls.Job(GID, 1, aac=True)
+    write_job_files(aac)
+    (aac.dir / "init.mp4").write_bytes(b"aac init")
+    livehls.live.jobs[plain.key] = plain
+    livehls.live.jobs[aac.key] = aac
+    r = await api.get(f"/api/downloads/{GID}/hls/1/init.mp4", params={"codec": "aac"})
+    assert r.status_code == 200 and r.content == b"aac init"
+    r = await api.get(f"/api/downloads/{GID}/hls/1/init.mp4")
+    assert r.content == (plain.dir / "init.mp4").read_bytes() != b"aac init"
+    r = await api.get(f"/api/downloads/{GID}/hls/1/index.m3u8", params={"codec": "auto"})
+    assert r.status_code == 200
+
+
+async def test_aac_mode_without_its_job_is_404(api, served):
+    r = await api.get(f"/api/downloads/{GID}/hls/1/index.m3u8", params={"codec": "aac"})
+    assert r.status_code == 404
+    r = await api.get(f"/api/downloads/{GID}/hls", params={"audio": 1, "codec": "aac"})
+    assert r.status_code == 404 and r.json()["detail"] == "not started"
+
+
+@pytest.mark.parametrize("codec", ["ac3", "AAC", "", "aac2"])
+async def test_an_unknown_codec_mode_is_422(api, codec):
+    assert (await api.post(f"/api/downloads/{GID}/hls", params={"codec": codec})).status_code == 422
+    assert (await api.get(f"/api/downloads/{GID}/hls", params={"codec": codec})).status_code == 422
+    assert (await api.get(f"/api/downloads/{GID}/hls/1/index.m3u8", params={"codec": codec})).status_code == 422
+    assert livehls.live.jobs == {}
+
+
+async def test_start_in_aac_mode_replaces_the_phone_job_of_that_download(api, qbit, monkeypatch):
+    async def held_run(self, qb, j):
+        await asyncio.Event().wait()
+
+    monkeypatch.setattr(livehls.LiveHls, "_run", held_run)
+    await api.post(f"/api/downloads/{GID}/hls", params={"audio": 1})
+    r = await api.post(f"/api/downloads/{GID}/hls", params={"audio": 1, "codec": "aac"})
+    assert r.status_code == 200 and r.json()["state"] == "probing"
+    assert list(livehls.live.jobs) == [f"{GID}:1:aac"]
+    assert livehls.live.jobs[f"{GID}:1:aac"].aac is True
+    r = await api.get(f"/api/downloads/{GID}/hls", params={"audio": 1, "codec": "aac"})
+    assert r.status_code == 200
+    assert (await api.get(f"/api/downloads/{GID}/hls", params={"audio": 1})).status_code == 404

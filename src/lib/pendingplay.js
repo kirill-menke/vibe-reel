@@ -81,14 +81,16 @@ export function sourceFromProbe(probe) {
 /* Watching a grab while it downloads. The TV plays the growing MKV as is; iOS
  * Safari can't play MKV, so on the phone reel-api remuxes the growing file to
  * fMP4 segments (livehls.py) and livefeed.js/segfeed.js append them to a
- * ManagedMediaSource (iOS 17.1+). Screens hide their Play button without it. */
+ * ManagedMediaSource (iOS 17.1+). Screens hide their Play button without it.
+ * The desktop web build goes the phone's way (every current desktop browser
+ * has MediaSource), with the audio made AAC by the server (livefeed.js). */
 export const canWatchPending = !__PHONE__ || feedSupported();
 
 /** @param {Reel.ActivityItem} it the grab to watch @param {VR.ActivityGroup | null} [group] its title
  * @param {Reel.EpisodeMetadata | null} [em] the episode's Sonarr metadata, when the caller has it */
 export async function playPending(it, group, em) {
   if (__PHONE__ && !canWatchPending) {
-    toast('Watching while downloading needs iOS 17.1 or later');
+    toast(__WEB__ ? 'Watching while downloading needs a browser with Media Source Extensions' : 'Watching while downloading needs iOS 17.1 or later');
     return;
   }
   if (!it.download_id) {

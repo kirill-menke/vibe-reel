@@ -321,7 +321,11 @@ Any torrent qBittorrent has works, whatever its category.
   resolution, HDR / Dolby Vision), audio and subtitle tracks.
 - `POST|GET /api/downloads/{id}/hls?audio=N` and `GET …/hls/{audio}/{file}` — the
   iPhone's variant: the growing file remuxed into an HLS event playlist of fMP4
-  segments (`src/reel_api/livehls.py`).
+  segments (`src/reel_api/livehls.py`). Audio is copied when it is AAC, AC-3 or E-AC-3,
+  else converted to AC-3 5.1 (stereo: AAC). `&codec=aac` (on all three calls; anything
+  but `auto`/`aac` is `422`) is the desktop browsers' variant — a job of its own that
+  copies only AAC and encodes the rest to AAC (5.1 at 384k, stereo at 256k), since
+  Chrome and Firefox decode no AC-3/E-AC-3.
 
 `404 not_found` for a hash qBittorrent doesn't know, `409 not_ready` while the
 torrent's metadata or first bytes are missing, `503` without `QBIT_URL` or while

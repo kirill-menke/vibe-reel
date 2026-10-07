@@ -12,6 +12,10 @@
  * drops a job nobody asked about for 10 minutes, so this pings its status
  * while the stream is open, and re-starts a job that has gone (a 404).
  *
+ * The desktop web build uses it too, asking for AAC audio (`codec=aac`): the
+ * server's default (copy AAC/AC-3/E-AC-3, else AC-3 5.1) is the iPhone's, and
+ * neither Chrome nor Firefox decodes AC-3/E-AC-3.
+ *
  * Phone-only (pendingplay.js calls it inside `if (__PHONE__)`). */
 import { cfg } from './config.js';
 import { mlHeaders } from './medialib.js';
@@ -30,7 +34,8 @@ export function liveOpener(downloadId) {
   return ({ audioIndex, position, jump, onFail }) => {
     const audio = audioIndex >= 0 ? audioIndex : -1;
     const ac = new AbortController();
-    const q = '?audio=' + audio;
+    // web: the browsers take no AC-3/E-AC-3, so the server makes the audio AAC
+    const q = __WEB__ ? '?audio=' + audio + '&codec=aac' : '?audio=' + audio;
     const files = base + '/' + audio + '/';
     /** @param {'GET' | 'POST'} method @returns {Promise<Reel.LiveHlsStatus>} reel-api livehls.py's job status */
     const json = async (method) => {
@@ -71,7 +76,7 @@ export function liveOpener(downloadId) {
         return { codecs: st.codecs, duration: st.duration || 0 };
       },
       async playlist() {
-        const r = await fetch(files + 'index.m3u8', { headers: mlHeaders(), signal: ac.signal, cache: 'no-store' });
+        const r = await fetch(__WEB__ ? files + 'index.m3u8?codec=aac' : files + 'index.m3u8', { headers: mlHeaders(), signal: ac.signal, cache: 'no-store' });
         if (r.status === 404) {
           restart();
           return { segs: [], complete: false };
@@ -81,14 +86,14 @@ export function liveOpener(downloadId) {
       },
       async fetchInit() {
         for (let i = 0; i < 30; i++) {
-          const r = await fetch(files + 'init.mp4', { headers: mlHeaders(), signal: ac.signal, cache: 'no-store' });
+          const r = await fetch(__WEB__ ? files + 'init.mp4?codec=aac' : files + 'init.mp4', { headers: mlHeaders(), signal: ac.signal, cache: 'no-store' });
           if (r.ok) return r.arrayBuffer();
           await sleep(1000);
         }
         return null;
       },
       async fetchSeg(seg) {
-        const r = await fetch(files + seg.name, { headers: mlHeaders(), signal: ac.signal, cache: 'no-store' });
+        const r = await fetch(__WEB__ ? files + seg.name + '?codec=aac' : files + seg.name, { headers: mlHeaders(), signal: ac.signal, cache: 'no-store' });
         if (r.status === 404) {
           restart();   // the job was dropped (idle) — it remuxes again from the start
           return null;
