@@ -71,14 +71,18 @@
 
 /* scrollbars: the phone hides them all (touch has no use for them); a mouse
    wants the page's — thin, dark — while rails keep theirs hidden (◀ ▶) */
-.screen { scrollbar-width: thin; scrollbar-color: rgba(255, 255, 255, 0.18) transparent; }
-.screen::-webkit-scrollbar { display: block; width: 10px; }
-.screen::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.16); border-radius: 10px; border: 3px solid transparent; background-clip: padding-box; }
-.screen::-webkit-scrollbar-track { background: transparent; }
+.screen, .wsheet .sheet__body { scrollbar-width: thin; scrollbar-color: rgba(255, 255, 255, 0.18) transparent; }
+.screen::-webkit-scrollbar, .wsheet .sheet__body::-webkit-scrollbar { display: block; width: 10px; }
+.screen::-webkit-scrollbar-thumb, .wsheet .sheet__body::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.16); border-radius: 10px; border: 3px solid transparent; background-clip: padding-box; }
+.screen::-webkit-scrollbar-track, .wsheet .sheet__body::-webkit-scrollbar-track { background: transparent; }
 
-/* text can be selected on a desktop (titles, overviews), not on controls */
+/* text can be selected on a desktop (titles, overviews), not on controls —
+   nor on the rows, switches and segmented pickers that act as one (a
+   double-click on a settings row used to select its label) */
 body { -webkit-user-select: text; user-select: text; }
-button, .tile, .chip, .pchip, .wnav, .rail__head, .player, .wplayer { -webkit-user-select: none; user-select: none; }
+button, .tile, .chip, .pchip, .wnav, .rail__head, .player, .wplayer,
+.row, .seg, .switch, .sheet__head, .navbar, .group__label, .wtopbar { -webkit-user-select: none; user-select: none; }
+.row.selectable, .row.selectable * { -webkit-user-select: text; user-select: text; }
 
 /* ================================================================= 2. shell */
 html, body { overflow: hidden; }
