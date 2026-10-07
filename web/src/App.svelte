@@ -8,7 +8,8 @@
    * (lib/urlsync.svelte.js). No page transitions beyond a short fade — a
    * desktop page swap should feel instant. */
   import { onMount, tick } from 'svelte';
-  import { R, S, TABS, top, closeSheet, markBooted, takeFocus, pruneFocus } from '$p/lib/router.svelte.js';
+  import { R, S, TABS, top, closeSheet, switchTab, markBooted, takeFocus, pruneFocus } from '$p/lib/router.svelte.js';
+  import { CONFIRM } from '$p/lib/confirm.svelte.js';
   import { openLogin } from '$lib/nav.svelte.js';
   import { screens } from './screens.js';
   import { sheets } from './sheets.js';
@@ -215,19 +216,47 @@
   const POPOVER = new Set(['accounts', 'notifications']);
   const sheetKind = $derived(R.sheet && POPOVER.has(R.sheet.name) ? 'popover' : 'dialog');
 
+  /* Escape closes the sheet — unless a confirm (Sign out?) or a context menu
+   * sits above it: their own Escape answers first, and this capture handler
+   * used to swallow the key, closing the popover under a confirm left open. */
   /** @param {KeyboardEvent} e */
   function onKey(e) {
-    if (e.key === 'Escape' && R.sheet && !e.defaultPrevented) {
+    if (e.key === 'Escape' && R.sheet && !e.defaultPrevented && !CONFIRM.req && !document.querySelector('.ctx')) {
       e.preventDefault();
       e.stopPropagation();
       closeSheet();
     }
   }
+
+  /* `/` jumps to the Search field from anywhere in the browse UI (as on most
+   * sites with a search box) — not while typing, under the player, Login or
+   * an open sheet. The Search root mounts on its first visit, so the field
+   * is looked for over a few frames. */
+  /** @param {KeyboardEvent} e */
+  function onSlash(e) {
+    if (e.key !== '/' || e.defaultPrevented || e.ctrlKey || e.metaKey || e.altKey) return;
+    const t = /** @type {HTMLElement | null} */ (e.target instanceof HTMLElement ? e.target : null);
+    if (t && (t.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName))) return;
+    if (!shell || R.modal || R.sheet || CONFIRM.req) return;
+    e.preventDefault();
+    if (R.tab !== 'search' || R.stacks.search.length > 1) switchTab('search');
+    let tries = 30;
+    const find = () => {
+      const f = /** @type {HTMLInputElement | null} */ (document.querySelector('.route[data-route="search"]:not([hidden]) .search__input'));
+      if (f) {
+        f.focus();
+        f.select();
+      } else if (--tries > 0) requestAnimationFrame(find);
+    };
+    tick().then(find);
+  }
 </script>
 
-<svelte:window onkeydowncapture={onKey} />
+<svelte:window onkeydowncapture={onKey} onkeydown={onSlash} />
 
-<div class="wapp" class:wapp--player={R.modal === 'player'}>
+<!-- a sheet (popover or dialog) is modal: its scrim already takes every click
+     outside it, and `inert` keeps Tab / the screen reader in it too -->
+<div class="wapp" class:wapp--player={R.modal === 'player'} inert={(!!R.sheet && !!SheetComp) || undefined}>
   {#if shell}<WebNav {solid} />{/if}
 
   <div class="stage wstage" bind:this={stage} onscrollcapture={onScroll}>

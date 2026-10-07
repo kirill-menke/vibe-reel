@@ -27,7 +27,10 @@
   /** @type {HTMLElement | null} */
   let el = $state(null);
 
-  /* keyboard users land in the popover */
+  /* keyboard users land in the popover, and go back to what opened it. The
+   * page under a sheet is `inert` (App) until the same update that removes
+   * the sheet, so the hand-back waits a task — and leaves focus alone if
+   * something (a pushed page, a confirm) has taken it meanwhile. */
   $effect(() => {
     const n = el;
     if (!n) return;
@@ -36,7 +39,10 @@
       if (!n.contains(document.activeElement)) n.focus({ preventScroll: true });
     });
     return () => {
-      if (prev && prev.isConnected && !n.isConnected) prev.focus?.({ preventScroll: true });
+      setTimeout(() => {
+        const a = document.activeElement;
+        if (prev && prev.isConnected && !n.isConnected && (!a || a === document.body)) prev.focus?.({ preventScroll: true });
+      });
     };
   });
 </script>
