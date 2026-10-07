@@ -38,6 +38,7 @@
     P, setVideoEl, setPgsCanvas, showOsd, hideOsd, togglePause, seekTo, seekBy, effectivePos, trickAt,
     skipVisible, skipSegment, upNextVisible, playNext, retryPlayback, exitPlayer, closePanel, pmSetSub, pmSetQuality, QUALITY_CAPS
   } from '$lib/player.svelte.js';
+  import { markQualityChosen } from '../lib/net.js';
 
   const SEEK_STEP = 10;
   const VOL_STEP = 0.05;
@@ -278,7 +279,9 @@
   }
 
   let pip = $state(false);
-  const pipOk = typeof document !== 'undefined' && !!document.pictureInPictureEnabled;
+  /* Chrome has the Picture-in-Picture API; Firefox has only its own built-in
+   * PiP toggle (no API), so the button shows only where the API is real */
+  const pipOk = typeof document !== 'undefined' && !!document.pictureInPictureEnabled && typeof HTMLVideoElement.prototype.requestPictureInPicture === 'function';
   async function togglePip() {
     if (!video) return;
     try {
@@ -641,7 +644,7 @@
         {#if slowHint}<p class="pcard__hint">{slowHint}</p>{/if}
         {#if fitCap}
           <div class="pcard__actions">
-            <button class="btn btn--glass btn--sm" type="button" onclick={() => pmSetQuality(fitCap)}><span>Switch to {fitCap / 1e6} Mbit/s</span></button>
+            <button class="btn btn--glass btn--sm" type="button" onclick={() => (markQualityChosen(), pmSetQuality(fitCap))}><span>Switch to {fitCap / 1e6} Mbit/s</span></button>
           </div>
         {/if}
       </div>

@@ -19,7 +19,7 @@
  * `n` counts our entries; sessionStorage keeps n → entry so a pop after a
  * reload still knows what lies behind.
  *
- * URLs:  /  /movies  /shows  /search  /movie/<id>  /show/<id>  /item/<id>
+ * URLs:  /  /movies  /shows  /search[?q=]  /movie/<id>  /show/<id>  /item/<id>
  *        /person/<id>  /lookup/<movie|tv>/<id>  /search/chart/<key>?t=<title>
  *        /pending/<key>  /settings  /my-library */
 import { untrack } from 'svelte';
@@ -27,6 +27,13 @@ import { R, TABS, push, pop, switchTab, restoreStacks } from '$p/lib/router.svel
 import { exitPlayer } from '$lib/player.svelte.js';
 
 const SITE = 'VibeReel';
+
+/* The Search root's `?q=…` (lib/searchurl.js registers the getter). */
+let searchQuery = () => '';
+/** @param {() => string} fn */
+export function setSearchQuery(fn) {
+  searchQuery = fn;
+}
 const HIST_KEY = 'reel.web.history';
 
 /** @typedef {{ name: VR.RouteName, params?: VR.RouteParams }} PlainRoute */
@@ -149,7 +156,9 @@ function write(how, tab, stack, player) {
   const n = how === 'push' ? cur.n + 1 : cur.n;
   const st = stateFor(tab, stack, player, n);
   const url = urlOf(tab, st.stack[st.stack.length - 1]);
-  const keepQuery = url === location.pathname ? location.search : '';
+  // the Search root carries its query (?q=, lib/searchurl.js); other pages keep
+  // a query only when they replace themselves
+  const keepQuery = tab === 'search' && !st.stack.length ? searchQuery() : url === location.pathname ? location.search : '';
   if (how === 'push') {
     for (const k of book.keys()) if (k > cur.n) book.delete(k);
     history.pushState(st, '', url + keepQuery);
@@ -262,7 +271,7 @@ export function initUrl() {
     cur = { n: 0, tab: p.tab, sigs: [], player: false };
     /** @type {HistState} */
     const root = { vr: 1, n: 0, tab: p.tab, stack: [], player: false };
-    history.replaceState(root, '', urlOf(p.tab, undefined));
+    history.replaceState(root, '', urlOf(p.tab, undefined) + (p.tab === 'search' && !p.stack.length ? location.search : ''));
     book.set(0, { tab: p.tab, sigs: [], player: false });
     if (p.stack.length) {
       // deep link: the tab's root behind it, so Back stays in the app

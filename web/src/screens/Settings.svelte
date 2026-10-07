@@ -19,7 +19,7 @@
   import appinfo from '../../../public/appinfo.json';
   import { push as pushRoute } from '$p/lib/router.svelte.js';
   import { ME, quotaSummary } from '$lib/me.svelte.js';
-  import { via } from '../lib/net.js';
+  import { via, markQualityChosen } from '../lib/net.js';
 
   /** @type {{ params?: VR.RouteParams, active?: boolean }} */
   let { active = false } = $props();
@@ -108,6 +108,8 @@
 
   <List group label="Streaming" foot="{qualityHint}{where}">
     <Row column title="Quality">
+      <!-- any click on a segment is an explicit pick, the selected one too (lib/net.js) -->
+      <div class="wquality" onclickcapture={markQualityChosen} role="presentation">
       <Segmented
         options={QUALITY}
         value={quality}
@@ -117,6 +119,7 @@
           setQualityCap(v);
         }}
       />
+      </div>
     </Row>
   </List>
 

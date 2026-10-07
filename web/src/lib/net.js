@@ -7,11 +7,13 @@
  * the tunnel defaults to 8 Mbit/s and the LAN to Original. No /net.json (the
  * dev server, an old NAS) = Original.
  *
- * "Picked by the user" needs no hook into Settings: we remember the value we
- * set last (reel.web.qualityAuto); a stored value that differs from it was
- * chosen by hand, and from then on (reel.web.qualityChosen) we never touch it.
- * A hand pick equal to the automatic value is indistinguishable and stays
- * automatic — harmless, it is what the user wanted on that network. */
+ * "Picked by the user" (reel.web.qualityChosen — from then on we never touch
+ * the setting): every explicit pick calls markQualityChosen() — the web
+ * Settings page, the player's slow-link "Switch to …" button, and (watched
+ * here, at the DOM edge, since the panel is the phone's) any option in the
+ * player's Quality column — even a pick equal to the network default. As a
+ * fallback, a stored value that differs from the one we set last
+ * (reel.web.qualityAuto) counts as a pick too. */
 import { getQualityCap, setQualityCap } from '$lib/player.svelte.js';
 
 const AUTO_KEY = 'reel.web.qualityAuto';
@@ -48,8 +50,17 @@ async function where() {
   }
 }
 
+/* The user picked a streaming quality: never default it again. */
+export function markQualityChosen() {
+  set(CHOSEN_KEY, '1');
+}
+
 /* Once at start; never blocks the first paint. */
 export async function initQualityDefault() {
+  // the player's Quality column (TrackPanel's .vr-quality options)
+  document.addEventListener('click', (e) => {
+    if (/** @type {Element} */ (e.target).closest?.('.vr-quality .option')) markQualityChosen();
+  }, true);
   via = await where();
   if (get(CHOSEN_KEY) === '1') return;
   const cur = String(getQualityCap());

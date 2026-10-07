@@ -172,6 +172,19 @@ html, body { overflow: hidden; }
 }
 .hero__meta, .hero__overview { max-width: 640px; }
 
+/* Home hero paddles (lib/heroarrows.js): shown while the pointer is over it */
+.whero__btn {
+  position: absolute; top: 50%; z-index: 5; translate: 0 -50%;
+  display: grid; place-items: center; width: 52px; height: 52px; border-radius: var(--r-pill);
+  color: var(--text); background: var(--glass-bg-strong); box-shadow: inset 0 0 0 1px var(--glass-line);
+  opacity: 0; transition: opacity var(--dur-fast) linear, background-color var(--dur-fast) linear;
+}
+.whero__btn .i { width: 28px; height: 28px; }
+.whero__btn--l { left: max(12px, calc(var(--gutter) / 3)); }
+.whero__btn--r { right: max(12px, calc(var(--gutter) / 3)); }
+.homehero:hover .whero__btn, .whero__btn:focus-visible { opacity: 1; }
+@media (hover: hover) { .whero__btn:hover { background: rgba(40, 40, 46, 0.9); } }
+
 /* title pages: the backdrop is a wide hero; over its lower edge a text
    column (title, meta, actions, overview) no wider than reads well, with the
    primary button and the secondary actions in one row instead of stacked */
@@ -205,6 +218,9 @@ html, body { overflow: hidden; }
 .detail__title { max-width: 18ch; }
 .detail__title--long { font-size: clamp(36px, 2.6vw, 54px); max-width: 24ch; }
 .detail__body .overview-wrap, .detail__body > p { max-width: 75ch; }
+/* "more" ends the clamped third line (the wrap is the text column, not the
+   page): a longer fade so no half-cut word peeks out before it */
+.overview__more--inline { padding-left: 64px; background: linear-gradient(90deg, transparent, var(--bg) 48px); }
 
 /* episodes as a two-column card list */
 .episodes.detail__episodes { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 620px), 1fr)); column-gap: var(--s-4); padding: 0 calc(var(--gutter) - var(--s-3)); }
