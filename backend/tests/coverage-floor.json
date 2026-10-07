@@ -1,0 +1,42 @@
+{
+  "_doc": "Line-coverage floors per module (percent, integers). Only ever raise them. target applies to core modules; the lane is done when every core floor is >= target.",
+  "target": 80,
+  "core": [
+    "app.py",
+    "arr.py",
+    "charts.py",
+    "collections.py",
+    "introdb.py",
+    "livehls.py",
+    "ownership.py",
+    "push.py",
+    "qbittorrent.py",
+    "security.py",
+    "statefile.py",
+    "streaming.py",
+    "trailers.py",
+    "trending.py",
+    "undo.py"
+  ],
+  "floors": {
+    "__init__.py": 100,
+    "app.py": 100,
+    "arr.py": 98,
+    "canary.py": 100,
+    "charts.py": 100,
+    "collections.py": 100,
+    "introdb.py": 100,
+    "livehls.py": 97,
+    "models.py": 100,
+    "ownership.py": 100,
+    "push.py": 100,
+    "qbittorrent.py": 100,
+    "security.py": 100,
+    "server.py": 96,
+    "statefile.py": 100,
+    "streaming.py": 100,
+    "trailers.py": 100,
+    "trending.py": 100,
+    "undo.py": 96
+  }
+}

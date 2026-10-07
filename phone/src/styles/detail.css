@@ -1,0 +1,169 @@
+/* Title pages (workstream D): Movie / Series / Not-in-library / Downloading
+   detail and Person. The design classes (.detail__*, .meta, .actions, .pills,
+   .episode, .cast, .kv, .person__*) live in components.css; these are the
+   app-side additions. Tokens only. */
+
+/* Cast rail: tighter track than posters (design: gap s-3) */
+.rail--cast .rail__track { gap: var(--s-3); }
+.cast { -webkit-touch-callout: none; }
+.cast__photo { background: var(--surface-2); }
+.cast__photo > .art { position: absolute; inset: 0; }
+.cast__photo > .art:not(:has(img)) { background: none; }
+
+/* Season picker: the bar around the .pills scroller is always sticky under
+   the nav bar (it lives directly in the scroller so it can stay pinned over
+   the whole episode list); the glass look (.pills--sticky, components.css)
+   only while it is actually pinned — SeasonPills watches a 1-px mark just
+   above it. Vertical padding: s-2 in all, 4 px of it the scroller's own
+   (room for the pills' press scale and hit slop). */
+.detail__pills {
+  position: sticky; top: calc(var(--safe-top) + var(--s-1) + var(--tap) + var(--s-2));
+  z-index: calc(var(--z-header) - 1);
+  padding: calc(var(--s-2) - 4px) 0;
+}
+.pills__mark { height: 1px; margin-bottom: -1px; pointer-events: none; }
+.detail__gap { height: calc(var(--section-gap) - var(--s-2)); }
+.detail__episodes { padding-top: var(--s-2); min-height: 40vh; }
+.detail__sum { padding: var(--s-1) var(--gutter) var(--s-1); font: var(--t-caption); color: var(--text-faint); font-variant-numeric: tabular-nums; }
+.detail__empty { padding: var(--s-4) var(--gutter); font: var(--t-callout); color: var(--text-faint); }
+.detail__epskel { display: grid; grid-template-columns: var(--still-w) minmax(0, 1fr); align-items: center; gap: var(--s-3); padding: var(--s-3) var(--gutter); }
+.detail__epskel .skel--thumb { width: var(--still-w); }
+.detail__cardwrap { padding: var(--s-3) var(--gutter); }
+
+/* Episode row inside a context-menu preview card: no own padding / press
+   (lib/press.js skips it and aria-disabled rows) */
+.episode--preview { padding: 0; }
+.episode[aria-disabled="true"] { cursor: default; }
+.episode { cursor: pointer; -webkit-touch-callout: none; -webkit-user-select: none; user-select: none; }
+
+/* Eyebrow line of an episode page ("<Series> · Season 2 · Episode 4") */
+.detail__eyebrow .badge { text-transform: none; }
+.detail__series { font: var(--t-callout); color: var(--text-dim); align-self: flex-start; }
+
+/* SeriesDetail: the tech badges' row (one line of 22-pt .tech chips) held
+   while the first episode loads */
+.detail__badgeslot { height: 22px; }
+
+/* Slow-link hint under the tech badges (P.link) */
+.detail__hint { display: flex; gap: var(--s-2); align-items: flex-start; font: var(--t-caption); color: var(--text-faint); }
+.detail__hint .i { flex: none; width: var(--icon-xs); height: var(--icon-xs); margin-top: 1px; color: var(--gold); }
+
+/* "This film" in the collection rail: not a link (lib/press.js skips it) */
+.tile--self { cursor: default; }
+
+/* Loading skeleton action placeholders */
+.detail__skelaction { display: grid; justify-items: center; gap: 6px; }
+
+/* Details list heading spacing + multi-line values */
+.kv dd { overflow-wrap: anywhere; }
+.detail__kvsec { padding-bottom: var(--s-2); }
+
+/* Person: nav bar over a page without a backdrop */
+.person__photo { position: relative; background: var(--surface-2); }
+.person__photo > .art { position: absolute; inset: 0; }
+.person__photo .cast__initials { font-size: 40px; }
+.person__bio { display: flex; flex-direction: column; gap: var(--s-4); }
+.person__chips { padding-bottom: var(--s-4); }
+.person__empty { padding: var(--s-6) var(--gutter); font: var(--t-callout); color: var(--text-faint); text-align: center; }
+
+/* A queue-only season that is selected: outlined in text colour */
+.pill--dim.pill--active { color: var(--text); box-shadow: inset 0 0 0 1.5px var(--text-dim); }
+
+/* Cancel download (src/lib/cancel.svelte.js): a row/tile whose cancel is in
+ * flight — dimmed until the next activity poll drops it. (The confirm is the
+ * action sheet now, ACT-01.) */
+.is-cancelling { opacity: 0.4; pointer-events: none; transition: opacity var(--dur-base) var(--ease-out); }
+
+/* LookupDetail's Add button speaks the tiles' quick-add language (LIB-02):
+   + → spinner → a ✓ that pops in (Svelte scale) with "Added", then the status */
+.btn--added > span { display: inline-flex; align-items: center; gap: var(--s-2); }
+.btn__check { display: inline-grid; place-items: center; }
+.btn__check .i { stroke-width: 2.6; }
+
+/* ---- UX pass (title pages) ---- */
+
+/* Status button (download state): one line that ellipsizes instead of
+   clipping both ends of a centred string ("ownloading · 21% … lef") */
+.detail__buttons .btn--status { padding: 0 var(--s-4); }
+.detail__buttons .btn--status > span:not(.btn__fill) { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+
+/* Long titles step down a size so three serif lines don't push the button
+   off the first screen */
+.detail__title--long { font-size: calc(30 * var(--tu)); line-height: 1.04; }
+
+/* The show link above an episode's title: a real 44-pt target with a chevron */
+.detail__series { display: inline-flex; align-items: center; gap: 2px; min-height: var(--tap); margin: calc((var(--tap) - 20px) / -2) 0; transition: opacity var(--dur-base) var(--ease-out); }
+.detail__series .i { width: var(--icon-xs); height: var(--icon-xs); color: var(--text-faint); }
+.detail__series.pressing { opacity: 0.6; transition-duration: var(--dur-press); }
+
+/* The next-up episode of a show: its row carries "Up next" in the status line */
+.episode__status .i { width: 12px; height: 12px; }
+
+/* Resume row of a show: "S2 · E4 · Episode Name · 31 min left" stays on one line */
+.detail__resume > span { min-width: 0; max-width: 62%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* Collection rail: franchise titles share their prefix ("<Franchise> - …"),
+   so one line made every tile read the same — allow two */
+.rail--coll .tile__title { white-space: normal; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; text-wrap: balance; }
+
+/* Landscape phone: the 440-pt backdrop was taller than the screen, so a title
+   page opened on nothing but artwork. Shorter hero; the header column keeps a
+   readable width and leaves the artwork visible beside it. */
+@media (orientation: landscape) and (max-height: 500px) {
+  .detail__hero { height: min(var(--backdrop-h), 66dvh); }
+  .detail__body { max-width: calc(560px + var(--gutter) * 2); }
+  .detail__title { font-size: calc(32 * var(--tu)); }
+}
+
+/* No artwork at all: a short tonal band instead of 440 pt of empty gradient
+   pushing the title halfway down the screen */
+.detail__hero--empty { height: calc(var(--safe-top) + var(--s-16) * 2 + 120px); }
+
+/* The note under the primary/status button: no one-word last line */
+.detail__note { text-wrap: balance; }
+
+/* ---- Polish round (docs/ios/polish/detail.md) ---- */
+
+/* DET-01: the backdrop stretches into the rubber-band gap on pull-down and
+   drifts at 0.3× on scroll (DetailHero's heroScroll). The top may overflow
+   upward into the gap; bottom and sides stay clipped, so the parallaxed image
+   never shows below the scrim. One layer for the art. */
+.detail__hero { overflow: visible; clip-path: inset(-100vh 0 0 0); }
+.detail__hero > .art, .detail__hero > .skel, .detail__hero > .detail__scrim { transform-origin: 50% 100%; }
+.detail__hero > .art { will-change: transform; }
+
+/* DET-03: skeleton text/actions only after ~250 ms (a fast load never shows
+   grey bars); the hero block is static — no pulse on a full-size layer. */
+@keyframes vr-fade-in { from { opacity: 0; } }
+.detail__skel-late { animation: vr-fade-in var(--dur-img) var(--ease-out) var(--dur-base) backwards; }
+.detail__hero > .skel--hero { animation: none; }
+
+/* DET-06: the old season's list dims while a slow answer is on its way
+   (only after 120 ms — SeriesDetail's timer), the new one dissolves in */
+.detail__episodes--stale { opacity: 0.45; transition: opacity var(--dur-fast) linear; }
+
+/* DET-09: status states share one grid cell, so the outgoing and incoming
+   state overlap while they cross-fade and nothing below jumps; the note slot
+   keeps two caption lines whatever it says (or doesn't) */
+.detail__morph { display: grid; }
+.detail__morph > * { grid-area: 1 / 1; min-width: 0; }
+.detail__noteslot { display: grid; font: var(--t-caption); min-height: 2lh; }
+.detail__noteslot > * { grid-area: 1 / 1; }
+.detail__eyebrowin { display: inline-flex; }
+
+/* DET-11: the Download action's ring (App Store style) around a small arrow,
+   inside the 44-pt circle; captions in tabular figures */
+.action { font-variant-numeric: tabular-nums; }
+.action__icon .action__ring { --ring-size: 40px; --ring-stroke: 2.5; color: var(--text); }
+.action__icon .action__ring .i { width: 14px; height: 14px; }
+
+/* DET-12: "more" trails the third line over a soft fade into the page, and
+   the clamped text itself is a tap target (Overview.svelte) */
+.overview-wrap { position: relative; }
+.overview__more--inline {
+  position: absolute; right: 0; bottom: 0; margin: 0; height: auto;
+  padding-left: 28px;
+  background: linear-gradient(90deg, transparent, var(--bg) 24px);
+  font: var(--t-body); font-weight: 600; letter-spacing: var(--t-body-ls); color: var(--text);
+}
+.overview__more--inline::after { left: 0; right: -8px; top: -12px; bottom: -8px; }

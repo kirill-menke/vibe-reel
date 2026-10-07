@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>Home — empty library · VibeReel</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&amp;display=swap">
+<link rel="stylesheet" href="../tokens.css">
+<link rel="stylesheet" href="../components.css">
+</head>
+<body class="proto">
+<div class="device" data-component="DeviceFrame" style="width: 393px; height: 852px">
+<div class="app">
+  <main class="screen" data-component="HomeScreen">
+    <header class="topbar" data-component="TopBar">
+      <p class="wordmark">Vibe<span class="wordmark__accent">Reel</span></p>
+      <div class="topbar__actions">
+        <a class="iconbtn" href="10-notifications--empty.html" aria-label="Notifications"><svg class="i" viewBox="0 0 24 24"><path d="M6 16.5V11a6 6 0 0 1 12 0v5.5l1.5 2h-15z"></path><path d="M10 20.5a2 2 0 0 0 4 0"></path></svg></a>
+        <a class="avatarbtn" href="11-accounts.html" aria-label="Account: Alice"><span class="avatar" style="--av: #e6b450">A</span></a>
+      </div>
+    </header>
+
+    <div class="state state--card" data-component="StateMessage">
+      <span class="state__icon"><svg class="i" viewBox="0 0 24 24"><rect x="3.5" y="4.5" width="17" height="15" rx="2"></rect><path d="M7.5 4.5v15M16.5 4.5v15M3.5 9h4M3.5 15h4M16.5 9h4M16.5 15h4"></path></svg></span>
+      <h2 class="state__title">Your library is empty</h2>
+      <p class="state__text">Add something from Trending below, or search for a title — it lands here as soon as it’s downloaded.</p>
+      <div class="state__actions"><a class="btn btn--primary btn--sm" href="07-search--browse.html"><span>Search titles</span></a></div>
+    </div>
+
+    <section class="rail" data-component="Rail" aria-label="Trending movies">
+      <div class="rail__head"><h2 class="rail__title">Trending <span class="rail__title-sub">Movies</span></h2><a class="rail__more" href="07-search--ranked.html">See all<svg class="i i--xs" viewBox="0 0 24 24"><path d="m9 5 7 7-7 7"></path></svg></a></div>
+      <div class="rail__track">
+        <a class="tile tile--poster" href="08-not-in-library.html" data-component="Tile"><div class="tile__frame"><div class="art" style="--a1: #a3372a; --a2: #140c0a; --a3: #5b4a2a"><span class="art__label">Delta Night</span></div><span class="tile__badge badge">Not in library</span></div><p class="tile__title">Delta Night</p><p class="tile__sub">2025</p></a>
+        <a class="tile tile--poster" href="08-not-in-library.html" data-component="Tile"><div class="tile__frame"><div class="art" style="--a1: #d7d4c4; --a2: #1b1d22; --a3: #c0392b"><span class="art__label">Pit Lane</span></div><span class="tile__badge badge">Not in library</span></div><p class="tile__title">Pit Lane</p><p class="tile__sub">2025</p></a>
+        <a class="tile tile--poster" href="08-not-in-library.html" data-component="Tile"><div class="tile__frame"><div class="art" style="--a1: #6fa0c8; --a2: #0d1420; --a3: #d9b36c"><span class="art__label">Copy Nine</span></div><span class="tile__badge badge">Not in library</span></div><p class="tile__title">Copy Nine</p><p class="tile__sub">2025</p></a>
+        <a class="tile tile--poster" href="08-not-in-library.html" data-component="Tile"><div class="tile__frame"><div class="art" style="--a1: #7c6a8a; --a2: #121016"><span class="art__label">Hollow Street</span></div><span class="tile__badge badge">Not in library</span></div><p class="tile__title">Hollow Street</p><p class="tile__sub">2025</p></a>
+      </div>
+    </section>
+
+    <section class="rail" data-component="Rail" aria-label="Trending shows">
+      <div class="rail__head"><h2 class="rail__title">Trending <span class="rail__title-sub">Shows</span></h2></div>
+      <div class="rail__track">
+        <a class="tile tile--poster" href="08-not-in-library--queued.html"><div class="tile__frame"><div class="art" style="--a1: #4f8fa3; --a2: #0e1a20"><span class="art__label">Night Shift</span></div><span class="tile__badge badge">Not in library</span></div><p class="tile__title">Night Shift</p><p class="tile__sub">2025</p></a>
+        <a class="tile tile--poster" href="08-not-in-library--queued.html"><div class="tile__frame"><div class="art" style="--a1: #6b7280; --a2: #111317; --a3: #3a4a5c"><span class="art__label">Small Hours</span></div><span class="tile__badge badge">Not in library</span></div><p class="tile__title">Small Hours</p><p class="tile__sub">2025</p></a>
+        <a class="tile tile--poster" href="08-not-in-library--queued.html"><div class="tile__frame"><div class="art" style="--a1: #b9c7cb; --a2: #142028"><span class="art__label">Undercurrent</span></div><span class="tile__badge badge">Not in library</span></div><p class="tile__title">Undercurrent</p><p class="tile__sub">2022</p></a>
+      </div>
+    </section>
+  </main>
+
+  <div class="tabbar-fade"></div>
+  <nav class="tabbar" aria-label="Tabs" data-component="TabBar">
+    <a class="tabbar__item tabbar__item--active" href="02-home.html" aria-current="page"><svg class="i" viewBox="0 0 24 24"><path d="M4 10.5 12 4l8 6.5V19a1 1 0 0 1-1 1h-4.5v-6h-5v6H5a1 1 0 0 1-1-1z"></path></svg><span>Home</span></a>
+    <a class="tabbar__item" href="03-library-movies.html"><svg class="i" viewBox="0 0 24 24"><rect x="3.5" y="4.5" width="17" height="15" rx="2"></rect><path d="M7.5 4.5v15M16.5 4.5v15M3.5 9h4M3.5 15h4M16.5 9h4M16.5 15h4"></path></svg><span>Movies</span></a>
+    <a class="tabbar__item" href="03-library-shows.html"><svg class="i" viewBox="0 0 24 24"><rect x="3" y="6" width="18" height="12.5" rx="2"></rect><path d="M8.5 21h7M8.5 2.5 12 6l3.5-3.5"></path></svg><span>Shows</span></a>
+    <a class="tabbar__item" href="07-search--browse.html"><svg class="i" viewBox="0 0 24 24"><circle cx="11" cy="11" r="6.5"></circle><path d="m20 20-4.35-4.35"></path></svg><span>Search</span></a>
+  </nav>
+</div>
+<div class="device__island"></div>
+<div class="device__status"><span>9:41</span><span class="device__glyphs"><svg viewBox="0 0 18 12"><rect x="0" y="8" width="3" height="4" rx="1"></rect><rect x="5" y="5.5" width="3" height="6.5" rx="1"></rect><rect x="10" y="3" width="3" height="9" rx="1"></rect><rect x="15" y="0" width="3" height="12" rx="1"></rect></svg><svg viewBox="0 0 27 12"><rect x=".5" y=".5" width="23" height="11" rx="3.3" fill="none" stroke="#fff" stroke-opacity=".45"></rect><rect x="2" y="2" width="17" height="8" rx="2"></rect><path d="M25 4v4c.8-.3 1.5-1.1 1.5-2S25.8 4.3 25 4z" fill-opacity=".45"></path></svg></span></div>
+<div class="device__home"></div>
+</div>
+</body>
+</html>

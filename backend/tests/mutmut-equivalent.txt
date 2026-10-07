@@ -1,0 +1,160 @@
+# Mutants proven equivalent (no test can tell them from the original), excluded
+# from tests/run_mutmut.sh's score. One per line:
+#   <mutant name>  # one-line reason
+# Add a mutant here only with the reason it is equivalent; a survivor that is
+# merely hard to kill needs a test instead.
+reel_api.app.x__cached_lookup__mutmut_26  # popitem(last=None): None is falsy, same as last=False (FIFO end)
+reel_api.app.x__cached_lookup__mutmut_30  # pop(key) without default: run() is only ever started after the key is set, nothing else removes it
+reel_api.app.x__lookup_key__mutmut_2  # "XX XX".join: still an injective whitespace normalisation; the key never leaves the process
+reel_api.app.x__mark_added__mutmut_6  # entries cached before the add expire (TTL) before the add memory (2 x TTL); every read re-applies _with_adds
+reel_api.app.x_require_arr__mutmut_4  # ArrNotConfigured's argument is never read (fixed 503 body, no log)
+reel_api.app.x__unavailable__mutmut_9  # header name case: Starlette lower-cases response header names
+reel_api.app.x__unavailable__mutmut_10  # header name case: Starlette lower-cases response header names
+reel_api.app.xǁ_GZipExceptStreamsǁ__call____mutmut_10  # .get("path", default): an ASGI http scope always has "path"
+reel_api.app.xǁ_GZipExceptStreamsǁ__call____mutmut_12  # .get("path", default): an ASGI http scope always has "path"
+reel_api.app.xǁ_GZipExceptStreamsǁ__call____mutmut_15  # .get("path", default): an ASGI http scope always has "path"
+reel_api.app.xǁ_GZipExceptStreamsǁ__call____mutmut_22  # .get("path", default): an ASGI http scope always has "path"
+reel_api.app.xǁ_GZipExceptStreamsǁ__call____mutmut_24  # .get("path", default): an ASGI http scope always has "path"
+reel_api.app.xǁ_GZipExceptStreamsǁ__call____mutmut_27  # .get("path", default): an ASGI http scope always has "path"
+reel_api.undo.x__state__mutmut_10  # "" vs "XXXX" fallback: _state() is only tested for membership in _IMPORTING
+reel_api.undo.xǁRefusedǁ__init____mutmut_1  # Exception args: Refused is only read through .code/.detail
+reel_api.undo.xǁUndoǁ_purge__mutmut_4  # return 1 instead of 0: every caller ignores _purge's count
+reel_api.undo.xǁUndoǁundo_add__mutmut_8  # UndoGone's argument is never read (fixed 410 body, no log)
+reel_api.undo.xǁUndoǁundo_get__mutmut_4  # UndoGone's argument is never read (fixed 410 body, no log)
+reel_api.undo.xǁUndoǁundo_add__mutmut_29  # a missing id field reads "" or "XXXX": neither equals a validated numeric media id
+reel_api.undo.xǁUndoǁcancel__mutmut_1  # default blocklist: the only caller (app.cancel_activity) always passes it
+reel_api.undo.xǁUndoǁcancel__mutmut_32  # NothingToCancel's argument is never read (fixed 404 body, no log)
+reel_api.arr.x__image__mutmut_22  # "" vs "XXXX" fallback: neither starts with "http", both give None
+reel_api.arr.x__norm__mutmut_34  # "(US)" replaced by "XXXX" instead of "": s is lower-cased already, so the X's become spaces next line
+reel_api.arr.x__norm__mutmut_50  # "&" -> "XX and XX": upper-case X's are not [a-z0-9] and become spaces like the original's
+reel_api.arr.x__when__mutmut_7  # replace("XXZXX", ...): fromisoformat parses a "Z" suffix itself since Python 3.11 (requires-python >= 3.12)
+reel_api.arr.x__when__mutmut_8  # replace("z", ...): as _when__mutmut_7
+reel_api.arr.xǁAlreadyAddedǁ__init____mutmut_1  # Exception args: AlreadyAdded is only read through .title
+reel_api.arr.xǁArrClientǁ__init____mutmut_15  # header name case: HTTP header names are case-insensitive
+reel_api.arr.xǁArrClientǁ__init____mutmut_16  # header name case: HTTP header names are case-insensitive
+reel_api.arr.xǁArrClientǁ_shape_queue__mutmut_37  # "" vs "XXXX" state fallback: both map to the "downloading" default
+reel_api.arr.xǁArrClientǁ_shape_queue__mutmut_43  # the "downloading" key maps to the same value as the .get default
+reel_api.arr.xǁArrClientǁ_shape_queue__mutmut_44  # the "downloading" key maps to the same value as the .get default
+reel_api.arr.xǁArrClientǁadd__mutmut_12  # NoSuchTitle's argument is never read (fixed 404 body, no log)
+reel_api.arr.xǁArrClientǁmetadata__mutmut_12  # NoSuchTitle's argument is never read (fixed 404 body, no log)
+reel_api.arr.xǁArrClientǁsearch_season__mutmut_12  # NoSuchTitle's argument is never read (fixed 404 body, no log)
+reel_api.arr.xǁArrClientǁsearch_season__mutmut_26  # NoSuchTitle's argument is never read (fixed 404 body, no log)
+reel_api.arr.xǁArrClientǁadd__mutmut_45  # _at None: app's remember_add stamps now() instead, microseconds later; undo compares with a 5 s SKEW
+reel_api.arr.xǁArrClientǁadd__mutmut_86  # "_at" key renamed: as add__mutmut_45 (app pops "_at" with a None default; response_model drops the stray key)
+reel_api.arr.xǁArrClientǁadd__mutmut_87  # "_at" key renamed: as add__mutmut_45
+reel_api.arr.xǁArrClientǁadd__mutmut_68  # arr_id "" instead of None on a non-numeric id: remember_add treats both as "no token"
+reel_api.arr.xǁArrClientǁmedia_id_of__mutmut_18  # "None" instead of None: only compared against a validated numeric media id
+reel_api.arr.xǁArrClientǁqueue_records__mutmut_58  # totalRecords missing: >= 0 and >= 1 both stop after a non-empty page; an empty page stops anyway
+reel_api.arr.xǁArrClientǁgrabs_since__mutmut_15  # eventType "GRABBED": the arrs bind enum query values case-insensitively (ASP.NET), the sim lower-cases too
+reel_api.arr.xǁArrClientǁseason_news__mutmut_166  # mon.get(n, default): n comes from the same seasons list, so the key always exists
+reel_api.arr.xǁArrClientǁseason_news__mutmut_168  # mon.get(n, default): as season_news__mutmut_166
+reel_api.arr.xǁArrClientǁseason_news__mutmut_169  # mon.get(n, default): as season_news__mutmut_166
+reel_api.livehls.x__aac__mutmut_7  # profile fallback "XXXX": contains no "he-aac", same mp4a.40.2 as ""
+reel_api.livehls.x__h264__mutmut_23  # profile fallback "XXXX": not a known profile, same fallback as ""
+reel_api.livehls.x__h264__mutmut_45  # profile fallback "XXXX" != "constrained baseline", same as ""
+reel_api.livehls.x__hevc__mutmut_24  # profile fallback "XXXX" holds no "10", same as ""
+reel_api.livehls.x__hevc__mutmut_30  # pix_fmt fallback "XXXX" does not end in "10le", same as ""
+reel_api.livehls.x__dovi__mutmut_13  # side_data_type fallback "XXXX" holds no "DOVI", same as ""
+reel_api.livehls.xǁJobǁ__init____mutmut_16  # task "" instead of None: only ever tested for truthiness
+reel_api.livehls.xǁJobǁ__init____mutmut_17  # proc "" instead of None: only ever tested for truthiness
+reel_api.livehls.xǁLiveHlsǁ_drop__mutmut_3  # pop(key) without default: _drop is only called for jobs in self.jobs
+reel_api.livehls.xǁLiveHlsǁ_drop__mutmut_4  # `task or not done()`: every job in self.jobs got its task in start()
+reel_api.trailers.xǁJobǁ__init____mutmut_23  # ended_at "" instead of None: only read as `ended_at or 0`
+reel_api.trailers.xǁJobǁ__init____mutmut_24  # task "" instead of None: only tested for truthiness
+reel_api.trailers.xǁTrailersǁfile_response__mutmut_55  # header name case: Starlette lower-cases response header names
+reel_api.trailers.xǁTrailersǁfile_response__mutmut_56  # header name case: Starlette lower-cases response header names
+reel_api.trailers.xǁTrailersǁfile_response__mutmut_66  # header name case: Starlette lower-cases response header names
+reel_api.trailers.xǁTrailersǁfile_response__mutmut_67  # header name case: Starlette lower-cases response header names
+reel_api.trailers.xǁTrailersǁstart__mutmut_19  # ended_at or 1: monotonic() is far beyond ERROR_TTL either way; ended_at is set by _work's finally before state can be read as "error"
+reel_api.push.x__parse__mutmut_7  # replace("XXZXX", ...): fromisoformat parses a "Z" suffix itself since Python 3.11 (requires-python >= 3.12)
+reel_api.push.x__parse__mutmut_8  # replace("z", ...): as push.x__parse__mutmut_7
+reel_api.push.x__public_of__mutmut_9  # int.from_bytes(b) without byteorder: "big" is the default since Python 3.11
+reel_api.push.x_generate_key__mutmut_7  # to_bytes(32) without byteorder: "big" is the default since Python 3.11
+reel_api.push.xǁPushǁ_auth__mutmut_2  # header name case: HTTP header names are case-insensitive
+reel_api.push.xǁPushǁ_auth__mutmut_3  # header name case: HTTP header names are case-insensitive
+reel_api.push.xǁPushǁ_load__mutmut_41  # setdefault("news") without a default: None either way
+reel_api.push.xǁPushǁsend__mutmut_26  # 201 <= code: _send_sync only ever returns 201 for a delivery (pywebpush raises above 202)
+reel_api.push.xǁPushǁsend__mutmut_27  # 200 < code: as send__mutmut_26
+reel_api.push.xǁPushǁtest__mutmut_48  # 201 <= code: as send__mutmut_26
+reel_api.push.xǁPushǁtest__mutmut_49  # 200 < code: as send__mutmut_26
+reel_api.push.xǁPushǁ_send_sync__mutmut_25  # return 202 instead of 201: callers only test 200 <= code < 300
+reel_api.push.xǁPushǁ_confirm__mutmut_22  # created or 1: subscriptions always carry a created timestamp (subscribe sets it)
+reel_api.push.xǁPushǁ_confirm__mutmut_139  # IndexNumber <= e: equality is already matched by the IndexNumber == e clause before it
+reel_api.push.xǁPushǁ_confirm__mutmut_151  # IndexNumberEnd or -2: any negative bound matches nothing, like -1
+reel_api.push.xǁPushǁ_confirm__mutmut_191  # users.get(uid, None): uid comes from iterating users itself
+reel_api.push.xǁPushǁ_confirm__mutmut_193  # users.get(uid): as _confirm__mutmut_191
+reel_api.push.xǁPushǁtick__mutmut_97  # reason fallback "XXXX": neither it nor "" is "upgrade"
+reel_api.push.xǁPushǁsubscribe__mutmut_11  # endpoint fallback "XXXX": fails the https:// check like ""
+reel_api.push.xǁPushǁsubscribe__mutmut_197  # seasons default None instead of False: wrapped in bool()
+reel_api.push.xǁPushǁsubscribe__mutmut_199  # seasons default omitted (None): wrapped in bool()
+reel_api.push.xǁPushǁ_candidate__mutmut_52  # a candidate's "year" is stored in push.json but never read
+reel_api.push.xǁPushǁ_candidate__mutmut_53  # a candidate's "year" is stored in push.json but never read
+reel_api.push.xǁPushǁ_candidate__mutmut_54  # a candidate's "year" is stored in push.json but never read
+reel_api.push.xǁPushǁ_candidate__mutmut_55  # a candidate's "year" is stored in push.json but never read
+reel_api.push.xǁPushǁ_candidate__mutmut_56  # a candidate's "year" is stored in push.json but never read
+reel_api.push.xǁPushǁ_candidate__mutmut_120  # a candidate's "year" is stored in push.json but never read
+reel_api.push.xǁPushǁ_candidate__mutmut_121  # a candidate's "year" is stored in push.json but never read
+reel_api.push.xǁPushǁ_candidate__mutmut_122  # a candidate's "year" is stored in push.json but never read
+reel_api.push.xǁPushǁ_candidate__mutmut_123  # a candidate's "year" is stored in push.json but never read
+reel_api.push.xǁPushǁ_candidate__mutmut_124  # a candidate's "year" is stored in push.json but never read
+# ---- hardening pass (2026-10-03): arr, push, streaming, charts, trending
+reel_api.arr.x__queue_message__mutmut_34  # lstrip vs rstrip on msg[:MAX-1]: every text was whitespace-normalised (" ".join(split())), so the message never starts with whitespace
+reel_api.push.x__unb64u__mutmut_6  # +len%4 vs -len%4: only differs for len%4==3 (3 "=" instead of 1); Python's non-strict b64decode ignores surplus padding
+reel_api.push.xǁPushǁ_confirm__mutmut_138  # (IndexNumber or 0)->1: only matters for a Jellyfin episode with IndexNumberEnd but no IndexNumber, which Jellyfin never serves
+reel_api.push.xǁPushǁ_confirm__mutmut_143  # (c["e"] or 0)->1: only matters for a history event without an episodeNumber (Sonarr always sends one) against an E0 with an IndexNumberEnd
+reel_api.push.xǁPushǁ_find__mutmut_84  # missing provider id -> "XXXX" instead of "": c["ext"] is str() of a truthy tvdb/tmdb id (digits), equal to neither
+reel_api.push.xǁPushǁtick__mutmut_64  # seen_set.add(None): only de-duplicates an id repeated within ONE history answer, which the arr never sends (ids are row keys); `seen` itself still records it
+reel_api.trending.xǁTrendingǁ__init____mutmut_9  # header name case: HTTP header names are case-insensitive (httpx sends them lower-cased)
+reel_api.trending.xǁTrendingǁ_resolve__mutmut_5  # failed = None: None is falsy like False; only `not failed` reads it
+reel_api.charts.xǁChartsǁ__init____mutmut_9  # header name case: HTTP header names are case-insensitive (httpx sends them lower-cased)
+reel_api.charts.x__hit__mutmut_11  # hit["title"] is never read: _resolve copies only imdb_id/rating/rating_votes/rank, index only image
+reel_api.charts.x__hit__mutmut_12  # hit["title"] is never read (see x__hit__mutmut_11)
+reel_api.charts.x__hit__mutmut_13  # hit["title"] is never read (see x__hit__mutmut_11)
+reel_api.charts.x__hit__mutmut_14  # hit["title"] is never read (see x__hit__mutmut_11)
+reel_api.charts.x__hit__mutmut_15  # hit["title"] is never read (see x__hit__mutmut_11)
+reel_api.charts.x__hit__mutmut_16  # hit["title"] is never read (see x__hit__mutmut_11)
+reel_api.charts.x__hit__mutmut_17  # hit["title"] is never read (see x__hit__mutmut_11)
+reel_api.charts.x__hit__mutmut_18  # hit["title"] is never read (see x__hit__mutmut_11)
+reel_api.charts.x__hit__mutmut_19  # hit["title"] is never read (see x__hit__mutmut_11)
+reel_api.charts.x__hit__mutmut_20  # hit["title"] is never read (see x__hit__mutmut_11)
+reel_api.charts.x__hit__mutmut_21  # hit["title"] is never read (see x__hit__mutmut_11)
+reel_api.charts.x__hit__mutmut_22  # hit["title"] is never read (see x__hit__mutmut_11)
+reel_api.charts.xǁChartsǁ_resolve__mutmut_44  # pop("digital_release") is redundant at the API: response_model ChartResult has no digital_release, FastAPI drops it
+reel_api.charts.xǁChartsǁ_resolve__mutmut_47  # same as _resolve__mutmut_44
+reel_api.charts.xǁChartsǁ_resolve__mutmut_48  # same as _resolve__mutmut_44
+reel_api.streaming.x__not_ready__mutmut_9  # header name case: Starlette lower-cases response header names
+reel_api.streaming.x__not_ready__mutmut_10  # header name case: Starlette lower-cases response header names
+reel_api.streaming.x_probe_endpoint__mutmut_60  # header name case: Starlette lower-cases response header names
+reel_api.streaming.x_probe_endpoint__mutmut_61  # header name case: Starlette lower-cases response header names
+reel_api.streaming.x_stream_endpoint__mutmut_20  # header name case: Starlette lower-cases response header names
+reel_api.streaming.x_stream_endpoint__mutmut_21  # header name case: Starlette lower-cases response header names
+reel_api.streaming.x_stream_endpoint__mutmut_34  # header name case: Starlette lower-cases response header names
+reel_api.streaming.x_stream_endpoint__mutmut_35  # header name case: Starlette lower-cases response header names
+reel_api.streaming.x_stream_endpoint__mutmut_43  # header name case: Starlette lower-cases response header names
+reel_api.streaming.x_stream_endpoint__mutmut_44  # header name case: Starlette lower-cases response header names
+reel_api.streaming.x_stream_endpoint__mutmut_68  # header name case: Starlette lower-cases response header names
+reel_api.streaming.x_stream_endpoint__mutmut_69  # header name case: Starlette lower-cases response header names
+reel_api.streaming.x_stream_endpoint__mutmut_111  # header name case: Starlette lower-cases response header names (and finds content-length case-insensitively)
+reel_api.streaming.x_stream_endpoint__mutmut_112  # header name case: Starlette lower-cases response header names (and finds content-length case-insensitively)
+reel_api.streaming.x_stream_endpoint__mutmut_123  # header name case: Starlette lower-cases response header names
+reel_api.streaming.x_stream_endpoint__mutmut_124  # header name case: Starlette lower-cases response header names
+reel_api.streaming.x_stream_endpoint__mutmut_58  # request.headers.get("RANGE"): Starlette request headers are case-insensitive
+reel_api.streaming.x_stream_endpoint__mutmut_48  # Response(status_code=200) vs default: Response's default status is 200
+reel_api.streaming.x_stream_endpoint__mutmut_128  # media_type=None: the headers already carry Content-Type, which Starlette keeps as is
+reel_api.streaming.x_stream_endpoint__mutmut_132  # media_type omitted: same as x_stream_endpoint__mutmut_128
+reel_api.streaming.x_stream_endpoint__mutmut_60  # start > size vs >= size: end <= size-1 always, so start == size is caught by start > end
+reel_api.streaming.x__body__mutmut_11  # fetched_at = 1.0 vs 0.0: time.monotonic() is far above 2 s on any running host, the first poll fetches either way
+reel_api.streaming.x__fps__mutmut_10  # "" -> "XXXX": int("XXXX") raises ValueError -> None, same as the empty-string path
+reel_api.streaming.x__fps__mutmut_16  # `if num or True`: for num == "", int("") raises ValueError -> None, same result
+reel_api.streaming.x__hdr__mutmut_13  # "" -> "XXXX": "DOVI" is in neither
+reel_api.streaming.x__hdr__mutmut_21  # "" -> "XXXX": matches neither smpte2084 nor arib-std-b67
+reel_api.streaming.x__main_file__mutmut_44  # piece_size <= 1: a 1-byte piece does not exist (BitTorrent pieces are >= 16 KiB)
+reel_api.streaming.x__main_file__mutmut_95  # state "" -> "XXXX": state is only compared with the four parked states, never returned
+reel_api.streaming.x__parse_range__mutmut_39  # size+1 vs size-1: clipped by min(end, size-1) on the next line
+reel_api.streaming.x__shape_probe__mutmut_108  # profile "" -> "XXXX": contains neither "atmos" nor "joc"
+reel_api.streaming.x_probe_endpoint__mutmut_117  # b"{}" -> b"XX{}XX": the ValueError path yields the same {} data
+
+# ---- fetch.py (review fix round, 2026-10-03)
+reel_api.fetch.xǁBaseFetcherǁ__init____mutmut_3  # _last_fetch 1.0 vs 0.0: time.monotonic() is far above REQUEST_DELAY + 1 on any running host, the first fetch never waits either way
+reel_api.fetch.xǁFlareSolverrFetcherǁ_get__mutmut_34  # message default "" -> "XXXX": only feeds `"Timeout" in`, false for both
+reel_api.fetch.xǁFlareSolverrFetcherǁ_get__mutmut_50  # message default "" -> "XXXX": only feeds the "Challenge"/"challenge" substring tests, false for both (the message isn't in the 502)

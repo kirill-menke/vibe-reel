@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>Deepwell — episodes · VibeReel</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&amp;display=swap">
+<link rel="stylesheet" href="../tokens.css">
+<link rel="stylesheet" href="../components.css">
+</head>
+<body class="proto">
+<div class="device" data-component="DeviceFrame" style="width: 393px; height: 852px">
+<div class="app">
+  <main class="screen" data-component="SeriesDetailScreen">
+    <div class="spacer-navbar"></div>
+    <div class="pills pills--sticky" role="tablist" aria-label="Seasons" data-component="SeasonPicker">
+      <button class="pill" type="button" role="tab" aria-selected="false"><span class="tick"><svg class="i" viewBox="0 0 24 24"><path d="m5 12.5 4.5 4.5L19 7.5"></path></svg></span>Season 1</button>
+      <button class="pill pill--active" type="button" role="tab" aria-selected="true">Season 2</button>
+      <button class="pill pill--dim" type="button" role="tab" aria-selected="false">Season 3 <span class="pill__pct">12%</span></button>
+    </div>
+    <div class="episodes" data-component="EpisodeList">
+      <a class="episode episode--watched" href="12-player--controls.html" data-component="EpisodeRow">
+        <div class="episode__still"><div class="art" style="--a1: #6a7a6a; --a2: #0e110e"></div><span class="tile__corner tick" aria-label="Watched"><svg class="i" viewBox="0 0 24 24"><path d="m5 12.5 4.5 4.5L19 7.5"></path></svg></span></div>
+        <div class="episode__head"><p class="episode__num">E3 · 51 min</p><p class="episode__title">Hollis</p></div>
+        <p class="episode__overview">Mara learns she isn’t alone in the dead city — and that the man hiding there has rules of his own.</p>
+      </a>
+      <a class="episode" href="12-player--controls.html" data-component="EpisodeRow">
+        <div class="episode__still"><div class="art" style="--a1: #9a7a4a; --a2: #15100a"></div><div class="progress tile__progress" style="--p: .38"><div class="progress__fill"></div></div></div>
+        <div class="episode__head"><p class="episode__num">E4 · 50 min</p><p class="episode__title">Ballast</p><p class="episode__status">31 min left</p></div>
+        <p class="episode__overview">Voss tightens his grip on the Lower Rings while Mara looks for a way across the flooded levels.</p>
+      </a>
+      <a class="episode" href="12-player--controls.html" data-component="EpisodeRow">
+        <div class="episode__still"><div class="art" style="--a1: #5a6a7a; --a2: #0c0f12"></div></div>
+        <div class="episode__head"><p class="episode__num">E5 · 47 min</p><p class="episode__title">Sounding</p></div>
+        <p class="episode__overview">Rumours of Mara’s survival spread through the Works, and Teague has to decide what the city owes her.</p>
+      </a>
+      <a class="episode episode--downloading" href="12-player--controls.html" data-component="EpisodeRow" aria-disabled="true">
+        <div class="episode__still"><div class="art" style="--a1: #7a5a4a; --a2: #140e0b"></div><div class="episode__ringwrap"><span class="ring ring--glass" style="--p: .62"><svg class="ring__svg" viewBox="0 0 36 36"><circle class="ring__track" cx="18" cy="18" r="16" pathLength="100"></circle><circle class="ring__value" cx="18" cy="18" r="16" pathLength="100"></circle></svg><span class="ring__label">62%</span></span></div></div>
+        <div class="episode__head"><p class="episode__num">E6 · 53 min</p><p class="episode__title">Bulkheads</p><p class="episode__status">Downloading · 9 min left</p></div>
+        <p class="episode__overview">Tempers boil over below, and Voss has to choose how far he’ll go to keep order.</p>
+      </a>
+      <div class="episode episode--queued" data-component="EpisodeRow" aria-disabled="true">
+        <div class="episode__still"><div class="art" style="--a1: #4a6a7a; --a2: #0a0f12"></div><div class="episode__ringwrap"><span class="tile__queued"><svg class="i i--sm" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"></circle><path d="M12 7.5V12l3 2"></path></svg></span></div></div>
+        <div class="episode__head"><p class="episode__num">E7 · 49 min</p><p class="episode__title">Floodline</p><p class="episode__status">Queued</p></div>
+        <p class="episode__overview">Mara and Hollis prepare to go under water to reach what’s left of the old machinery.</p>
+      </div>
+    </div>
+  </main>
+
+  <nav class="navbar navbar--solid" data-component="NavBar">
+    <a class="iconbtn" href="03-library-shows.html" aria-label="Back"><svg class="i" viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"></path></svg></a>
+    <p class="navbar__title">Deepwell</p>
+    <span></span>
+  </nav>
+
+  <div class="tabbar-fade"></div>
+  <nav class="tabbar" aria-label="Tabs" data-component="TabBar">
+    <a class="tabbar__item" href="02-home.html"><svg class="i" viewBox="0 0 24 24"><path d="M4 10.5 12 4l8 6.5V19a1 1 0 0 1-1 1h-4.5v-6h-5v6H5a1 1 0 0 1-1-1z"></path></svg><span>Home</span></a>
+    <a class="tabbar__item" href="03-library-movies.html"><svg class="i" viewBox="0 0 24 24"><rect x="3.5" y="4.5" width="17" height="15" rx="2"></rect><path d="M7.5 4.5v15M16.5 4.5v15M3.5 9h4M3.5 15h4M16.5 9h4M16.5 15h4"></path></svg><span>Movies</span></a>
+    <a class="tabbar__item tabbar__item--active" href="03-library-shows.html" aria-current="page"><svg class="i" viewBox="0 0 24 24"><rect x="3" y="6" width="18" height="12.5" rx="2"></rect><path d="M8.5 21h7M8.5 2.5 12 6l3.5-3.5"></path></svg><span>Shows</span></a>
+    <a class="tabbar__item" href="07-search--browse.html"><svg class="i" viewBox="0 0 24 24"><circle cx="11" cy="11" r="6.5"></circle><path d="m20 20-4.35-4.35"></path></svg><span>Search</span></a>
+  </nav>
+</div>
+<div class="device__island"></div>
+<div class="device__status"><span>9:41</span><span class="device__glyphs"><svg viewBox="0 0 18 12"><rect x="0" y="8" width="3" height="4" rx="1"></rect><rect x="5" y="5.5" width="3" height="6.5" rx="1"></rect><rect x="10" y="3" width="3" height="9" rx="1"></rect><rect x="15" y="0" width="3" height="12" rx="1"></rect></svg><svg viewBox="0 0 27 12"><rect x=".5" y=".5" width="23" height="11" rx="3.3" fill="none" stroke="#fff" stroke-opacity=".45"></rect><rect x="2" y="2" width="17" height="8" rx="2"></rect><path d="M25 4v4c.8-.3 1.5-1.1 1.5-2S25.8 4.3 25 4z" fill-opacity=".45"></path></svg></span></div>
+<div class="device__home"></div>
+</div>
+</body>
+</html>

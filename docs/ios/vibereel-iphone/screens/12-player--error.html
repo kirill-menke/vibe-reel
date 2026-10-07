@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>Player — playback stalled · VibeReel</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&amp;display=swap">
+<link rel="stylesheet" href="../tokens.css">
+<link rel="stylesheet" href="../components.css">
+</head>
+<body class="proto">
+<div class="device device--landscape" data-component="DeviceFrame" style="width: 852px; height: 393px">
+<div class="player" data-component="Player">
+  <div class="player__video player__video--dim art" style="--a1: #c9d4d8; --a2: #1a2630; --a3: #3a5566"></div>
+  <div class="pcard" role="alert" data-component="PlayerStatusCard">
+    <span class="pcard__icon"><svg class="i" viewBox="0 0 24 24"><path d="M10.3 4.6 2.9 17.5a2 2 0 0 0 1.7 3h14.8a2 2 0 0 0 1.7-3L13.7 4.6a2 2 0 0 0-3.4 0z"></path><path d="M12 9.5v4M12 16.8h.01"></path></svg></span>
+    <p class="pcard__title">Playback stalled</p>
+    <p class="pcard__text">The server stopped sending video at 26:14.</p>
+    <div class="pcard__actions">
+      <a class="btn btn--primary btn--sm" href="12-player--loading.html"><svg class="i i--xs" viewBox="0 0 24 24"><path d="M20 12a8 8 0 1 1-2.3-5.6L20 8.5"></path><path d="M20 3.5v5h-5"></path></svg><span>Retry</span></a>
+      <a class="btn btn--glass btn--sm" href="05-series-detail.html"><span>Close</span></a>
+    </div>
+  </div>
+</div>
+<div class="device__island"></div>
+<div class="device__home"></div>
+</div>
+</body>
+</html>

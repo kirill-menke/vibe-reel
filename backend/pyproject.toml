@@ -1,0 +1,89 @@
+[project]
+name = "reel-api"
+version = "0.1.0"
+description = "VibeReel backend: a LAN API over Sonarr, Radarr and qBittorrent"
+license = { text = "MIT" }
+requires-python = ">=3.12"
+dependencies = [
+    "fastapi>=0.115",
+    "uvicorn>=0.30",
+    "httpx>=0.27",
+    "pywebpush>=2.0",
+]
+
+# Test tooling for backend/tests (see tests/README.md), exact pins:
+#   uv run --frozen --group dev pytest
+[dependency-groups]
+dev = [
+    "pytest==9.1.1",
+    "pytest-asyncio==1.4.0",
+    "respx==0.23.1",
+    "pytest-cov==7.1.0",
+    "mutmut==3.8.0",
+    "pytest-socket==0.8.1",
+    "pytest-timeout==2.4.0",
+    "pytest-randomly==5.0.0",
+    "asgi-lifespan==2.1.0",
+    "time-machine==3.5.1",
+    "responses==0.26.3",
+    "jsonschema==4.26.0",
+]
+
+[project.scripts]
+reel-api = "reel_api.server:main"
+reel-api-canary = "reel_api.canary:main"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/reel_api"]
+
+# ---- tests (backend/tests; see tests/README.md) ----
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"
+asyncio_default_test_loop_scope = "function"
+timeout = 60
+# Known product bugs are strict xfails (tests/support/known_bugs.py): a fix XPASSes and fails the run.
+xfail_strict = true
+# No network for the whole suite: only AF_UNIX (the event loop's self-pipe)
+# and loopback. Every upstream is mocked (respx / responses) — see conftest.py.
+addopts = [
+    "--strict-markers",
+    "--strict-config",
+    "-p", "no:cacheprovider",
+    "--allow-unix-socket",
+    "--allow-hosts=127.0.0.1,::1",
+]
+markers = [
+    "slow: generates media with ffmpeg or runs real subprocesses (excluded by LANE_TEST_FAST)",
+    "ffmpeg: needs ffmpeg/ffprobe on PATH (skipped without them)",
+    "spec: validates mocks against a public API spec in tests/.spec-cache (skipped when the cache is missing)",
+    "deletes_files_directly: a unit test of ArrClient.delete_title_and_files itself (conftest's arr_deletes_keep_files)",
+]
+filterwarnings = [
+    "error",
+    # pytest-socket warns, then raises SocketConnectBlockedError: keep the error
+    "ignore:A test tried to use socket:UserWarning",
+]
+
+[tool.coverage.run]
+source = ["reel_api"]
+branch = true
+
+[tool.coverage.report]
+show_missing = true
+skip_covered = false
+
+# Mutation testing: tests/run_mutmut.sh <module> (see tests/README.md). mutmut 3
+# copies src/ and tests/ into mutants/ (git-ignored) and mutates only the copy;
+# it adds -x -q -p no:randomly itself. The slow (ffmpeg/subprocess) tests are
+# left out: a mutant has to be killed by the fast suite.
+[tool.mutmut]
+source_paths = ["src/"]
+pytest_add_cli_args = ["-m", "not slow", "-p", "no:cov"]
+use_git_change_detection = false

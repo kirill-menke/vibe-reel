@@ -1,0 +1,35 @@
+/* My library (screens/MyLibrary.svelte, run/design.md §7.2): quota bars and
+ * the user's own titles, each with a trash button. Tokens only; every text
+ * size comes from the type tokens or calc(N * var(--tu)). The poster slot
+ * reuses Downloads' .dl__art (44 × 66 pt). */
+
+/* quota rows: the bar sits under the label, the value stays right */
+.mylib__q .row__main { gap: var(--s-2); }
+.mylib__bar { --progress-h: 6px; width: 100%; }
+.mylib__q.is-full .row__value { color: var(--text); font-weight: 600; }
+
+/* a title: the Row (tap = open) and its trash button side by side, so the
+ * button is never inside the row's <button> */
+.mylib__item { position: relative; display: flex; align-items: center; }
+.mylib__item > .row { flex: 1; min-width: 0; padding-right: 0; }
+/* hairlines between items (the wrapper hides .row + .row), inset past the poster */
+.mylib__item + .mylib__item::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: calc(var(--s-4) + 44px + var(--s-3));
+  right: 0;
+  height: 1px;
+  background: var(--line);
+}
+.mylib__status { font: var(--t-caption); color: var(--text-dim); }
+.mylib__status.is-in { color: var(--ok); }
+/* 44 pt hit box (UX-AUDIT) */
+.mylib__del { width: var(--tap); height: var(--tap); margin: 0 var(--s-1); color: var(--danger); }
+.mylib__del .i { width: calc(20 * var(--tu)); height: calc(20 * var(--tu)); }
+.mylib__del:disabled { opacity: 0.4; }
+/* while its delete runs: dimmed, inert (the status line says "Deleting…") */
+.mylib__item.is-deleting > .row { opacity: 0.45; pointer-events: none; transition: opacity var(--dur-base) var(--ease-out); }
+
+
+.mylib__skel { display: flex; flex-direction: column; gap: var(--s-3); padding: 0 var(--gutter); }

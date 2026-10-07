@@ -1,0 +1,12 @@
+#!/bin/sh
+# Homebrew Channel startup hook (/var/lib/webosbrew/init.d/reel-svc):
+# starts the VibeReel companion service at TV boot, as root and un-jailed (via
+# the service's own run-js-service wrapper) so it can reach settingsservice.
+# Detached (setsid + nohup + closed stdin) so it survives the launching shell.
+SVCDIR=/media/developer/apps/usr/palm/services/com.kirill.reel.service
+[ -x "$SVCDIR/run-js-service" ] || exit 0
+# Already up? Identify by the loopback endpoint, not a process name — the node
+# binary is shared with other webOS services, so pgrep would be ambiguous.
+if curl -s --max-time 2 http://127.0.0.1:8791/health >/dev/null 2>&1; then exit 0; fi
+setsid /bin/sh -c "exec nohup env REEL_SVC_NAME=com.webos.app.multiviewsettings-reel \
+  '$SVCDIR/run-js-service' -k -n '$SVCDIR' >>/tmp/reel-svc.log 2>&1" </dev/null >/dev/null 2>&1 &

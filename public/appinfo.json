@@ -1,0 +1,19 @@
+{
+  "id": "com.kirill.reel",
+  "version": "0.1.0",
+  "vendor": "kirill",
+  "type": "web",
+  "main": "index.html",
+  "title": "VibeReel",
+  "icon": "icon.png",
+  "largeIcon": "largeIcon.png",
+  "iconColor": "#e6b450",
+  "bgColor": "#050506",
+  "resolution": "1920x1080",
+  "disableBackHistoryAPI": true,
+  "supportTouchMode": "none",
+  "handlesRelaunch": false,
+  "inspectable": true,
+  "allowVideoCapture": false,
+  "allowAudioCapture": false
+}

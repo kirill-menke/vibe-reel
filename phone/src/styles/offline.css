@@ -1,0 +1,102 @@
+/* Offline downloads: the Downloads screen (screens/Downloads.svelte) and the
+ * Download sheet (sheets/OfflineSheet.svelte). Tokens only. */
+
+.offsheet__title {
+  margin: 0 20px 12px;
+  font: var(--t-body, 400 15px/1.35 var(--font-ui));
+  color: var(--text-dim);
+}
+
+.dl__art {
+  width: 44px;
+  height: 66px;
+  flex: none;
+  border-radius: 6px;
+  overflow: hidden;
+  background: var(--surface-3);
+  display: grid;
+  place-items: center;
+  color: var(--text-faint);
+}
+.dl__art img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+/* no cover: the title lettered on the tonal placeholder, sized for the 44 pt slot */
+.dl__art .art__label {
+  left: 6%;
+  right: 6%;
+  bottom: 7%;
+  font-size: calc(9 * var(--tu));
+  line-height: 1.1;
+}
+
+.dl__state {
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: var(--surface-3);
+  color: var(--gold);
+}
+
+/* DL-01: each Row sits in a long-press wrapper, so `.row + .row` never matched
+   and the list had no hairlines. Inset to the text, past the 44 pt cover. */
+.dl__item + .dl__item > .row::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: calc(var(--s-4) + 44px + var(--s-3));
+  right: 0;
+  height: 1px;
+  background: var(--line);
+}
+
+/* the trailing control: a 32 pt ring (App Store / TV app downloads) */
+.dl__ring {
+  --ring-size: 32px;
+  color: var(--gold);
+}
+.dl__ring .ring__svg {
+  stroke-width: 2.5;
+}
+/* waiting: the track alone, in two static dashes (no spinner) */
+.dl__ring--queued .ring__track {
+  stroke: var(--text-faint);
+  stroke-dasharray: 44 6;
+  stroke-dashoffset: 3;
+}
+.dl__stop {
+  position: relative;
+  width: 9px;
+  height: 9px;
+  border-radius: 2px;
+  background: var(--gold);
+}
+.dl__state--err {
+  color: var(--danger);
+  background: var(--danger-soft);
+}
+
+.dl__others {
+  margin: 12px 20px;
+  color: var(--text-faint);
+  font-size: 13px;
+}
+
+.banner .dl__go {
+  flex: none;
+}
+
+.dl__status {
+  display: block;
+  margin-top: 2px;
+  font-size: 13px;
+  font-variant-numeric: tabular-nums; /* "43% · 120 MB of ~2.1 GB" updates live (MOT-10) */
+  color: var(--text-faint);
+}
+.dl__status--err {
+  color: var(--danger);
+}

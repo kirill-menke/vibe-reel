@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>Player — audio and subtitles · VibeReel</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&amp;display=swap">
+<link rel="stylesheet" href="../tokens.css">
+<link rel="stylesheet" href="../components.css">
+</head>
+<body class="proto">
+<div class="device device--landscape" data-component="DeviceFrame" style="width: 852px; height: 393px">
+<div class="player" data-component="Player">
+  <div class="player__video player__video--dim art" style="--a1: #c9d4d8; --a2: #1a2630; --a3: #3a5566"></div>
+  <section class="panel" role="dialog" aria-label="Audio and subtitles" data-component="TrackPicker">
+    <div class="panel__head">
+      <h2 class="panel__title">Audio &amp; Subtitles</h2>
+      <a class="closebtn" href="12-player--controls.html" aria-label="Close"><svg class="i" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18"></path></svg></a>
+    </div>
+    <div class="panel__cols">
+      <div class="panel__col" role="radiogroup" aria-label="Audio">
+        <p class="panel__label"><svg class="i i--xs" viewBox="0 0 24 24"><path d="M4 9.5h3l4.5-4v13L7 14.5H4z"></path><path d="M15.5 9a4 4 0 0 1 0 6M18.2 6.5a7.5 7.5 0 0 1 0 11"></path></svg>Audio</p>
+        <button class="option option--selected" type="button" role="radio" aria-checked="true" data-component="TrackOption"><svg class="i option__check" viewBox="0 0 24 24"><path d="m5 12.5 4.5 4.5L19 7.5"></path></svg><span class="option__main"><span class="option__title">English · DD+ 5.1 Atmos</span><span class="option__sub">Original</span></span></button>
+        <button class="option" type="button" role="radio" aria-checked="false"><svg class="i option__check option__check--off" viewBox="0 0 24 24"><path d="m5 12.5 4.5 4.5L19 7.5"></path></svg><span class="option__main"><span class="option__title">German · AC3 5.1</span><span class="option__sub">Deutsch</span></span></button>
+        <button class="option" type="button" role="radio" aria-checked="false"><svg class="i option__check option__check--off" viewBox="0 0 24 24"><path d="m5 12.5 4.5 4.5L19 7.5"></path></svg><span class="option__main"><span class="option__title">English · AAC 2.0</span><span class="option__sub">Stereo</span></span></button>
+        <button class="option" type="button" role="radio" aria-checked="false"><svg class="i option__check option__check--off" viewBox="0 0 24 24"><path d="m5 12.5 4.5 4.5L19 7.5"></path></svg><span class="option__main"><span class="option__title">English · Audio Description</span><span class="option__sub">AAC 2.0</span></span></button>
+      </div>
+      <div class="panel__col" role="radiogroup" aria-label="Subtitles">
+        <p class="panel__label"><svg class="i i--xs" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2.5"></rect><path d="M7 15h4M13.5 15H17M7 11.5h2.5M12 11.5h5"></path></svg>Subtitles</p>
+        <button class="option" type="button" role="radio" aria-checked="false"><svg class="i option__check option__check--off" viewBox="0 0 24 24"><path d="m5 12.5 4.5 4.5L19 7.5"></path></svg><span class="option__main"><span class="option__title">Off</span></span></button>
+        <button class="option" type="button" role="radio" aria-checked="false"><svg class="i option__check option__check--off" viewBox="0 0 24 24"><path d="m5 12.5 4.5 4.5L19 7.5"></path></svg><span class="option__main"><span class="option__title">English · Forced</span><span class="option__sub">Foreign dialogue only</span></span></button>
+        <button class="option option--selected" type="button" role="radio" aria-checked="true"><svg class="i option__check" viewBox="0 0 24 24"><path d="m5 12.5 4.5 4.5L19 7.5"></path></svg><span class="option__main"><span class="option__title">English · SDH</span><span class="option__sub">PGS · image-based</span></span></button>
+        <button class="option" type="button" role="radio" aria-checked="false"><svg class="i option__check option__check--off" viewBox="0 0 24 24"><path d="m5 12.5 4.5 4.5L19 7.5"></path></svg><span class="option__main"><span class="option__title">German</span><span class="option__sub">SRT</span></span></button>
+        <button class="option" type="button" role="radio" aria-checked="false"><svg class="i option__check option__check--off" viewBox="0 0 24 24"><path d="m5 12.5 4.5 4.5L19 7.5"></path></svg><span class="option__main"><span class="option__title">German · Forced</span><span class="option__sub">SRT</span></span></button>
+      </div>
+    </div>
+  </section>
+</div>
+<div class="device__island"></div>
+<div class="device__home"></div>
+</div>
+</body>
+</html>

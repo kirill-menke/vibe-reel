@@ -1,0 +1,57 @@
+{
+  "compilerOptions": {
+    "target": "es2022",
+    "module": "esnext",
+    "moduleResolution": "bundler",
+    "lib": [
+      "es2022",
+      "dom",
+      "dom.iterable"
+    ],
+    "allowJs": true,
+    "checkJs": true,
+    "noEmit": true,
+    "strict": false,
+    "noImplicitAny": true,
+    "noImplicitThis": true,
+    "alwaysStrict": true,
+    "strictFunctionTypes": true,
+    "strictBindCallApply": true,
+    "useUnknownInCatchVariables": true,
+    "strictBuiltinIteratorReturn": true,
+    "skipLibCheck": true,
+    "types": [
+      "svelte",
+      "vite/client"
+    ],
+    "paths": {
+      "$lib/nav.svelte.js": [
+        "./src/lib/nav.svelte.js"
+      ],
+      "$lib/focus.js": [
+        "./src/lib/focus-shim.js"
+      ],
+      "$lib/lifecycle.js": [
+        "./src/lib/lifecycle.js"
+      ],
+      "$lib/*": [
+        "../src/lib/*"
+      ],
+      "$p/*": [
+        "./src/*"
+      ]
+    }
+  },
+  "include": [
+    "src/**/*.js",
+    "src/**/*.svelte",
+    "../types/**/*.d.ts",
+    "../types/tests/phone/**/*.js"
+  ],
+  "exclude": [
+    "dist",
+    "dev",
+    "public",
+    "scripts"
+  ]
+}

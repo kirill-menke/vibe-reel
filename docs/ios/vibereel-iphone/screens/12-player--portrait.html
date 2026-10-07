@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>Player — portrait · VibeReel</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&amp;display=swap">
+<link rel="stylesheet" href="../tokens.css">
+<link rel="stylesheet" href="../components.css">
+</head>
+<body class="proto">
+<div class="device" data-component="DeviceFrame" style="width: 393px; height: 852px">
+<div class="pport" data-component="PlayerPortrait">
+  <div class="pport__video">
+    <div class="art" style="--a1: #c9d4d8; --a2: #1a2630; --a3: #3a5566"></div>
+    <div class="pport__overlay">
+      <a class="iconbtn pport__close" href="05-series-detail.html" aria-label="Close player"><svg class="i" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18"></path></svg></a>
+      <div class="pport__tools">
+        <button class="iconbtn" type="button" aria-label="AirPlay"><svg class="i" viewBox="0 0 24 24"><path d="M6.5 17H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2h-1.5"></path><path d="M12 14.5 16.5 20h-9z"></path></svg></button>
+        <button class="iconbtn" type="button" aria-label="Picture in Picture"><svg class="i" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"></rect><rect x="12" y="11.5" width="6.5" height="5" rx="1"></rect></svg></button>
+      </div>
+      <div class="pport__center">
+        <button class="pbtn" type="button" aria-label="Back 10 seconds"><svg class="i" viewBox="0 0 24 24"><path d="M12 4.5a7.5 7.5 0 1 1-7.5 7.5"></path><path d="M14.5 2 12 4.5 14.5 7"></path><path d="M9.3 10.2l1.4-1v5.8" stroke-width="1.5"></path><ellipse cx="14.4" cy="12.1" rx="1.8" ry="2.9" stroke-width="1.5"></ellipse></svg></button>
+        <button class="pbtn pbtn--lg" type="button" aria-label="Pause"><svg class="i i--fill" viewBox="0 0 24 24"><rect x="6" y="5" width="4.25" height="14" rx="1.2"></rect><rect x="13.75" y="5" width="4.25" height="14" rx="1.2"></rect></svg></button>
+        <button class="pbtn" type="button" aria-label="Forward 10 seconds"><svg class="i" viewBox="0 0 24 24"><path d="M12 4.5a7.5 7.5 0 1 0 7.5 7.5"></path><path d="M9.5 2 12 4.5 9.5 7"></path><path d="M9.3 10.2l1.4-1v5.8" stroke-width="1.5"></path><ellipse cx="14.4" cy="12.1" rx="1.8" ry="2.9" stroke-width="1.5"></ellipse></svg></button>
+      </div>
+      <div class="pport__scrub">
+        <div class="scrubber" data-component="Scrubber">
+          <span class="scrubber__time">26:14</span>
+          <div class="scrubber__track" style="--p: .53; --b: .71"><div class="scrubber__buffer"></div><div class="scrubber__fill"></div><i class="scrubber__tick" style="--at: .24"></i><i class="scrubber__tick" style="--at: .63"></i><span class="scrubber__thumb"></span></div>
+          <span class="scrubber__time scrubber__time--end">−23:02</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="pport__info">
+    <p class="player__show">Undercurrent · S2 · E4</p>
+    <h1 class="pport__title">The Quiet Floor</h1>
+    <p class="pport__meta">50 min · English · DD+ 5.1 Atmos</p>
+    <div class="pport__chips">
+      <a class="pchip" href="12-player--tracks.html"><svg class="i" viewBox="0 0 24 24"><path d="M4 9.5h3l4.5-4v13L7 14.5H4z"></path><path d="M15.5 9a4 4 0 0 1 0 6M18.2 6.5a7.5 7.5 0 0 1 0 11"></path></svg>Audio</a>
+      <a class="pchip" href="12-player--tracks.html"><svg class="i" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2.5"></rect><path d="M7 15h4M13.5 15H17M7 11.5h2.5M12 11.5h5"></path></svg>English SDH</a>
+      <a class="pchip" href="12-player--chapters.html"><svg class="i" viewBox="0 0 24 24"><path d="M9 6.5h11M9 12h11M9 17.5h11"></path><path d="M4.5 6.5h.01M4.5 12h.01M4.5 17.5h.01" stroke-width="2.5"></path></svg>Chapters</a>
+    </div>
+  </div>
+
+  <div class="rotatehint" data-component="RotateHint">
+    <span class="rotatehint__icon"><svg class="i" viewBox="0 0 24 24"><rect x="7" y="3" width="10" height="18" rx="2.2"></rect><path d="M11 18h2"></path></svg></span>
+    <p class="rotatehint__text"><strong>Turn your iPhone for full screen</strong>Rotation lock has to be off — a web app can’t rotate by itself.</p>
+  </div>
+
+  <section class="section" aria-label="Up next">
+    <div class="section__head"><h2 class="section__title">Up Next</h2></div>
+    <div class="episodes">
+      <a class="episode" href="12-player--loading.html">
+        <div class="episode__still"><div class="art" style="--a1: #8a7a6a; --a2: #15110e; --a3: #3a4a5a"></div></div>
+        <div class="episode__head"><p class="episode__num">E5 · 54 min</p><p class="episode__title">Open Water</p></div>
+      </a>
+    </div>
+  </section>
+</div>
+<div class="device__island"></div>
+<div class="device__status"><span>9:41</span><span class="device__glyphs"><svg viewBox="0 0 18 12"><rect x="0" y="8" width="3" height="4" rx="1"></rect><rect x="5" y="5.5" width="3" height="6.5" rx="1"></rect><rect x="10" y="3" width="3" height="9" rx="1"></rect><rect x="15" y="0" width="3" height="12" rx="1"></rect></svg><svg viewBox="0 0 27 12"><rect x=".5" y=".5" width="23" height="11" rx="3.3" fill="none" stroke="#fff" stroke-opacity=".45"></rect><rect x="2" y="2" width="17" height="8" rx="2"></rect><path d="M25 4v4c.8-.3 1.5-1.1 1.5-2S25.8 4.3 25 4z" fill-opacity=".45"></path></svg></span></div>
+<div class="device__home"></div>
+</div>
+</body>
+</html>

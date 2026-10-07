@@ -1,0 +1,10 @@
+#!/bin/sh
+# Elevated launcher: run the stock run-js-service but with the third-party jail
+# turned off, so the service runs un-jailed (root) and can reach privileged luna
+# services like com.webos.settingsservice. The sed lines below are taken from the
+# Homebrew Channel's services/run-js-service
+# (https://github.com/webosbrew/webos-homebrew-channel, MIT, Copyright (c) 2021
+# webOS Brew; see THIRD_PARTY_NOTICES.md).
+eval "$(sed -e '/^thirdparty_jail=/s/=.*/=off/' \
+            -e '\@/var/luna/preferences/devmode_enabled@s/if /&false \&\& /' \
+            '/usr/bin/run-js-service')"

@@ -1,0 +1,9 @@
+dist/
+__pycache__/
+*.pyc
+.venv/
+out/
+fixtures/
+# third-party test fixtures: fetched by tests/fetch_fixtures.py, never committed
+tests/specs/jellyfin-12.1-subset.json
+tests/recorded/imdb/
