@@ -54,8 +54,9 @@
   const isEp = $derived(item.Type === 'Episode');
 
   const bg = $derived(
-    /* an episode shows its own still (the series' backdrop said nothing about which episode) */
-    (isEp ? imgUrl(item, 'Primary', { w: 1280 }) : null) || imgUrl(item, 'Backdrop', { w: 1280 }) || imgUrl(item, 'Primary', { h: 1080 })
+    /* an episode shows its own still (the series' backdrop said nothing about which episode);
+     * a desktop window spans up to 2560 px, where 1280 read soft (the web player's art is 1920 too) */
+    (isEp ? imgUrl(item, 'Primary', { w: 1280 }) : null) || imgUrl(item, 'Backdrop', { w: __WEB__ ? 1920 : 1280 }) || imgUrl(item, 'Primary', { h: 1080 })
   );
   const badges = $derived(techBadges(item));
   const slow = $derived(slowLink(P.link, item));
