@@ -262,6 +262,10 @@ html, body { overflow: hidden; }
   outline: none;
 }
 .wsheethost--dialog .wsheet { width: min(620px, calc(100vw - 2 * var(--gutter))); max-height: min(82vh, 860px); }
+/* inside a popover the page gutter (up to 64 px — the phone's lists and
+   labels inset by it) squeezed a 420 px card to a 340 px column, indented
+   past its own title: a card-sized gutter, the head's 20 px */
+.wsheet { --gutter: var(--s-5); }
 .wsheet.sheet--large { top: auto; }
 .wsheet .sheet__head { padding: var(--s-4) var(--s-4) var(--s-2) var(--s-5); }
 .wsheet .sheet__body { padding-bottom: var(--s-3); }
