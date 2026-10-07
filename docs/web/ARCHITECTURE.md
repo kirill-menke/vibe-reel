@@ -54,11 +54,29 @@ npx vite --config web/vite.config.js           # dev server, http://127.0.0.1:89
   stops playback, with Stopped sent as `keepalive`. Back after an absence of more than
   60 s, it rechecks the server and the token.
 - `player/WebPlayer.svelte` maps the mouse and keyboard onto `src/lib/player.svelte.js`:
-  - Space or K: play/pause. ← → or J L: ∓10 s. ↑ ↓: volume. M: mute.
-  - C: subtitles. F: full screen. Shift+N: next episode.
-  - Esc: closes a panel, else leaves full screen, else the player.
-  - It also has a hover preview on the scrubber, PiP where the browser has it, and the
-    phone's Track/Chapter panels and Up Next card.
+  - Space or K: play/pause. ← → or J L: ∓10 s. 0–9: jump to 0–90 %. ↑ ↓: volume.
+    M: mute. C: subtitles. S: skip intro/recap. Shift+N: next episode.
+    F: full screen. P: Picture in Picture. ?: the list of shortcuts.
+  - Esc: closes the shortcut list, else a panel, else leaves full screen, else the
+    player. In full screen the browser takes Esc itself and only leaves full screen.
+  - The key map is `player/shortcuts.js` (pure, pinned by
+    `test/web/shortcuts.web.test.js`); it also feeds the "?" list. Keys that change
+    nothing visible in the bar flash on the picture: play/pause, ∓N s (adding up
+    while the key repeats), the volume %, the time a digit jumped to.
+  - Mouse: a click on the picture pauses, a double click toggles full screen, the
+    wheel over the speaker sets the volume (remembered in `reel.web.volume`). The
+    controls and cursor hide after the engine's idle timeout or when the pointer
+    leaves the window; the cursor stays over a loading or error card. Every button
+    has a tooltip naming its key.
+  - Scrubber: a lighter fill and a hover preview (trickplay, chapter, time) follow
+    the pointer. The bar's clock shows elapsed / total; a click flips it to time left.
+  - The phone's Track/Chapter panels are popovers over the right end of the bar; a
+    click anywhere outside closes them (on the picture without pausing). The Up Next
+    card is the phone's.
+  - PiP: the button and P exist where the API does (Chrome, Firefox 156). There the
+    `<video>` carries `disablePictureInPicture` while not in PiP, which hides
+    Firefox's own "Pop out this video" toggle over the picture; our request lifts it
+    first.
 
 ## Hosting: `vr.kirill.es`
 
