@@ -24,7 +24,7 @@
  *        /pending/<key>  /settings  /my-library */
 import { untrack } from 'svelte';
 import { R, TABS, push, pop, switchTab, restoreStacks } from '$p/lib/router.svelte.js';
-import { exitPlayer } from '$lib/player.svelte.js';
+import { P, exitPlayer } from '$lib/player.svelte.js';
 
 const SITE = 'VibeReel';
 
@@ -233,6 +233,20 @@ let titleT = 0;
 function retitle() {
   clearTimeout(titleT);
   const set = () => {
+    /* the modals first: the browser tab names what is playing ("The White
+     * Lotus — Arrivals", "Dune: Part Two · Trailer") or the sign-in, not the
+     * page hidden underneath */
+    if (R.modal === 'login') {
+      document.title = 'Sign in · ' + SITE;
+      return;
+    }
+    if (R.modal === 'player') {
+      const it = P.item;
+      const name = it?.Name || '';
+      const t = !it ? '' : P.trailer ? name + ' · Trailer' : it.SeriesName ? it.SeriesName + (name ? ' — ' + name : '') : name;
+      document.title = t ? t + ' · ' + SITE : SITE;
+      return;
+    }
     const tab = R.tab;
     const s = R.stacks[tab];
     if (s.length < 2) {
@@ -292,6 +306,10 @@ export function initUrl() {
         reconcile(tab, stack, player);
         retitle();
       });
+    });
+    // Up Next rolls on to the next episode without a navigation: retitle
+    $effect(() => {
+      if (R.modal === 'player' && P.item) untrack(retitle);
     });
   });
 }
