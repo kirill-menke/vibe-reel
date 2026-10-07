@@ -108,6 +108,14 @@ html, body { overflow: hidden; }
 }
 .wnav--solid::before { opacity: 1; }
 .wapp--player .wnav { visibility: hidden; }
+/* the skip link: out of sight until it is the keyboard's first stop */
+.wnav__skip {
+  position: absolute; left: var(--gutter); top: 50%; z-index: 2; translate: 0 -50%;
+  padding: 10px 18px; border-radius: var(--r-pill);
+  background: var(--gold); color: var(--text-on-gold); font: 600 15px/1 var(--font-ui); text-decoration: none;
+  opacity: 0; pointer-events: none;
+}
+.wnav__skip:focus-visible { opacity: 1; pointer-events: auto; outline-color: var(--text); }
 .wnav__mark { display: flex; align-items: baseline; gap: 10px; color: var(--text); text-decoration: none; flex: none; }
 .wnav__mark .wordmark--short { font-size: 30px; }
 .wnav__name { font: 400 26px/1 var(--font-display); letter-spacing: -0.01em; color: var(--text); }
@@ -123,6 +131,9 @@ html, body { overflow: hidden; }
 .wnav__tab--on::after { content: ""; }
 .wnav__end { margin-left: auto; display: flex; align-items: center; gap: var(--s-2); }
 .wnav__btn--on { background: var(--gold-soft); border-radius: var(--r-pill); }
+/* on Settings / My library no section is current (WebNav): the avatar wears
+   the ring instead, so the bar still says where you are */
+.wnav__btn--here .avatar { box-shadow: 0 0 0 2px var(--bg), 0 0 0 4px var(--gold); }
 .wnav .avatarbtn { border-radius: var(--r-pill); padding: 2px; }
 .wnav .iconbtn { color: var(--text); }
 
