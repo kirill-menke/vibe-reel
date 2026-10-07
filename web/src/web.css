@@ -331,8 +331,8 @@ html, body { overflow: hidden; }
 /* Firefox makes every scroll container a Tab stop (the page's .screen comes
    right after the avatar): a ring round the whole page says nothing */
 .screen:focus-visible { outline: none; }
-.tile:focus-visible { outline: none; }
-.tile:focus-visible .tile__frame::after { box-shadow: inset 0 0 0 3px var(--gold), inset 0 0 0 4px rgba(0, 0, 0, 0.5); }
+/* tiles: see lane: browse (an outer ring + gold title; the grids there keep
+   content-visibility visible so it isn't clipped) */
 .field__input:focus-visible { outline: none; }
 
 /* =============================================================== 6. player */

@@ -63,15 +63,12 @@ function restoreFromUrl() {
 }
 
 /* ---- the keyboard ----
- *   /        from anywhere (not while typing, nor with the player, Login, a
- *            sheet or a menu up): Search, with the cursor in the field — the
- *            web's usual shortcut. On a chart page it goes back to the root.
+ *   /        is App.svelte's (onSlash): Search, with the cursor in the field.
  *   Esc      in the field: clears the query (Chrome does that natively for
  *            type=search, Firefox doesn't — now both do, and both update
  *            ?q=); on an empty field it leaves it, which ends search mode.
  *   the nav  a click on the Search link from another section puts the cursor
  *            in the field too, so typing can start at once. */
-const typing = (/** @type {EventTarget | null} */ t) => t instanceof Element && !!t.closest('input, textarea, select, [contenteditable]');
 
 /* the field once the Search root is the visible route (a few frames after a
  * tab switch: Svelte mounts / un-hides it first) */
@@ -96,11 +93,7 @@ function onKey(e) {
     } else f.blur();
     return;
   }
-  if (e.key !== '/' || typing(e.target)) return;
-  if (R.modal || R.sheet || document.querySelector('.ctx, .actsheet:not([inert])')) return;
-  e.preventDefault();
-  if (R.tab !== 'search' || R.stacks.search.length > 1) switchTab('search');
-  focusField();
+  // `/` itself is App.svelte's onSlash (it also knows Login and the confirm)
 }
 
 export function initSearchUrl() {

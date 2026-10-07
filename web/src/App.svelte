@@ -237,7 +237,7 @@
     if (e.key !== '/' || e.defaultPrevented || e.ctrlKey || e.metaKey || e.altKey) return;
     const t = /** @type {HTMLElement | null} */ (e.target instanceof HTMLElement ? e.target : null);
     if (t && (t.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName))) return;
-    if (!shell || R.modal || R.sheet || CONFIRM.req) return;
+    if (!shell || R.modal || R.sheet || CONFIRM.req || document.querySelector('.ctx, .actsheet:not([inert])')) return;
     e.preventDefault();
     if (R.tab !== 'search' || R.stacks.search.length > 1) switchTab('search');
     let tries = 30;
