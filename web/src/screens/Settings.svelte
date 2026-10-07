@@ -70,70 +70,77 @@
     <p class="pagehead__sub">{cfg.userName || 'Signed out'} · this browser</p>
   </header>
 
-  <List label="Playback" foot="Up Next counts down for 10 seconds before it plays.">
-    <Row wrap title="Skip recaps automatically" sub="“Previously on” and previews">
-      {#snippet trail()}<Switch on={SET.autoSkipRecap} label="Skip recaps automatically" onchange={(v) => setSetting('autoSkipRecap', v)} />{/snippet}
-    </Row>
-    <Row wrap title="Skip intros automatically" sub="Otherwise a Skip Intro button shows">
-      {#snippet trail()}<Switch on={SET.autoSkipIntro} label="Skip intros automatically" onchange={(v) => setSetting('autoSkipIntro', v)} />{/snippet}
-    </Row>
-    <Row wrap title="Autoplay next episode">
-      {#snippet trail()}<Switch on={SET.autoplayNext} label="Autoplay next episode" onchange={(v) => setSetting('autoplayNext', v)} />{/snippet}
-    </Row>
-  </List>
+  <!-- two columns on a wide window (web.css: .wsettings__cols); one, in this
+       order, below that -->
+  <div class="wsettings__cols">
+    <div class="wsettings__col">
+      <List group label="Playback" foot="Up Next counts down for 10 seconds before it plays.">
+        <Row wrap title="Skip recaps automatically" sub="“Previously on” and previews">
+          {#snippet trail()}<Switch on={SET.autoSkipRecap} label="Skip recaps automatically" onchange={(v) => setSetting('autoSkipRecap', v)} />{/snippet}
+        </Row>
+        <Row wrap title="Skip intros automatically" sub="Otherwise a Skip Intro button shows">
+          {#snippet trail()}<Switch on={SET.autoSkipIntro} label="Skip intros automatically" onchange={(v) => setSetting('autoSkipIntro', v)} />{/snippet}
+        </Row>
+        <Row wrap title="Autoplay next episode">
+          {#snippet trail()}<Switch on={SET.autoplayNext} label="Autoplay next episode" onchange={(v) => setSetting('autoplayNext', v)} />{/snippet}
+        </Row>
+      </List>
 
-  <List group label="Languages" foot="What you pick in the player’s Audio and Subtitles menus is remembered per series and wins over these.">
-    <Row class="setrow" title="Audio" value={langName(SET.audioLang)} chevron>
-      <select class="setrow__select" aria-label="Audio language" value={SET.audioLang} onchange={(e) => setSetting('audioLang', e.currentTarget.value)}>
-        {#each LANGS as [code, name] (code)}<option value={code}>{name}</option>{/each}
-      </select>
-    </Row>
-    <Row class="setrow" title="Subtitles" value={langName(SET.subLang)} chevron>
-      <select class="setrow__select" aria-label="Subtitle language" value={SET.subLang} onchange={(e) => setSetting('subLang', e.currentTarget.value)}>
-        {#each LANGS as [code, name] (code)}<option value={code}>{name}</option>{/each}
-      </select>
-    </Row>
-  </List>
+      <List group label="Languages" foot="What you pick in the player’s Audio and Subtitles menus is remembered per series and wins over these.">
+        <Row class="setrow" title="Audio" value={langName(SET.audioLang)} chevron>
+          <select class="setrow__select" aria-label="Audio language" value={SET.audioLang} onchange={(e) => setSetting('audioLang', e.currentTarget.value)}>
+            {#each LANGS as [code, name] (code)}<option value={code}>{name}</option>{/each}
+          </select>
+        </Row>
+        <Row class="setrow" title="Subtitles" value={langName(SET.subLang)} chevron>
+          <select class="setrow__select" aria-label="Subtitle language" value={SET.subLang} onchange={(e) => setSetting('subLang', e.currentTarget.value)}>
+            {#each LANGS as [code, name] (code)}<option value={code}>{name}</option>{/each}
+          </select>
+        </Row>
+      </List>
 
-  <List group label="Subtitles" foot={modeHint}>
-    <Row column title="Show subtitles">
-      <Segmented options={MODES} value={SET.subMode} label="Show subtitles" onchange={(v) => setSetting('subMode', v)} />
-    </Row>
-    <Row class="setrow" title="Size" value="{SET.subSize}%" chevron>
-      <select class="setrow__select" aria-label="Subtitle size" value={String(SET.subSize)} onchange={(e) => setSetting('subSize', Number(e.currentTarget.value))}>
-        {#each SIZES as s (s)}<option value={String(s)}>{s}%{s === 100 ? ' (default)' : ''}</option>{/each}
-      </select>
-    </Row>
-  </List>
+      <List group label="Subtitles" foot={modeHint}>
+        <Row column title="Show subtitles">
+          <Segmented options={MODES} value={SET.subMode} label="Show subtitles" onchange={(v) => setSetting('subMode', v)} />
+        </Row>
+        <Row class="setrow" title="Size" value="{SET.subSize}%" chevron>
+          <select class="setrow__select" aria-label="Subtitle size" value={String(SET.subSize)} onchange={(e) => setSetting('subSize', Number(e.currentTarget.value))}>
+            {#each SIZES as s (s)}<option value={String(s)}>{s}%{s === 100 ? ' (default)' : ''}</option>{/each}
+          </select>
+        </Row>
+      </List>
+    </div>
+    <div class="wsettings__col">
+      <List group label="Streaming" foot="{qualityHint}{where}">
+        <Row column title="Quality">
+          <!-- any click on a segment is an explicit pick, the selected one too (lib/net.js) -->
+          <div class="wquality" onclickcapture={markQualityChosen} role="presentation">
+            <Segmented
+              options={QUALITY}
+              value={quality}
+              label="Streaming quality"
+              onchange={(v) => {
+                quality = v;
+                setQualityCap(v);
+              }}
+            />
+          </div>
+        </Row>
+      </List>
 
-  <List group label="Streaming" foot="{qualityHint}{where}">
-    <Row column title="Quality">
-      <!-- any click on a segment is an explicit pick, the selected one too (lib/net.js) -->
-      <div class="wquality" onclickcapture={markQualityChosen} role="presentation">
-      <Segmented
-        options={QUALITY}
-        value={quality}
-        label="Streaming quality"
-        onchange={(v) => {
-          quality = v;
-          setQualityCap(v);
-        }}
-      />
-      </div>
-    </Row>
-  </List>
+      {#if ME.me}
+        <List group label="Library">
+          <!-- what you added to the server and your quota (GET /api/me; an old reel-api has none) -->
+          <Row title="My library" icon="movies" sub={quotaSummary()} chevron onclick={() => pushRoute('mylibrary')} />
+        </List>
+      {/if}
 
-  {#if ME.me}
-    <List group label="Library">
-      <!-- what you added to the server and your quota (GET /api/me; an old reel-api has none) -->
-      <Row title="My library" icon="movies" sub={quotaSummary()} chevron onclick={() => pushRoute('mylibrary')} />
-    </List>
-  {/if}
-
-  <List group label="About">
-    <Row title="Server" value={host} class="selectable" />
-    <Row title="Version" value="{appinfo.title} {appinfo.version} · Web" class="selectable" />
-  </List>
+      <List group label="About">
+        <Row title="Server" value={host} class="selectable" />
+        <Row title="Version" value="{appinfo.title} {appinfo.version} · Web" class="selectable" />
+      </List>
+    </div>
+  </div>
 </main>
 
 <NavBar title="Settings" {solid} />

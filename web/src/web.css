@@ -399,4 +399,15 @@ html, body { overflow: hidden; }
 .ctx__preview:not(.ctx__preview--card) { margin-left: 0 !important; align-self: center; max-width: 100%; }
 
 /* settings-like pages read as a column, not a 2560-px-wide list */
-.wapp .settings > *, .wapp .mylib > * { max-width: 900px; }
+.wapp .mylib > * { max-width: 900px; }
+/* Settings: one column of ≤ 720 px (a switch 840 px from its label was a
+   long way for the eye), two side by side once the window has room —
+   the page then fits a 1080p screen without scrolling */
+.wapp .settings > .pagehead { max-width: 900px; }
+.wsettings__cols { display: grid; grid-template-columns: minmax(0, 720px); align-items: start; }
+@media (min-width: 1400px) {
+  .wsettings__cols { grid-template-columns: repeat(2, minmax(0, 640px)); }
+  /* every list insets by the gutter on both sides: pull the second column
+     in, or the two cards stood two gutters (up to 128 px) apart */
+  .wsettings__col + .wsettings__col { margin-left: calc(var(--s-6) - var(--gutter)); }
+}
