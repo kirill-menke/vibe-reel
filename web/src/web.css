@@ -524,3 +524,114 @@ html, body { overflow: hidden; }
   background: rgba(255, 255, 255, 0.1); box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.14), inset 0 -2px 0 rgba(255, 255, 255, 0.08);
 }
 .wkeys__or, .wkeys__plus { padding: 0 2px; font-size: 12px; color: var(--text-faint); }
+
+/* ============================================================ lane: detail */
+/* Title pages (Movie/Series/Lookup/Pending detail), Person and their parts
+   (phone/src/components/detail) on a desktop window. */
+
+/* The hero in whole pixels. --backdrop-h is vh/vw-based (777.6 px at
+   1920×1080, 537.6 at 1280×800); the backdrop is its own layer (parallax), and
+   Chrome let one row of it show under the scrim's last, fractional pixel — a
+   grey hairline across the page at the hero's foot. Firefox snapped it
+   already. (A window under 500 px tall keeps detail.css's shorter hero.) */
+@media (min-height: 501px) {
+  .wapp .detail__hero:not(.detail__hero--empty) { height: round(down, var(--backdrop-h), 1px); }
+}
+
+/* The resume bar ran the whole 1080-px column (a 900-px hairline for "30 min
+   left"); a fixed length reads as progress, with the time right after it. */
+.wapp .detail__resume .progress { flex: 0 1 440px; }
+
+/* Tech badges and the certification box were the phone's 11-px chips — too
+   small to read at arm's length next to 16-px body text. */
+.wapp .techbadges { gap: 8px; }
+.wapp .tech { height: 26px; padding: 0 9px; font-size: calc(13 * var(--tu)); letter-spacing: 0.03em; border-radius: 6px; }
+.wapp .meta__cert { height: 20px; padding: 0 6px; font-size: calc(12 * var(--tu)); }
+
+/* One action row on every title page. LookupDetail / PendingDetail wrap their
+   primary button (Add to library, the live download state, Play while
+   downloading) and its note in .detail__buttons: as a row of its own, the
+   note sat top-aligned beside the button in 12-px type and Trailer / Cancel
+   fell to the next line — where the overview then filled the space beside
+   them. Unboxed, the buttons share the row with the secondary actions, the
+   note gets a full line under them, and the text follows. */
+.wapp .detail__buttons { display: contents; }
+.wapp .detail__morph { flex: 0 0 auto; min-width: 220px; }
+.wapp .detail__morph .btn { padding: 0 var(--s-8); }
+/* the live state's line changes width with every poll: room for
+   "43% · 7.4 MB/s · 1 h 12 min left", so the actions beside it hold still */
+.wapp .detail__morph:has(.btn__pct) { min-width: 360px; }
+.wapp .detail__noteslot { order: 1; flex: 1 1 100%; min-height: 1lh; font: var(--t-callout); margin-top: calc(var(--s-1) * -1); }
+.wapp .detail__noteslot .detail__note { font: inherit; text-align: left; max-width: 90ch; text-wrap: pretty; }
+.wapp .detail__body > :is(.overview-wrap, .techbadges, .detail__hint, .detail__badgeslot) { order: 2; }
+/* the overview never shares a line with buttons: a 75-ch item fit beside a
+   lone Trailer pill; the margin makes its outer size the full row */
+.wapp .detail__body > .overview-wrap { margin-right: max(0px, calc(100% - 75ch)); }
+
+/* secondary action pills: hover, press and disabled states (the phone's
+   press styles live on the circle, which the pill look hides) */
+.wapp .action { transition: background-color var(--dur-fast) linear, transform var(--dur-fast) var(--ease-out); }
+.wapp .action:not(:disabled):active { transform: scale(0.97); }
+.wapp .action:disabled { opacity: 0.5; cursor: default; }
+.wapp .detail__body .btn:not(:disabled):not(.btn--status):active { transform: scale(0.98); }
+
+/* Season pills wrap instead of scrolling sideways: the scroller hides its bar
+   and a mouse wheel scrolls the page, so a long show's later seasons were
+   out of reach without Shift+wheel. */
+.wapp .pills { flex-wrap: wrap; overflow: visible; }
+
+/* Episodes: two columns from 1280 px (the 620-px minimum left 1280 with one
+   column of 950-px-wide lines; above 1500 px it stays, so 1920 keeps two
+   roomy columns rather than three clipped ones); body-size overviews no
+   longer than reads well. Rows that do nothing on a click (LookupDetail's,
+   a download's) get no pointer and no hover; a playable one shows a play
+   glyph on its still. */
+@media (max-width: 1499px) {
+  .wapp .episodes.detail__episodes { grid-template-columns: repeat(auto-fill, minmax(min(100%, 540px), 1fr)); }
+}
+.wapp .detail__episodes .episode__overview { font-size: calc(14 * var(--tu)); max-width: 75ch; }
+.wapp .episode:not([tabindex]) { cursor: default; }
+.wapp .episode__still::after {
+  content: ""; position: absolute; inset: 0; margin: auto; width: 52px; height: 52px; border-radius: var(--r-pill);
+  background: rgba(10, 10, 12, 0.62) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M8 5.6v12.8a1 1 0 0 0 1.5.86l10.2-6.4a1 1 0 0 0 0-1.72L9.5 4.74A1 1 0 0 0 8 5.6z' fill='%23fff'/%3E%3C/svg%3E") 55% 50% / 24px no-repeat;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.18);
+  opacity: 0; transition: opacity var(--dur-fast) linear; pointer-events: none;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .wapp .action:not(:disabled):hover { background: #303038; }
+  .wapp .action--on:not(:disabled):hover { background: rgba(230, 180, 80, 0.24); }
+  .wapp .episode:not([tabindex]):hover { background-color: transparent; }
+  .wapp .episode[tabindex]:hover { background-color: var(--surface-1); }
+  .wapp .episode[tabindex]:hover .episode__title { color: var(--gold); }
+  .wapp .episode[tabindex]:hover .episode__still::after { opacity: 1; }
+  .wapp .cast { cursor: pointer; }
+  .wapp .cast__photo { transition: box-shadow var(--dur-fast) linear, transform var(--dur-release) var(--spring-snappy); }
+  .wapp .cast:hover .cast__photo { box-shadow: 0 0 0 2px var(--gold-line); }
+  .wapp .cast:hover .cast__name { color: var(--gold); }
+}
+.wapp .episode[tabindex]:focus-visible .episode__still::after { opacity: 1; }
+
+/* Person: a profile header — photo beside name and facts, the bio under the
+   name at a reading width — instead of the phone's centred column with a bio
+   running the full 1800-px page; the filmography grid gets the desktop
+   column count (the shell's `.person` hook matches no element). */
+.wapp .screen:has(> .person__head) { --person-photo: 168px; --grid-cols: var(--wgrid-cols); }
+.wapp .person__head {
+  display: grid; grid-template-columns: var(--person-photo) minmax(0, 1fr); grid-template-rows: 1fr auto auto 1fr;
+  column-gap: var(--s-8); row-gap: var(--s-2); justify-items: start; text-align: left;
+  padding-top: calc(var(--safe-top) + var(--s-16));
+}
+/* name + facts centred on the photo: the two 1fr rows share what the photo
+   adds over them */
+.wapp .person__photo { grid-row: 1 / -1; }
+.wapp .person__name { grid-area: 2 / 2; }
+.wapp .person__facts { grid-area: 3 / 2; }
+.wapp .person__bio { padding-left: calc(var(--gutter) + var(--person-photo) + var(--s-8)); }
+.wapp .person__bio .overview-wrap { max-width: 75ch; }
+@media (max-width: 700px) { .wapp .person__bio { padding-left: var(--gutter); } }
+
+/* Context menu (right-click on an episode, a season, a cast member): the list
+   hung off the left edge of a wider preview card; centred under it instead
+   (the phone aligns it to the pressed side by an inline style) */
+.ctx .ctx__menu { align-self: center !important; transform-origin: 50% 0 !important; }

@@ -291,7 +291,8 @@
   }
 
   /* ---------------------------------------------------------- the header */
-  const bg = $derived(imgUrl(series, 'Backdrop', { w: 1280 }) || imgUrl(series, 'Primary', { h: 1080 }));
+  /* 1920 on a desktop window (up to 2560 px wide), as MovieDetail */
+  const bg = $derived(imgUrl(series, 'Backdrop', { w: __WEB__ ? 1920 : 1280 }) || imgUrl(series, 'Primary', { h: 1080 }));
   const trailer = $derived(pickTrailer(series));
   const genres = $derived((series.Genres || []).slice(0, 3).join(' · '));
   const yr = $derived(
