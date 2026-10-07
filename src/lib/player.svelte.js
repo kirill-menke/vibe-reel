@@ -4,7 +4,7 @@ import { invalidatePlayState } from './played.js';
 import { ticksToSec, fmtTime } from './format.js';
 import {
   describeTracks, deviceProfile, needsBurnIn, streamByIndex, isBurnCodec, pickSource,
-  videoStream, resShort, hdrLabel, audioBadge, langKey, isSdh, PHONE_CAP_BOX
+  videoStream, resShort, hdrLabel, audioBadge, langKey, isSdh, PHONE_CAP_BOX, fileDefaultAudio, webCaps
 } from './tracks.js';
 import { findMarkers, communityMarkers } from './segments.js';
 import { mlSegments } from './medialib.js';
@@ -328,6 +328,9 @@ export function play(id, resumeSec) {
     if (P.audioIndex >= 0) body.AudioStreamIndex = P.audioIndex;
     body.SubtitleStreamIndex = burn ? P.subIndex : -1;
     body.StartTimeTicks = Math.floor((resumeSec || 0) * TICKS);
+    // Web: a desktop browser plays only the default audio track of a
+    // progressive file (no audioTracks) — any other pick goes through the remux.
+    if (__WEB__ && !burn && P.audioIndex >= 0 && P.audioIndex !== fileDefaultAudio(P.source)) body.EnableDirectPlay = false;
   } else if (burn) {
     // Jellyfin only evaluates the burn against a specific source, so pass the id.
     if (P.source && P.source.Id) body.MediaSourceId = P.source.Id;
@@ -341,7 +344,7 @@ export function play(id, resumeSec) {
       if (gen !== playGen || epoch !== S.epoch) return;   // the player was closed / the page left meanwhile
       const src = (info.MediaSources || [])[0];
       if (!src || (__PHONE__ && !src.SupportsDirectPlay && !src.TranscodingUrl)) {
-        failStart('No playable source', __PHONE__ ? 'Jellyfin offered no stream this iPhone can play for this title.' : 'Jellyfin found no file this TV can play for this title.');
+        failStart('No playable source', __PHONE__ ? (__WEB__ ? 'Jellyfin offered no stream this browser can play for this title.' : 'Jellyfin offered no stream this iPhone can play for this title.') : 'Jellyfin found no file this TV can play for this title.');
         return;
       }
       /* A restart inside the player (Retry, burn-in audio/sub switch) opens a
@@ -391,6 +394,25 @@ export function play(id, resumeSec) {
       }
       P.playMethod = method;
       if (__PHONE__) P.quality = phoneQuality(src);
+      if (__PHONE__ && __WEB__ && method !== 'DirectPlay') {
+        // Web: no browser is handed Jellyfin's playlist — jfhls.js appends its
+        // segments to a MediaSource. Imported on first use: a static import
+        // would reorder the modules of the phone bundle (it must stay
+        // byte-identical), and the web build gets it as its own small chunk.
+        const hls = /** @type {string} */ (url);
+        const how = method;
+        return import('./jfhls.js').then((jf) => {
+          if (gen !== playGen || epoch !== S.epoch) return;
+          startPlayback(openJfFeed(jf.createJfFeed, hls, resumeSec || 0), how, resumeSec || 0);
+          if (prev && prev.PlaySessionId !== P.sessionId) {
+            stoppedSession = prev.PlaySessionId;
+            api('/Sessions/Playing/Stopped', {
+              method: 'POST',
+              body: { ...prev, PositionTicks: Math.floor((resumeSec || 0) * TICKS) }
+            }).catch(() => {});
+          }
+        });
+      }
       startPlayback(url, method, resumeSec || 0);
       if (prev && prev.PlaySessionId !== P.sessionId) {
         stoppedSession = prev.PlaySessionId;
@@ -431,6 +453,60 @@ function directUrl(src) {
       deviceId: cfg.deviceId
     })
   );
+}
+
+/* ---------------- web: Jellyfin's HLS through a MediaSource ----------------
+ * The desktop web build (`__PHONE__ && __WEB__`) asks Jellyfin for what the
+ * phone gets — the HLS fMP4 remux, or a transcode — but neither Chrome nor
+ * Firefox is handed the playlist: jfhls.js appends its segments to a
+ * MediaSource (segfeed.js). Unlike the phone's pending/offline feeds this is
+ * an ordinary Jellyfin playback — progress reports, markers, trickplay, Up
+ * Next, subtitles all run as for any stream; only the <video> src is the
+ * feed's blob URL. One feed at a time: a restart (Retry, an audio switch, the
+ * quality picker, the next episode) opens a new one and stops the old, whose
+ * server job is stopped with it; exitPlayer() stops the last.
+ * Until the resume seek has landed (startPlayback() seeks on loadedmetadata,
+ * which comes with the init segment) the feed is told the start position, not
+ * the 0 currentTime reads — or it would ask for segment 0 first and Jellyfin
+ * would start its job there, only to restart it at the resume point. */
+/** @type {VR.Feed | null} */
+let jfFeed = null;
+
+/** @param {(opts: VR.JfFeedOptions) => VR.Feed} createJfFeed jfhls.js's
+ * @param {string} url main.m3u8, absolute @param {number} start seconds @returns {string} the blob URL */
+function openJfFeed(createJfFeed, url, start) {
+  stopJfFeed();
+  /** @type {number | null} */
+  let startAt = start;
+  const f = createJfFeed({
+    url,
+    position: () => {
+      if (seekTarget != null) return seekTarget;
+      const v = /** @type {HTMLVideoElement} */ (video);
+      if (startAt != null && v.readyState >= 1 && Math.abs(v.currentTime - startAt) < 1) startAt = null;
+      return startAt != null ? startAt : effectivePos();
+    },
+    jump: (t) => seekTo(t, true),
+    media: video,
+    bitrate: phoneStreamBps(),
+    hdr: webCaps().hdr,
+    onFail: (e) => {
+      if (jfFeed !== f || S.screen !== 'player' || P.error) return;
+      showPlayError(
+        e.code === 'unsupported' ? 'This browser can’t play this stream' : 'Lost the connection to the server',
+        e.message || '',
+        lastPos
+      );
+    }
+  });
+  jfFeed = f;
+  return f.url;
+}
+
+function stopJfFeed() {
+  if (!jfFeed) return;
+  jfFeed.stop();
+  jfFeed = null;
 }
 
 /* Play a file that is still downloading, streamed by the media-library service
@@ -501,7 +577,7 @@ function startFeed(pos) {
     onFail: (e) => {
       if (feedRun !== run || /** @type {NonNullable<typeof run>} */ (run).feeder !== f || S.screen !== 'player') return;
       showPlayError(
-        e && e.code === 'unsupported' ? 'This iPhone can’t play this file' : P.downloadId ? 'The download stream broke off' : 'This download can’t be played',
+        e && e.code === 'unsupported' ? (__WEB__ ? 'This browser can’t play this file' : 'This iPhone can’t play this file') : P.downloadId ? 'The download stream broke off' : 'This download can’t be played',
         (e && e.message) || '',
         lastPos
       );
@@ -628,6 +704,7 @@ function endTrailer() {
 /** @param {string} url @param {VR.StartMethod} method @param {number} resumeSec seconds */
 function startPlayback(url, method, resumeSec) {
   const sg = ++startGen;
+  if (__PHONE__ && __WEB__ && jfFeed && jfFeed.url !== url) stopJfFeed();   // anything but the feed play() just opened
   S.screen = 'player';
   P.spinner = true;
   P.loading = true;
@@ -731,7 +808,14 @@ export function restartPlayback(pos) {
  * same start again, at the last good position — or Back to the detail page. */
 /** MediaError.code → [title, detail]. @type {Record<number, [string, string]>} */
 const MEDIA_ERR = __PHONE__
-  ? {
+  ? __WEB__
+    ? {
+        1: ['Playback was interrupted', 'The stream was aborted before it finished loading.'],
+        2: ['Lost the connection to the server', 'The browser stopped receiving the video over the network.'],
+        3: ['The browser couldn’t decode this video', 'The stream started, but its video or audio broke the browser’s decoder.'],
+        4: ['The browser can’t play this stream', 'Its format isn’t supported here — the server’s remux may have failed.']
+      }
+    : {
       1: ['Playback was interrupted', 'The stream was aborted before it finished loading.'],
       2: ['Lost the connection to the server', 'The iPhone stopped receiving the video over the network.'],
       3: ['The iPhone couldn’t decode this video', 'The stream started, but its video or audio broke the iPhone’s decoder.'],
@@ -923,7 +1007,7 @@ function bindVideoEvents() {
     // exitPlayer() empties the element; that is not a failure worth a card.
     if (S.screen !== 'player' || !/** @type {NonNullable<typeof video>} */ (video).getAttribute('src')) return;
     const code = /** @type {NonNullable<typeof video>} */ (video).error ? /** @type {NonNullable<typeof video>} */ (video).error.code : 0;
-    let [title, detail] = MEDIA_ERR[code] || ['Playback failed', __PHONE__ ? 'The iPhone’s media pipeline reported an error.' : 'The TV’s media pipeline reported an error.'];
+    let [title, detail] = MEDIA_ERR[code] || ['Playback failed', __PHONE__ ? (__WEB__ ? 'The browser’s media pipeline reported an error.' : 'The iPhone’s media pipeline reported an error.') : 'The TV’s media pipeline reported an error.'];
     // A pending stream failing is almost always the download side (stalled,
     // removed, or imported and gone from the client), not the TV — "can't play
     // this file" would send the user looking in the wrong place.
@@ -1031,7 +1115,9 @@ function startStallWatch() {
       if (!loadSince) loadSince = now;
       if (!P.pending && !advancing && now - loadSince > START_FAIL_MS)
         stallFail('The video never started', __PHONE__
-          ? 'The server stopped answering before the first frame arrived. Check that the iPhone can reach it (Wi-Fi or Tailscale), then Retry.'
+          ? __WEB__
+            ? 'The server stopped answering before the first frame arrived. Check that this computer can reach it, then Retry.'
+            : 'The server stopped answering before the first frame arrived. Check that the iPhone can reach it (Wi-Fi or Tailscale), then Retry.'
           : 'The server stopped answering before the first frame arrived. Check that the TV can reach it, then Retry.');
       movedAt = now;
       return;
@@ -1121,8 +1207,12 @@ function startStallWatch() {
         'Playback stalled',
         __PHONE__
           ? sn
-            ? 'This stream needs about ' + sn.need + ' Mbit/s but the iPhone was only getting about ' + sn.got + ' Mbit/s, and then nothing for ' + dead + ' s. Check the connection or lower the streaming quality, then Retry from ' + fmtTime(lastPos) + '.'
-            : 'No video has arrived from the server for ' + dead + ' s. Check the iPhone’s connection, then Retry from ' + fmtTime(lastPos) + '.'
+            ? __WEB__
+              ? 'This stream needs about ' + sn.need + ' Mbit/s but this computer was only getting about ' + sn.got + ' Mbit/s, and then nothing for ' + dead + ' s. Check the connection or lower the streaming quality, then Retry from ' + fmtTime(lastPos) + '.'
+              : 'This stream needs about ' + sn.need + ' Mbit/s but the iPhone was only getting about ' + sn.got + ' Mbit/s, and then nothing for ' + dead + ' s. Check the connection or lower the streaming quality, then Retry from ' + fmtTime(lastPos) + '.'
+            : __WEB__
+              ? 'No video has arrived from the server for ' + dead + ' s. Check this computer’s connection, then Retry from ' + fmtTime(lastPos) + '.'
+              : 'No video has arrived from the server for ' + dead + ' s. Check the iPhone’s connection, then Retry from ' + fmtTime(lastPos) + '.'
           : sn
           ? 'This file needs about ' + sn.need + ' Mbit/s but the TV was only getting about ' + sn.got + ' Mbit/s, and then nothing for ' + dead + ' s. Check the TV’s connection — 5 GHz Wi-Fi or Ethernet — then Retry from ' + fmtTime(lastPos) + '.'
           : 'No video has arrived from the server for ' + dead + ' s. Check the TV’s connection, then Retry from ' + fmtTime(lastPos) + '.'
@@ -1855,6 +1945,7 @@ export function exitPlayer() {
       video.load();
     } catch {}
   }
+  if (__PHONE__ && __WEB__) stopJfFeed();
   clearSubs();
   P.osdShown = false;
   P.panel = null;
@@ -1954,6 +2045,13 @@ export function pmSetAudio(idx) {
   } else if (__PHONE__ && (P.playMethod === 'Transcode' || P.playMethod === 'DirectStream')) {
     // Phone: raise the loading card now — the PlaybackInfo round trip used to
     // leave the old track playing for a second with no sign the tap landed.
+    const pos = restartPos();
+    P.loading = true;
+    P.loadingFrom = pos;
+    restartPlayback(pos);
+  } else if (__PHONE__ && __WEB__ && !P.pending && P.playMethod === 'DirectPlay') {
+    // Web: a progressive file plays its default track only (no audioTracks
+    // in desktop browsers) — play() takes the remux for any other pick
     const pos = restartPos();
     P.loading = true;
     P.loadingFrom = pos;

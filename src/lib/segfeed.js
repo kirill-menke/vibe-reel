@@ -22,7 +22,8 @@
  * does, from `managed`); it says when it wants data and may evict on its own,
  * which the "fetch whatever isn't buffered" loop already covers.
  *
- * Phone-only: nothing on the TV imports this. */
+ * Phone-only: nothing on the TV imports this. The desktop web build feeds
+ * Jellyfin's own HLS stream through it as well (jfhls.js). */
 
 
 function mediaSourceClass() {
@@ -111,7 +112,7 @@ export function createSegFeeder(opts) {
     if (dead) return;
     const mime = 'video/mp4; codecs="' + codecs + '"';
     if (!MS.isTypeSupported(mime)) {
-      const e = /** @type {VR.ApiError} */ (new Error('this iPhone can’t play ' + codecs));
+      const e = /** @type {VR.ApiError} */ (new Error(__WEB__ ? 'this browser can’t play ' + codecs : 'this iPhone can’t play ' + codecs));
       e.code = 'unsupported';
       throw e;
     }
@@ -238,6 +239,11 @@ export function createSegFeeder(opts) {
       const t = here();
       if (jump && sb.buffered.length) {
         const b = sb.buffered;
+        // Web (Jellyfin's HLS, jfhls.js): a far seek restarts the server's job at
+        // the keyframe there, and its first AAC frame comes ~0.5 s later — a seek
+        // onto the segment start then sits just before the (muxed) buffered range
+        // and nothing ever plays (measured, Firefox 156).
+        if (__WEB__ && t < b.start(0) && b.start(0) - t < 1) jump(b.start(0) + 0.05);
         for (let i = 0; i < b.length - 1; i++) {
           if (t >= b.end(i) - 0.25 && t < b.start(i + 1) && b.start(i + 1) - b.end(i) < 1) jump(b.start(i + 1) + 0.05);
         }

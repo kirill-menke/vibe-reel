@@ -12,8 +12,8 @@ const LIB = path.resolve(import.meta.dirname, '../../src/lib');
 const modules = readdirSync(LIB).filter((f) => f.endsWith('.js')).sort();
 
 describe('src/lib imports', () => {
-  it('lists the 34 modules the lane covers', () => {
-    expect(modules.length).toBe(34); // + me.svelte.js (ownership and quotas)
+  it('lists the 35 modules the lane covers', () => {
+    expect(modules.length).toBe(35); // + me.svelte.js (ownership and quotas), + jfhls.js (web build)
   });
 
   it.each(modules)('%s imports without side-effect requests', async (f) => {
