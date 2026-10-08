@@ -50,6 +50,19 @@
 /* episode rows: a permanent trailing button in the card's top-right corner */
 .episode > .ctxmore--episode { position: absolute; top: var(--s-2); right: var(--s-2); z-index: 1; color: var(--text-dim); }
 .episode:has(> .ctxmore--episode) .episode__head { padding-right: 36px; }
+/* A narrow window (under 480 px: 400 % zoom, a phone-sized one): the still
+   takes a third of the card instead of its 200 px, and the ⋯ keeps clear of
+   the episode-number line only, a little higher up, so the title gets the
+   whole text column (S1-3). At 320 px the 200-px still and the 36-px pad
+   had left the title 14 px: one letter a line. (Stacked, a full-width still
+   filled a 200-px-tall window by itself.) */
+@media (max-width: 479.98px) {
+  .wapp .detail__episodes .episode { grid-template-columns: minmax(0, 34%) minmax(0, 1fr); }
+  .wapp .detail__episodes .episode__still { width: 100%; }
+  .wapp .detail__episodes .episode > .ctxmore--episode { top: var(--s-1); }
+  .wapp .episode:has(> .ctxmore--episode) .episode__head:has(> .episode__num) { padding-right: 0; }
+  .wapp .episode:has(> .ctxmore--episode) .episode__num { padding-right: 36px; }
+}
 
 /* season pills: one button right after the pills, for the selected season */
 .detail__pills:has(> .ctxmore) { display: flex; align-items: center; }
