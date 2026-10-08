@@ -1,5 +1,6 @@
 #!/usr/bin/env node
-/* VibeReel end-to-end run: fake Jellyfin 12.1 + reel-api, both apps built
+/* VibeReel end-to-end run: fake Jellyfin 12.1 + reel-api, the TV and phone
+ * apps (and the desktop web client when a selected test drives it) built
  * against it, headless Chrome over raw CDP, every scenario in e2e/scenarios/.
  *
  *   node e2e/run.mjs                 everything (LANE_TEST)
@@ -68,7 +69,7 @@ const TIMINGS = path.join(BUILD_DIR, 'timings.json');
 /* ------------------------------------------------------------------ */
 
 /* fake server + builds + Chrome, for the in-process run or one worker */
-async function setup({ buildDir, needBrowser, log }) {
+async function setup({ buildDir, needBrowser, needWeb, log }) {
   mkdirSync(runDir, { recursive: true });
   mkdirSync(buildDir, { recursive: true });
   const portsFile = path.join(buildDir, 'ports.json');
@@ -77,12 +78,12 @@ async function setup({ buildDir, needBrowser, log }) {
     ports = JSON.parse(readFileSync(portsFile, 'utf8'));
   } catch {}
   const env = { srv: null, browser: null };
-  env.srv = await startFakeServer({ ports, tvDir: path.join(buildDir, 'tv'), phoneDir: path.join(buildDir, 'phone') });
+  env.srv = await startFakeServer({ ports, tvDir: path.join(buildDir, 'tv'), phoneDir: path.join(buildDir, 'phone'), webDir: path.join(buildDir, 'web') });
   writeFileSync(portsFile, JSON.stringify(env.srv.ports));
   log('fake server: ' + Object.entries(env.srv.urls).map(([k, v]) => k + '=' + v.replace('http://127.0.0.1', '')).join(' '));
   if (!env.srv.media.webm) log('note: no fixture video — ' + env.srv.media.error);
   if (needBrowser) {
-    await buildApps({ jf: env.srv.urls.jf, ml: env.srv.urls.ml, log, dir: buildDir, ...(tvSrc ? { tvRoot: tvSrc } : {}) });
+    await buildApps({ jf: env.srv.urls.jf, ml: env.srv.urls.ml, log, dir: buildDir, web: needWeb, ...(tvSrc ? { tvRoot: tvSrc } : {}) });
     env.browser = await launchChrome({ runDir, allowPorts: Object.values(env.srv.ports), picUrl: env.srv.urls.pic, headless: !flag('--headed') });
   }
   return env;
@@ -100,6 +101,8 @@ function expand(list) {
 }
 
 const needsBrowser = (list) => list.some((t) => t.opts.app !== 'none' || t.opts.browser);
+/* the desktop web build only when a selected test drives it (or a runner self-test with a browser might) */
+const needsWeb = (list) => list.some((t) => t.opts.app === 'web');
 
 function defaultJobs() {
   if (process.env.E2E_JOBS) return Number(process.env.E2E_JOBS);
@@ -172,7 +175,7 @@ async function runInProcess(list, setCleanup) {
     })();
     return cleaning;
   });
-  env = await setup({ buildDir: buildDirOpt || BUILD_DIR, needBrowser: needsBrowser(list), log: (m) => console.log(m) });
+  env = await setup({ buildDir: buildDirOpt || BUILD_DIR, needBrowser: needsBrowser(list), needWeb: needsWeb(list), log: (m) => console.log(m) });
   const results = await runAll({ list, srv: env.srv, browser: env.browser, outDir });
   const g = env.browser?.guard;
   return { results, guard: { proxyHits: g ? g.proxyHits.slice() : [], browserNoise: g ? g.browserNoise.length : 0 }, jobs: 1, allRoutes: routeTemplates(env.srv) };
@@ -247,7 +250,7 @@ async function runParallel(list, jobs, setCleanup) {
       w.proc.send({ type: 'run', name: next.t.name, rep: next.t.rep, reps: next.t.reps });
     };
     for (let k = 1; k <= jobs; k++) {
-      const proc = fork(process.argv[1], ['--worker', String(k), ...passArgs], { stdio: ['ignore', 'pipe', 'pipe', 'ipc'], env: { ...process.env, E2E_NEED_BROWSER: needsBrowser(list) ? '1' : '' } });
+      const proc = fork(process.argv[1], ['--worker', String(k), ...passArgs], { stdio: ['ignore', 'pipe', 'pipe', 'ipc'], env: { ...process.env, E2E_NEED_BROWSER: needsBrowser(list) ? '1' : '', E2E_NEED_WEB: needsWeb(list) ? '1' : '' } });
       const w = { k, proc, current: null, setupLog: [], stderr: '' };
       w.exited = new Promise((r) => proc.on('exit', r));
       proc.stdout.on('data', (d) => w.setupLog.push(String(d)));
@@ -308,7 +311,7 @@ async function worker(k) {
   process.on('disconnect', () => quit(1)); // the parent is gone
   for (const sig of ['SIGINT', 'SIGTERM', 'SIGHUP']) process.on(sig, () => quit(130));
   try {
-    env = await setup({ buildDir: path.join(BUILD_DIR, 'w' + k), needBrowser: process.env.E2E_NEED_BROWSER === '1', log: (m) => lines.push(m) });
+    env = await setup({ buildDir: path.join(BUILD_DIR, 'w' + k), needBrowser: process.env.E2E_NEED_BROWSER === '1', needWeb: process.env.E2E_NEED_WEB === '1', log: (m) => lines.push(m) });
   } catch (e) {
     console.error('worker setup failed:', e.stack || e);
     return quit(1);

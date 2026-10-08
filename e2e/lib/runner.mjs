@@ -2,7 +2,8 @@
  * call test() at import time; run.mjs imports them and calls runAll().
  *
  *   test(name, opts, async (t) => { … })
- *     opts.app      'tv' | 'phone' | 'none' (default 'tv'): which page t.page is
+ *     opts.app      'tv' | 'phone' | 'web' | 'none' (default 'tv'): which page t.page is
+ *                   (web: the desktop web client, lib/page.mjs DESKTOP metrics)
  *     opts.fast     true → part of the smoke subset (run.mjs --fast)
  *     opts.browser  true → start the apps' builds + Chrome even for app 'none'
  *                   (runner self-tests that use t.browser / t.runInner)
@@ -134,7 +135,7 @@ export async function runAll({ list, srv, browser, outDir, print = console.log }
     };
     try {
       if (tc.opts.app !== 'none') {
-        page = await browser.newPage({ mobile: tc.opts.app === 'phone' });
+        page = await browser.newPage({ mobile: tc.opts.app === 'phone', desktop: tc.opts.app === 'web' });
         t.page = page;
       }
       await withTimeout(Promise.resolve().then(() => tc.fn(t)), tc.opts.timeout, 'test');

@@ -8,6 +8,7 @@
  *   await page.chars('text')                trusted key events per character (USB keyboard)
  *   await page.tap(x, y) / page.tapSel(css) trusted touch (phone)
  *   await page.press(x, y, ms)              trusted touch held still (phone long-press)
+ *   await page.click(x, y, {button, count}) trusted mouse click (web); page.move(x, y) hovers
  *   page.errors                             console errors, exceptions, failed loads
  */
 import { writeFileSync } from 'node:fs';
@@ -33,6 +34,15 @@ export const KEYS = {
 export const IPHONE = {
   width: 393, height: 852, deviceScaleFactor: 3, mobile: true,
   userAgent: 'Mozilla/5.0 (iPhone; CPU iPhone OS 18_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.5 Mobile/15E148 Safari/604.1'
+};
+
+/* the desktop web client (app 'web'): a laptop-sized window, no touch, a mouse
+ * that hovers (hover: hover / pointer: fine — Chrome's --blink-settings in
+ * lib/chrome.mjs) and a desktop Chrome UA — headless Chrome's own says
+ * "HeadlessChrome" */
+export const DESKTOP = {
+  width: 1440, height: 900, deviceScaleFactor: 1, mobile: false,
+  userAgent: 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/154.0.0.0 Safari/537.36'
 };
 
 export class Page {
@@ -71,6 +81,12 @@ export class Page {
       await s.send('Emulation.setTouchEmulationEnabled', { enabled: true, maxTouchPoints: 5 });
       await s.send('Emulation.setEmitTouchEventsForMouse', { enabled: true, configuration: 'mobile' });
       await s.send('Emulation.setUserAgentOverride', { userAgent: m.userAgent, platform: 'iPhone' });
+    } else if (this.opts.desktop) {
+      const m = DESKTOP;
+      await s.send('Emulation.setDeviceMetricsOverride', { width: m.width, height: m.height, deviceScaleFactor: m.deviceScaleFactor, mobile: false });
+      await s.send('Emulation.setUserAgentOverride', { userAgent: m.userAgent, platform: 'Linux x86_64' });
+      // keyboard focus as in a focused window (:focus-visible, focus events) though headless
+      await s.send('Emulation.setFocusEmulationEnabled', { enabled: true });
     } else {
       await s.send('Emulation.setDeviceMetricsOverride', { width: 1920, height: 1080, deviceScaleFactor: 1, mobile: false });
     }
@@ -201,6 +217,22 @@ export class Page {
     }, { timeout, what: 'tappable ' + css }, css);
     await this.tap(r.x, r.y);
     return r;
+  }
+
+  /* a trusted mouse click (desktop web): move there, press, release.
+   * button 'left' | 'right' (a right press opens the context menu) | 'middle'; count 2 = double click */
+  async click(x, y, { button = 'left', count = 1 } = {}) {
+    await this.move(x, y);
+    for (let i = 1; i <= count; i++) {
+      await this.s.send('Input.dispatchMouseEvent', { type: 'mousePressed', x, y, button, buttons: { left: 1, right: 2, middle: 4 }[button], clickCount: i });
+      await this.s.send('Input.dispatchMouseEvent', { type: 'mouseReleased', x, y, button, buttons: 0, clickCount: i });
+    }
+    await this.frames(2);
+  }
+
+  /* the mouse pointer to x, y (hover) */
+  async move(x, y) {
+    await this.s.send('Input.dispatchMouseEvent', { type: 'mouseMoved', x, y, button: 'none', buttons: 0 });
   }
 
   async swipe(x0, y0, x1, y1, { steps = 8, ms = 200 } = {}) {

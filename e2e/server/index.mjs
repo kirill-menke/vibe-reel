@@ -1,13 +1,15 @@
-/* The fake server: one process, five loopback origins sharing one world.
+/* The fake server: one process, six loopback origins sharing one world.
  *
  *   jf     Jellyfin 12.1           (TV: VITE_JELLYFIN_URL)
  *   ml     reel-api                (TV: VITE_MEDIALIB_URL)
  *   tv     the TV build, static    (http://127.0.0.1:<tv>/index.html)
  *   phone  the phone build + /jf + /ml on one origin, like production
+ *   web    the desktop web build, the same shape (vr.kirill.es: /jf, /ml, an
+ *          SPA fallback) plus the NAS's /net.json ({"via":"lan"})
  *   pic    the TV's picture-mode companion service; the harness maps the
  *          app's hard-coded http://127.0.0.1:8791 onto it (lib/chrome.mjs)
  *
- * startFakeServer({ ports, tvDir, phoneDir, seed }) → srv. Tests use srv
+ * startFakeServer({ ports, tvDir, phoneDir, webDir, seed }) → srv. Tests use srv
  * in-process: srv.world (mutable state), srv.fault(), srv.log, srv.violations,
  * srv.events, srv.reset(). Nothing is persisted; nothing leaves loopback. */
 import http from 'node:http';
@@ -371,7 +373,16 @@ export async function startFakeServer(opts = {}) {
   }
 
   /* ---------------- listeners ---------------- */
-  const tvDir = opts.tvDir, phoneDir = opts.phoneDir;
+  const tvDir = opts.tvDir, phoneDir = opts.phoneDir, webDir = opts.webDir;
+  /* /jf + /ml + the harness's blank page on the one-origin builds (phone, web);
+   * null = not one of those (the caller serves the build) */
+  const sameOrigin = (req, res, p) => {
+    if (/^\/jf(\/|$)/.test(p)) return handleJellyfin(req, res, p.slice(3) || '/', 'jf');
+    if (/^\/ml(\/|$)/.test(p)) return handleReelApi(req, res, p.slice(3) || '/', 'ml');
+    if (p === '/__e2e_blank') return send(res, 200, BLANK, { 'Content-Type': 'text/html; charset=utf-8' }), true;
+    if (/^\/__/.test(p)) return send(res, 404, 'dev-only route ' + p + ' is not part of a build'), true;
+    return null;
+  };
   /* a same-origin page for the harness to seed localStorage from before the app loads */
   const BLANK = '<!doctype html><meta charset="utf-8"><title>e2e</title><link rel="icon" href="data:,">';
   const handlers = {
@@ -379,13 +390,12 @@ export async function startFakeServer(opts = {}) {
     ml: (req, res, p) => handleReelApi(req, res, p),
     pic: (req, res, p) => handlePic(req, res, p),
     tv: (req, res, p) => p === '/__e2e_blank' ? send(res, 200, BLANK, { 'Content-Type': 'text/html; charset=utf-8' }) : (tvDir && existsSync(tvDir) ? serveStatic(req, res, tvDir, p) : send(res, 503, 'TV build missing')),
-    phone: (req, res, p) => {
-      if (/^\/jf(\/|$)/.test(p)) return handleJellyfin(req, res, p.slice(3) || '/', 'jf');
-      if (/^\/ml(\/|$)/.test(p)) return handleReelApi(req, res, p.slice(3) || '/', 'ml');
-      if (p === '/__e2e_blank') return send(res, 200, BLANK, { 'Content-Type': 'text/html; charset=utf-8' });
-      if (/^\/__/.test(p)) return send(res, 404, 'dev-only route ' + p + ' is not part of a build');
-      return phoneDir && existsSync(phoneDir) ? serveStatic(req, res, phoneDir, p, { fallback: 'index.html' }) : send(res, 503, 'phone build missing');
-    }
+    phone: (req, res, p) => sameOrigin(req, res, p) ?? (phoneDir && existsSync(phoneDir) ? serveStatic(req, res, phoneDir, p, { fallback: 'index.html' }) : send(res, 503, 'phone build missing')),
+    /* the NAS (vibereel-web.nix) answers /net.json {"via":"lan"} at home: web/src/lib/net.js
+     * reads it at start for the quality default, lib/access.js when an API call fails */
+    web: (req, res, p) => sameOrigin(req, res, p) ?? (p === '/net.json'
+      ? send(res, 200, { via: srv.world.webVia || 'lan' }, { 'Cache-Control': 'no-store' })
+      : webDir && existsSync(webDir) ? serveStatic(req, res, webDir, p, { fallback: 'index.html' }) : send(res, 503, 'web build missing'))
   };
   const servers = [];
   const sockets = new Set();
