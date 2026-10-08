@@ -34,6 +34,7 @@
 import { flushSync } from 'svelte';
 import { holdInert, releaseInert } from './modal.svelte.js';
 import { initMore } from './ctxmore.js';
+import { holdGuard } from './focusguard.js';
 
 export const MARGIN = 8;
 
@@ -336,7 +337,13 @@ function keepFocus(pick, ms = 3000) {
     if (gen === keepGen) keepGen++;
   };
   addEventListener('pointerdown', stopOnPointer, { once: true, capture: true });
-  const done = () => removeEventListener('pointerdown', stopOnPointer, true);
+  // App's lost-focus guard (focusguard.js) waits while this watches: it would
+  // put focus on the page before the removed tile's neighbour is known
+  const release = holdGuard(ms + 500);
+  const done = () => {
+    removeEventListener('pointerdown', stopOnPointer, true);
+    release();
+  };
   const check = () => {
     if (gen !== keepGen) return done();
     const a = document.activeElement;

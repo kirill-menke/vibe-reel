@@ -32,6 +32,7 @@
   import { meAtBoot } from '$p/lib/mylib.js';
   import { MODAL, holdInert, releaseInert } from './lib/modal.svelte.js';
   import { isTyping, isUndoKey, isMac, navInset } from './lib/shellkeys.js';
+  import { initFocusGuard } from './lib/focusguard.js';
 
   /* ------------------------------------------------------------ polling ---- */
   /* activity (download badges) and the bell's feed: only while the tab is
@@ -235,7 +236,9 @@
     if (!sc) return;
     const a = document.activeElement;
     if (a && a !== document.body && r?.contains(a)) return;
-    if (a && a !== document.body && !a.closest('.wnav') && !a.closest('.route[hidden]') && a.isConnected) return;
+    // already placed by the page (Search's field after `/`) — inside the shell: a
+    // confirm's button still fading out (a browser Back answered it No) is not a place
+    if (a && a !== document.body && a.closest('.wapp') && !a.closest('.wnav') && !a.closest('.route[hidden]') && a.isConnected) return;
     sc.focus({ preventScroll: true });
   }
   /* A page can swap its scroller after it loads (Detail's loading <main>
@@ -390,9 +393,37 @@
   }
   /** @param {FocusEvent} e */
   function onFocusIn(e) {
-    if (/** @type {Element | null} */ (e.target)?.closest?.('.toast')) pauseToast();
-    else clearOfBars(e.target);
+    if (/** @type {Element | null} */ (e.target)?.closest?.('.toast')) {
+      pauseToast();
+      const from = /** @type {Element | null} */ (e.relatedTarget);
+      if (from instanceof HTMLElement && !from.closest('.toast')) toastFrom = from;
+    } else {
+      toastFrom = null;
+      clearOfBars(e.target);
+    }
   }
+
+  /* --------------------------------------------------------- lost focus ---- */
+  /* Focus that falls to <body> under the keyboard (a Retry whose card goes on
+   * success, the toast's Undo removing itself, Esc out of Search's field, a
+   * confirm a browser Back answered) lands on the shown page — on what had
+   * focus before the toast took it, else the page's scroller — once every
+   * hand-off of its own (player, sheet, confirm, context menu) has had its
+   * turn (lib/focusguard.js). Never under a sheet, a modal or a menu. */
+  /** @type {HTMLElement | null} */
+  let toastFrom = null;
+  function guardBlocked() {
+    return !shell || !!R.sheet || !!R.modal || !!CONFIRM.req || MODAL.holds.length > 0 || !!document.querySelector('.ctx, .actsheet');
+  }
+  function guardTarget() {
+    const r = el(top().key);
+    if (!r || r.hidden) return null;
+    const from = toastFrom;
+    toastFrom = null;
+    if (from?.isConnected && r.contains(from) && !from.closest('[inert], [hidden]') && from.getClientRects().length) return from;
+    return /** @type {HTMLElement | null} */ (r.querySelector(':scope > .screen') || r.querySelector('.screen'));
+  }
+  onMount(() => initFocusGuard({ blocked: guardBlocked, target: guardTarget }));
 
   /* Keyboard focus never ends under the fixed bar or a page's sticky one
    * (the series' season bar, Search's field), nor cut off at the bottom: the

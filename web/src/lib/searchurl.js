@@ -66,7 +66,8 @@ function restoreFromUrl() {
  *   /        is App.svelte's (onSlash): Search, with the cursor in the field.
  *   Esc      in the field: clears the query (Chrome does that natively for
  *            type=search, Firefox doesn't — now both do, and both update
- *            ?q=); on an empty field it leaves it, which ends search mode.
+ *            ?q=); on an empty field it leaves it for the page's scroller
+ *            (not <body>), which ends search mode.
  *   the nav  a click on the Search link from another section puts the cursor
  *            in the field too, so typing can start at once. */
 
@@ -90,7 +91,13 @@ function onKey(e) {
     if (f.value) {
       f.value = '';
       f.dispatchEvent(new Event('input', { bubbles: true }));
-    } else f.blur();
+    } else {
+      // leave it for the page (search mode ends with the blur), not for
+      // <body>: PageDown and Space go on working from the keyboard
+      const sc = /** @type {HTMLElement | null} */ (f.closest('.screen'));
+      if (sc) sc.focus({ preventScroll: true });
+      else f.blur();
+    }
     return;
   }
   // `/` itself is App.svelte's onSlash (it also knows Login and the confirm)
