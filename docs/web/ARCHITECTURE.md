@@ -88,7 +88,14 @@ npx vite --config web/vite.config.js           # dev server, http://127.0.0.1:89
   screen reader hears the page; a page that swaps its `<main>` keeps that focus. Back
   restores the element that opened the page (`takeFocus`). A modal opening or closing never
   moves focus here — the player and context menus hand focus back themselves, and a sheet
-  doesn't hand it back when one of its rows navigated. Page scrollers have scroll-padding
+  doesn't hand it back when one of its rows navigated. Focus never rests on `<body>`:
+  `lib/focusguard.js` notices a focusout with nowhere to go, or the focused element's
+  removal (it watches the ancestors' child lists: Firefox fires no event for a removal),
+  and a frame + 100 ms later, if focus is still on `<body>` and no sheet, modal, confirm,
+  MODAL hold or context menu is up, focuses the shown route's `.screen`, or what had focus
+  before the toast took it. That covers a Retry whose card unmounts on success, the toast's
+  Undo, Esc on Search's empty field and a confirm answered No by the browser's Back. Every
+  other hand-off goes first (ctx holds it off with `holdGuard()`). Page scrollers have scroll-padding
   for the nav (plus the season bar on a series), and App re-scrolls keyboard focus that
   still lands under a fixed or stuck bar.
 - **Modality** (`lib/modal.svelte.js`). `.wapp` (nav + pages) is inert while a sheet is open
@@ -97,8 +104,15 @@ npx vite --config web/vite.config.js           # dev server, http://127.0.0.1:89
   Esc cancels it), `ctx` (a context menu) and `player`. Release a hold before focusing
   anything inside `.wapp`.
 - **Undo.** Ctrl+Z (⌘Z on a Mac) runs a toast's Undo, except while typing or under Login or
-  a confirm; the button shows the chord, and the toast pauses while focus is in it. On the
-  web the toast's `role=status` region is never `aria-hidden`.
+  a confirm; the button shows the chord (not under 480 px), and the toast pauses while focus
+  is in it. On the web the toast's `role=status` region is never `aria-hidden`. Toast and
+  offline banner are capped at the window width less 16 px; under 540 px the banner shows
+  only its title.
+- **Short and narrow windows** (200 % / 400 % zoom). Under 600 px of height the season bar
+  scrolls with the page (`position: relative; top: auto`); it always ends where the nav ends
+  (the overlay-scrollbar strip). In a landscape window ≤ 500 px tall a title page's text
+  rides up over the backdrop no further than the nav's foot; under 640 px the live download
+  state drops its width floor; under 480 px an episode's still takes a third of the card.
 - `screens.js` / `sheets.js` hold the phone's registries, minus Downloads and the offline
   sheet. Settings is the web's own.
 - `lib/urlsync.svelte.js` mirrors the phone router into the address bar and history:
@@ -156,7 +170,16 @@ npx vite --config web/vite.config.js           # dev server, http://127.0.0.1:89
     icons below 900 px). `.wplayer` is `overflow: clip`.
   - Trailers: a failure keeps the player up with an error card (Retry · Open on YouTube ·
     Close; no tab opens by itself, the app is never navigated away) and the raw yt-dlp
-    error goes to the console.
+    error goes to the console. A trailer that stops arriving gives up too: 30 s with
+    neither the playhead nor the buffered end moving brings "This trailer stopped
+    loading" (Retry from the position), and every request to reel-api has a 60 s deadline.
+    An untagged trailer audio row reads "Original audio".
+  - `player/stage.js` holds the pure pieces: `stageClicks` (a dblclick undoes only the pause
+    its own first click fired), `fullScreenStuck` (the "full screen didn't work" toast only
+    when the window neither grew nor covers 85 % of the screen — Chrome scales innerWidth
+    with page zoom but not `screen.*`) and `chipName` ("Subtitles: English", "Audio:
+    English DD+ 5.1"). While an error card is up, the busy ✕ is "Close trailer" / "Close
+    player" and out of the Tab order.
 
 ## Look (`styles/look.css`, `lib/tiletips.js`)
 
@@ -166,9 +189,14 @@ npx vite --config web/vite.config.js           # dev server, http://127.0.0.1:89
   edge, because `.list` / `.ctx__menu` clip; Settings' invisible `<select>` rows ring the
   row (`:has()`); fields ring their box; tiles ring their art (a background gap + gold, and
   a gold title); the position slider rings its thumb. Other code makes things focusable;
-  look.css makes them visible.
-- **States.** Hover is one `--hover-tint` overlay on surface controls (glass and selected
-  fills stay), a gold-line ring on artwork, brightness only on the gold button. `:active`
+  look.css makes them visible. The forced-colors block is the last thing in look.css; the
+  selected set uses `Highlight` / `HighlightText` there, hover included.
+- **States.** Hover is one `--hover-tint` overlay (.08, a background-image) on controls and
+  interactive rows, `--hover-tint-media` (.16) on glass over artwork or video (the hero's
+  group, the nav's back pill, a tile's ⋯, the player's controls and cards), a gold-line ring
+  on artwork, brightness only on gold fills; selected items keep gold-soft (.22) under the
+  pointer. Lane files add no hovers of their own, and only interactive rows get the pointer
+  cursor and the tint. `:active`
   scales button-like controls to .97 (rows take `--surface-press`). Selected is gold on
   `--gold-soft` everywhere except the segmented thumb. Disabled is `--disabled-opacity`
   (0.4). `html.wscrolling` (tiletips.js, from the first scroll event to 150 ms after the
@@ -179,14 +207,18 @@ npx vite --config web/vite.config.js           # dev server, http://127.0.0.1:89
 - **Font.** Inter 4 (variable, latin + latin-ext subsets, SIL OFL) is bundled in
   `web/src/fonts` as `'Inter VR'`; `--font-ui` lists `-apple-system`/`BlinkMacSystemFont`
   first, so macOS keeps SF and never downloads it, while Linux and Windows no longer fall
-  back to DejaVu Sans / Arial. `web/vite.config.js`'s `fontLicense` plugin appends the OFL
-  to the web build's LICENSES.txt only.
+  back to DejaVu Sans / Arial. `web/index.html` preloads the latin file (Vite resolves the
+  hashed name), so the nav doesn't jump on a cold load. `web/vite.config.js`'s `fontLicense`
+  plugin appends the OFL to the web build's LICENSES.txt only.
 - **Tooltips.** `tiletips.js` gives icon-only buttons outside the player their
   `aria-label` as a native title (never over a markup title) and cut-off tile captions —
   one line or the grids' two-line clamp — their whole text. An icon-only control needs a
   good `aria-label` and nothing else.
 - **Confirm.** The phone's ActionSheet confirm is a 460 px desktop dialog: title and message
-  left, Cancel then the action as pills in one row.
+  left, Cancel then the action as pills in one row (CSS `order`; `lib/confirmtab.js` walks
+  Tab / Shift+Tab through the answers in that drawn order and keeps Tab in the dialog). It is
+  capped to the window and scrolls; under 420 px tall it hangs from the top and only the
+  question scrolls.
 - **Progress rings** use `calc((1 - var(--p)) * 100px)`: Firefox rejects the phone's unitless
   dashoffset and drew every ring full.
 
@@ -221,18 +253,27 @@ opens it on a right-click, on Shift+F10 / the Menu key, on a mouse hold and from
   grid). The Accounts radios only move focus (a pick switches account).
 - `.grid`s get 2-D arrows by their computed columns (Home / End per row, Ctrl+Home / End for
   the grid; ↑ ↓ cross into the next grid on the page). Tiles stay Tab stops.
-- Rails: Tab onto a half-visible tile glides it into view as ← → do; the ◀ ▶ head buttons
-  are mouse-only (`tabindex=-1`) and named per rail; region names include the sub line.
+- Rails: ← → step between a rail's cells (tiles, Home cells, cast members); Tab onto a
+  half-visible cell glides it into view as ← → do; the ◀ ▶ head buttons are mouse-only
+  (`tabindex=-1`) and named per rail, and the hover edge paddles carry the same words as a
+  title; region names include the sub line.
+- Sort & filter opened from the Genre chip lands on the picked genre (else All). Home has a
+  visually hidden h1 "Home"; the slides' titles are level-2 headings.
 - Two live regions on `body`: an error card's title and reason are said once (its
   `role=alert` is removed, so Retry doesn't chatter); Search's count goes through the polite
   one, and Search keeps an h1 while results show.
 - `gridkeys-slices.js`: long Library and Chart grids mount in idle-time slices (≤ 8 ms) plus
-  a frame slice only when the viewport nears the end, instead of a slice every frame.
+  a frame slice only when the viewport nears the end, instead of a slice every frame. A cold
+  first page waits ≤ 1 s for the activity feed's first answer, so downloading titles are in
+  the first paint (no grid-wide shift when the pending tile lands).
 - Library / Chart / Search empty and error states sit in the page flow, below the chips.
   Search has no iOS Cancel (Esc does it) and Enter keeps the cursor in the field.
 
 ## Home hero (`lib/heroarrows.js`, `styles/home.css`)
 
+- The hero is a grid: every slide's text shares one cell at its foot, with `padding-top` =
+  nav + 8 and `min-height: var(--hero-h)`, so it grows past `--hero-h` only when the text
+  needs it (a 320 px window); primary buttons get their 200 px minimum from 640 px wide.
 - One group in front of the slides — Pause (an `aria-pressed` toggle), Previous, Next — at
   the right end of the pager row, like a rail's ◀ ▶. Auto-advance holds while the pointer
   is over the hero, keyboard focus is in it or Pause is down; reduced motion never advances.
