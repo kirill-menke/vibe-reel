@@ -20,7 +20,8 @@
  * reload still knows what lies behind.
  *
  * URLs:  /  /movies  /shows  /search[?q=]  /movie/<id>  /show/<id>  /item/<id>
- *        /person/<id>  /lookup/<movie|tv>/<id>  /search/chart/<key>?t=<title>
+ *        /person/<id>  /lookup/<movie|tv>/<id>?t=<title>&y=<year>
+ *        /search/chart/<key>?t=<title>
  *        /pending/<key>  /settings  /my-library */
 import { untrack } from 'svelte';
 import { R, TABS, push, pop, switchTab, restoreStacks } from '$p/lib/router.svelte.js';
@@ -54,8 +55,15 @@ export function urlOf(tab, r) {
     case 'person':
       return '/person/' + enc(p.id);
     case 'lookup': {
+      /* the title (and year) ride along like a chart's ?t=: a reload or a
+       * shared link has a page to show even when reel-api can't answer */
       const it = p.item || {};
-      return it.id && it.type ? '/lookup/' + enc(it.type) + '/' + enc(it.id) : '/lookup';
+      if (!(it.id && it.type)) return '/lookup';
+      const q = new URLSearchParams();
+      if (it.title) q.set('t', String(it.title));
+      if (it.year) q.set('y', String(it.year));
+      const qs = q.toString();
+      return '/lookup/' + enc(it.type) + '/' + enc(it.id) + (qs ? '?' + qs : '');
     }
     case 'chart':
       return '/search/chart/' + enc(p.key || 'top') + (p.title ? '?t=' + enc(p.title) : '');
@@ -89,8 +97,13 @@ export function parseUrl(pathname, search = '') {
   if (a === 'show' && b) return at('shows', [{ name: 'detail', params: { id: b, type: 'Series' } }]);
   if (a === 'item' && b) return at('home', [{ name: 'detail', params: { id: b, type: null } }]);
   if (a === 'person' && b) return at('home', [{ name: 'person', params: { id: b, name: '' } }]);
-  if (a === 'lookup' && (b === 'movie' || b === 'tv') && c)
-    return at('search', [{ name: 'lookup', params: { item: /** @type {Reel.LookupRef} */ ({ id: c, type: b, title: '' }) } }]);
+  if (a === 'lookup' && (b === 'movie' || b === 'tv') && c) {
+    const y = Number(q.get('y'));
+    /** @type {Reel.LookupRef} */
+    const item = { id: c, type: b, title: q.get('t') || '' };
+    if (Number.isInteger(y) && y > 1800) item.year = y;
+    return at('search', [{ name: 'lookup', params: { item } }]);
+  }
   if (a === 'search' && b === 'chart' && c) return at('search', [{ name: 'chart', params: { key: c, title: q.get('t') || '' } }]);
   if (a === 'pending' && b) return at('home', [{ name: 'pending', params: { key: b } }]);
   if (a === 'settings') return at('home', [{ name: 'settings', params: {} }]);
@@ -220,6 +233,21 @@ function onPop(e) {
     return;
   }
   expect = null;
+  if (st?.vr && st.player && R.modal !== 'player') {
+    /* Forward onto the entry of a player that has closed (Back closed it):
+     * nothing can reopen it, and the entry would cost the next Back a press
+     * that changes nothing (G-17) — step back over it instead. */
+    const behind = book.get(st.n - 1);
+    if (behind && behind.tab === st.tab && !behind.player) {
+      apply({ ...st, player: false });
+      expect = st.n - 1;
+      cur = { n: st.n - 1, ...behind };
+      history.go(-1);
+      return;
+    }
+    history.replaceState({ ...st, player: false }, '');
+    return apply({ ...st, player: false });
+  }
   if (st?.vr) return apply(st);
   // an entry that isn't ours (a #hash, a hand-edited URL): read the path
   const p = parseUrl(location.pathname, location.search);
@@ -241,7 +269,8 @@ function retitle() {
       return;
     }
     if (R.modal === 'player') {
-      const it = P.item;
+      // a start that failed may never have set P.item: name what was asked for
+      const it = P.item || P.loadingItem || P.detailItem;
       const name = it?.Name || '';
       const t = !it ? '' : P.trailer ? name + ' · Trailer' : it.SeriesName ? it.SeriesName + (name ? ' — ' + name : '') : name;
       document.title = t ? t + ' · ' + SITE : SITE;

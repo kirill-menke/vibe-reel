@@ -97,7 +97,7 @@
   class:toast--off={!toastState.show}
   role="status"
   aria-live="polite"
-  aria-hidden={!toastState.show}
+  aria-hidden={__WEB__ ? undefined : !toastState.show}
   bind:this={el}
   onpointerdown={down}
   onpointermove={move}
