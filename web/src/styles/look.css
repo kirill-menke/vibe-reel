@@ -61,3 +61,37 @@
 .tile:focus-visible .tile__frame { box-shadow: 0 0 0 var(--ring-gap) var(--bg), 0 0 0 calc(var(--ring-gap) + var(--ring-w)) var(--ring), var(--shadow-float); }
 .tile:focus-visible .tile__title { color: var(--gold); }
 .catcard:focus-visible { outline-offset: 3px; }
+
+/* ========================================================= forced colors */
+/* Windows High Contrast (C-05): the system repaints backgrounds as Canvas and
+   drops every box-shadow, which took away the tile's focus ring (a shadow),
+   both colours of a switch, the segmented thumb, the current nav tab, the
+   progress fills. Rings become outlines; fills that carry meaning keep it in
+   system colours (forced-color-adjust: none + Highlight / CanvasText). */
+@media (forced-colors: active) {
+  .tile:focus-visible .tile__frame { outline: 3px solid Highlight; outline-offset: 2px; }
+  .tile:focus-visible .tile__title { color: Highlight; }
+  .field--focus .field__box, .search__field--focus .search__bg { outline: 2px solid Highlight; outline-offset: -2px; }
+
+  .switch { forced-color-adjust: none; background: Canvas; box-shadow: inset 0 0 0 1px CanvasText; }
+  .switch::after { background: CanvasText; box-shadow: none; }
+  .switch--on { background: Highlight; box-shadow: none; }
+  .switch--on::after { background: HighlightText; }
+  .switch[disabled] { opacity: 1; box-shadow: inset 0 0 0 1px GrayText; }
+  .switch[disabled]::after { background: GrayText; }
+
+  /* the current / selected one of a set */
+  :is(.seg__opt--active, .wnav__tab--on, .pill--active, .chip--on, .action--on, .wnav__btn--on) {
+    forced-color-adjust: none; background: Highlight; color: HighlightText;
+  }
+  .seg__thumb { display: none; }
+  :is(.seg__opt, .pill, .chip, .action) { border: 1px solid ButtonText; }
+
+  /* progress: a framed track with a Highlight fill */
+  .progress { forced-color-adjust: none; background: Canvas; box-shadow: inset 0 0 0 1px CanvasText; }
+  .progress__fill { forced-color-adjust: none; background: Highlight; }
+  .dots__dot { forced-color-adjust: none; background: GrayText; }
+  .dots__dot--active { background: Highlight; }
+  .ring__track { stroke: GrayText; }
+  .ring__value { stroke: Highlight; }
+}
