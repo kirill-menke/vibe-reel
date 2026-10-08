@@ -8,8 +8,9 @@
    * (lib/urlsync.svelte.js). No page transitions beyond a short fade — a
    * desktop page swap should feel instant. */
   import { onMount, tick } from 'svelte';
-  import { R, S, TABS, top, closeSheet, switchTab, markBooted, takeFocus, pruneFocus } from '$p/lib/router.svelte.js';
-  import { CONFIRM } from '$p/lib/confirm.svelte.js';
+  import { R, S, TABS, top, closeSheet, switchTab, markBooted, takeFocus, pruneFocus, closeLoginModal } from '$p/lib/router.svelte.js';
+  import { CONFIRM, answer } from '$p/lib/confirm.svelte.js';
+  import { keepOrigins } from '$p/lib/zoom.js';
   import { openLogin } from '$lib/nav.svelte.js';
   import { screens } from './screens.js';
   import { sheets } from './sheets.js';
@@ -22,14 +23,15 @@
   import { conn, checkServer } from '$p/lib/conn.svelte.js';
   import { cfg } from '$lib/config.js';
   import { api, onAuthLost } from '$lib/api.js';
-  import { toast } from '$lib/toast.svelte.js';
+  import { toast, toastState, takeUndo, pauseToast, resumeToast } from '$lib/toast.svelte.js';
   import { onReconnect } from '$lib/reconnect.js';
   import { startActivity, stopActivity } from '$lib/activity.svelte.js';
   import { startNews, stopNews } from '$lib/news.svelte.js';
   import '$lib/landed.svelte.js'; // registers its activity-feed listener (the bell's "Ready to watch")
   import { rememberCurrent } from '$lib/account.svelte.js';
   import { meAtBoot } from '$p/lib/mylib.js';
-  import { MODAL } from './lib/modal.svelte.js';
+  import { MODAL, holdInert, releaseInert } from './lib/modal.svelte.js';
+  import { isTyping, isUndoKey, isMac, navInset } from './lib/shellkeys.js';
 
   /* ------------------------------------------------------------ polling ---- */
   /* activity (download badges) and the bell's feed: only while the tab is
@@ -127,14 +129,12 @@
   let readTimer = 0;
   let lastScroll = 0;
   const REST = 150;
-  let solid = $state(false);
   /** @param {Event} e */
   function onScroll(e) {
     const t = e.target;
     if (!(t instanceof Element)) return;
     const r = /** @type {HTMLElement | null} */ (t.closest('.route'));
     if (!r || r.hidden) return;
-    if (t.classList.contains('screen')) solid = t.scrollTop > 24;
     moved.set(t, r.dataset.key);
     lastScroll = performance.now();
     if (!readTimer) readTimer = setTimeout(readMoved, REST);
@@ -160,14 +160,119 @@
     void R.tab, R.stacks, R.modal;
     if (moved.size) flushOffsets();
   });
-  /** @type {{ tab: VR.TabName, key: string } | null} */
+
+  /* The bar turns to glass once the page on screen has scrolled 24 px. An
+   * IntersectionObserver on a 24 px mark at the top of the page's scroller
+   * says so off the scroll path — reading scrollTop in every scroll event
+   * forced the layout a grid's per-frame slice had just dirtied (E-07). */
+  let solid = $state(false);
+  /** @type {IntersectionObserver | null} */
+  let solidIo = null;
+  /** @type {Element | null} */
+  let solidOf = null;
+  /** @param {HTMLElement | null} sc */
+  function watchSolid(sc) {
+    if (sc === solidOf) return;
+    solidIo?.disconnect();
+    solidOf = sc;
+    if (!sc) {
+      solid = false;
+      return;
+    }
+    let mark = sc.querySelector(':scope > .wtopmark');
+    if (!mark) {
+      mark = document.createElement('div');
+      mark.className = 'wtopmark';
+      mark.setAttribute('aria-hidden', 'true');
+      sc.append(mark);
+    }
+    solidIo = new IntersectionObserver((es) => (solid = !es[es.length - 1].isIntersecting), { root: sc });
+    solidIo.observe(mark);
+  }
+
+  /* The fixed bar stays off the page's scrollbar (and its end lines up with
+   * the content's): --wnav-right is the scrollbar's width, measured, or for
+   * an overlay scrollbar that takes no room a strip the thumb can use. */
+  let insetW = -1;
+  /** @param {HTMLElement | null} sc */
+  function measureScrollbar(sc) {
+    if (!sc || !sc.isConnected || sc.closest('[hidden]')) return;
+    const w = sc.offsetWidth - sc.clientWidth;
+    if (w === insetW) return;
+    insetW = w;
+    const { right, pad } = navInset(w);
+    const st = document.documentElement.style;
+    st.setProperty('--wnav-right', right + 'px');
+    st.setProperty('--wnav-right-pad', pad + 'px');
+  }
+  onMount(() => {
+    const again = () => {
+      insetW = -1;
+      measureScrollbar(solidOf instanceof HTMLElement ? solidOf : null);
+    };
+    addEventListener('resize', again);
+    return () => removeEventListener('resize', again);
+  });
+
+  /* Routes mount the first time they show (a deep link to /movie/… must not
+   * mount — and load — the hidden Home or Movies grid under it); once shown,
+   * they stay mounted, so their scroll and data survive Back. */
+  let seen = $state(/** @type {Record<string, true>} */ ({}));
+  $effect.pre(() => {
+    if (!shell) return;
+    const k = top().key;
+    if (!seen[k]) seen[k] = true;
+  });
+
+  /* Focus on a forward navigation (a tile, a crumb, a section, a deep link):
+   * the new page's scroller, so PageDown / Space / End scroll it and a screen
+   * reader lands on the page — unless something on that page already took
+   * focus (Search's field after `/`). A modal opening or closing never moves
+   * it (the player hands focus back itself). */
+  /** @param {HTMLElement | null | undefined} r */
+  function focusPage(r) {
+    const sc = /** @type {HTMLElement | null | undefined} */ (r?.querySelector('.screen'));
+    if (!sc) return;
+    const a = document.activeElement;
+    if (a && a !== document.body && r?.contains(a)) return;
+    if (a && a !== document.body && !a.closest('.wnav') && !a.closest('.route[hidden]') && a.isConnected) return;
+    sc.focus({ preventScroll: true });
+  }
+  /* A page can swap its scroller after it loads (Detail's loading <main>
+   * gives way to MovieDetail's): follow the active route's children, so the
+   * glass, the scrollbar inset and a focus that sat on the old one move over. */
+  /** @type {MutationObserver | null} */
+  let swapMo = null;
+  /** @param {HTMLElement} r */
+  function followRoute(r) {
+    swapMo?.disconnect();
+    swapMo = new MutationObserver(() => {
+      const sc = /** @type {HTMLElement | null} */ (r.querySelector(':scope > .screen'));
+      if (!sc || sc === solidOf || r.hidden) return;
+      const hadFocus = !!solidOf && document.activeElement === document.body;
+      tameScreens(r);
+      watchSolid(sc);
+      measureScrollbar(sc);
+      if (hadFocus && !R.modal && !R.sheet) sc.focus({ preventScroll: true });
+    });
+    swapMo.observe(r, { childList: true });
+  }
+  /** @param {HTMLElement} r  pages' scrollers are focus targets, never Tab stops (Firefox makes every scroller one) */
+  function tameScreens(r) {
+    for (const sc of /** @type {NodeListOf<HTMLElement>} */ (r.querySelectorAll('.screen'))) if (!sc.hasAttribute('tabindex')) sc.tabIndex = -1;
+  }
+  /** @type {{ tab: VR.TabName, key: string, modal: VR.Modal | null } | null} */
   let landed = null;
   $effect(() => {
     void R.tab, R.stacks, R.modal;
     const t = top();
     const tab = R.tab;
+    const modal = R.modal;
     const was = landed;
-    landed = { tab, key: t.key };
+    landed = { tab, key: t.key, modal };
+    const went = !was || was.key !== t.key || was.tab !== tab;
+    // a confirm belongs to the page it was asked on (Delete “…”?): leaving it answers No
+    if (was && went && CONFIRM.req) answer(false);
     tick().then(() => {
       if (!stage) return;
       if (moved.size) flushOffsets();
@@ -185,17 +290,24 @@
             if (node.scrollTop !== st) node.scrollTop = st;
             if (node.scrollLeft !== sl) node.scrollLeft = sl;
           }
-        const sc = /** @type {HTMLElement | null} */ (r.querySelector('.screen'));
-        solid = !!sc && sc.scrollTop > 24;
+        tameScreens(r);
+        const sc = /** @type {HTMLElement | null} */ (r.querySelector(':scope > .screen') || r.querySelector('.screen'));
+        watchSolid(sc);
+        measureScrollbar(sc);
+        followRoute(r);
       }
       for (const k of offsets.keys()) if (!live.has(k)) offsets.delete(k);
+      for (const k of Object.keys(seen)) if (!live.has(k)) delete seen[k];
       pruneFocus(live);
+      keepOrigins(live); // a popped page's tile origin held the whole detached page (E-03)
+      if (!went || R.modal || R.sheet || (was && was.modal !== modal)) return;
+      const r = el(t.key);
       // keyboard: back on a page, focus returns to what opened the next one
-      if (was && was.tab === tab && was.key !== t.key && !R.modal && !R.sheet && !R.stacks[tab].some((x) => x.key === was.key)) {
+      if (was && was.tab === tab && !R.stacks[tab].some((x) => x.key === was.key)) {
         const f = takeFocus(t.key);
-        const r = el(t.key);
-        if (f?.isConnected && r?.contains(f)) f.focus({ preventScroll: true });
+        if (f?.isConnected && r?.contains(f)) return f.focus({ preventScroll: true });
       }
+      focusPage(r);
     });
   });
 
@@ -226,7 +338,88 @@
       e.preventDefault();
       e.stopPropagation();
       closeSheet();
+    } else if (e.key === 'Escape' && R.modal === 'login' && S.addingAccount && !e.defaultPrevented && !CONFIRM.req) {
+      // Esc cancels adding an account, as its Cancel does — back to the avatar
+      e.preventDefault();
+      e.stopPropagation();
+      closeLoginModal();
+      tick().then(() => /** @type {HTMLElement | null} */ (document.querySelector('.wnav .avatarbtn'))?.focus());
     }
+  }
+
+  /* ------------------------------------------------------------ modality ---- */
+  /* A confirm (Delete “…”?, Sign out?) and the add-account Login are modal:
+   * the shell under them is inert (lib/modal.svelte.js) — Tab, the pointer and
+   * screen readers stay in the dialog. Released in the same update that
+   * closes them, before anything hands focus back into the shell. */
+  $effect.pre(() => {
+    if (CONFIRM.req) holdInert('confirm');
+    else releaseInert('confirm');
+  });
+  $effect.pre(() => {
+    if (R.modal === 'login' && shell) holdInert('login');
+    else releaseInert('login');
+  });
+  /* Login: the first empty field takes focus (the server address on a first
+   * start, else the user name), so typing can start at once. */
+  $effect(() => {
+    if (R.modal !== 'login') return;
+    tick().then(() =>
+      requestAnimationFrame(() => {
+        const host = document.querySelector('.wloginhost');
+        if (!host || host.contains(document.activeElement)) return;
+        const fields = /** @type {HTMLInputElement[]} */ ([...host.querySelectorAll('input.field__input')]);
+        (fields.find((f) => !f.value) || fields[0])?.focus();
+      })
+    );
+  });
+
+  /* ---------------------------------------------------------------- undo ---- */
+  /* Ctrl+Z (⌘Z on a Mac) runs the Undo a toast offers ("Added — … · Undo"),
+   * as the TV's Play key does — not while typing (the field's own undo), nor
+   * under Login or a confirm. The toast says so on its button, and stays up
+   * while focus is in it (Tab to it takes a while). */
+  const MAC = isMac();
+  document.documentElement.style.setProperty('--wundo-key', MAC ? '" · ⌘Z"' : '" · Ctrl+Z"');
+  /** @param {KeyboardEvent} e */
+  function onUndo(e) {
+    if (!toastState.undo || e.defaultPrevented || !isUndoKey(e, MAC) || isTyping(e.target)) return;
+    if (R.modal === 'login' || CONFIRM.req) return;
+    e.preventDefault();
+    takeUndo();
+  }
+  /** @param {FocusEvent} e */
+  function onFocusIn(e) {
+    if (/** @type {Element | null} */ (e.target)?.closest?.('.toast')) pauseToast();
+    else clearOfBars(e.target);
+  }
+
+  /* Keyboard focus never ends under the fixed bar or a page's sticky one
+   * (the series' season bar, Search's field), nor cut off at the bottom: the
+   * scrollers' scroll-padding (shell.css) covers the browser's own focus
+   * scrolling, and this corrects what it can't know — a season bar that
+   * wrapped to two rows, Shift+Tab up a page. */
+  const STICKY = '.detail__pills.pills--sticky, .srch--on .search';
+  /** @param {EventTarget | null} t */
+  function clearOfBars(t) {
+    if (!(t instanceof HTMLElement) || !t.matches(':focus-visible')) return;
+    const sc = /** @type {HTMLElement | null} */ (t.closest('.route:not([hidden]) .screen'));
+    if (!sc || t === sc || t.closest(STICKY)) return;
+    const r = t.getBoundingClientRect();
+    const view = sc.getBoundingClientRect();
+    let top = Math.max(view.top, document.querySelector('.wnav')?.getBoundingClientRect().bottom ?? 0);
+    for (const b of sc.querySelectorAll(STICKY)) top = Math.max(top, b.getBoundingClientRect().bottom);
+    const bottom = view.bottom;
+    let dy = 0;
+    if (r.top < top + 4) dy = r.top - top - 12;
+    else if (r.bottom > bottom - 4 && r.height < bottom - top - 24) dy = r.bottom - bottom + 16;
+    if (dy) sc.scrollBy({ top: dy, behavior: 'instant' });
+  }
+  /** @param {FocusEvent} e */
+  function onFocusOut(e) {
+    const from = /** @type {Element | null} */ (e.target)?.closest?.('.toast');
+    const to = /** @type {Element | null} */ (e.relatedTarget)?.closest?.('.toast');
+    if (from && !to) resumeToast();
   }
 
   /* `/` jumps to the Search field from anywhere in the browse UI (as on most
@@ -253,7 +446,8 @@
   }
 </script>
 
-<svelte:window onkeydowncapture={onKey} onkeydown={onSlash} />
+<svelte:window onkeydowncapture={onKey} onkeydown={(e) => (onSlash(e), onUndo(e))} />
+<svelte:document onfocusin={onFocusIn} onfocusout={onFocusOut} />
 
 <!-- a sheet (popover or dialog) is modal: its scrim already takes every click
      outside it, and `inert` keeps Tab / the screen reader in it too — as for
@@ -275,7 +469,7 @@
             hidden={!active}
             inert={!active || !!R.modal || undefined}
           >
-            {#if Screen}<Screen params={route.params} active={active && !R.modal} />{/if}
+            {#if Screen && (active || seen[route.key])}<Screen params={route.params} active={active && !R.modal} />{/if}
           </section>
         {/each}
       {/each}
@@ -287,7 +481,8 @@
 
 {#if R.sheet && SheetComp}
   <div class="wscrim wscrim--{sheetKind}" onclick={closeSheet} role="presentation"></div>
-  <div class="wsheethost wsheethost--{sheetKind} wsheethost--{R.sheet.name}">
+  <!-- a confirm asked from a popover (Sign out?) sits over it: inert under it too -->
+  <div class="wsheethost wsheethost--{sheetKind} wsheethost--{R.sheet.name}" inert={!!CONFIRM.req || undefined}>
     {#key R.sheet.key}<SheetComp params={R.sheet.params} />{/key}
   </div>
 {/if}

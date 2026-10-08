@@ -47,11 +47,13 @@ const REDIRECTS = new Map([
   [path.join(phone, 'lib/gestures.js'), path.join(web, 'lib/gestures.js')],
   [path.join(phone, 'components/Sheet.svelte'), path.join(web, 'components/Sheet.svelte')],
   [path.join(phone, 'components/TopBar.svelte'), path.join(web, 'components/TopBar.svelte')],
-  [path.join(phone, 'components/Rail.svelte'), path.join(web, 'components/Rail.svelte')]
+  [path.join(phone, 'components/Rail.svelte'), path.join(web, 'components/Rail.svelte')],
+  // the pushed pages' header lives in WebNav (the one desktop bar)
+  [path.join(phone, 'components/NavBar.svelte'), path.join(web, 'components/NavBar.svelte')]
 ]);
 /* a variant that wraps the phone original imports it under its real path */
 const WRAPPERS = new Set([path.join(web, 'lib/gestures.js')]);
-const NAMES = /(nav\.svelte|focus|lifecycle|offline\.svelte|homesnap\.svelte|push|restore\.svelte|gestures|Sheet\.svelte|TopBar\.svelte|Rail\.svelte)(\.js)?$/;
+const NAMES = /(nav\.svelte|focus|lifecycle|offline\.svelte|homesnap\.svelte|push|restore\.svelte|gestures|Sheet\.svelte|TopBar\.svelte|Rail\.svelte|NavBar\.svelte)(\.js)?$/;
 
 const moduleRedirects = {
   name: 'web-module-redirects',

@@ -1,3 +1,141 @@
 /* VibeReel Web — lane "shell": the top navigation, the one desktop header
    (back control, page title), the stage and its scrollbars, page gutters,
    route focus and modality, sheets. */
+
+/* ============================================================ the one bar */
+/* WebNav is the only fixed bar. It stops short of the page's scrollbar
+   (App measures it into --wnav-right: the classic gutter, or a strip for an
+   overlay thumb, whose width then comes out of the bar's end padding), so
+   the thumb is never under it and its avatar ends where the content does. */
+.wnav {
+  right: var(--wnav-right, 0px);
+  padding-right: max(8px, calc(var(--gutter) - var(--wnav-right-pad, 0px)));
+}
+/* the page scrollers keep their gutter whether they scroll or not, so the
+   content's right edge doesn't move between a long and a short page */
+.wapp .screen { scrollbar-gutter: stable; }
+/* a thumb you can find: the half-alpha one was ~1.9:1 on the page */
+.wapp .screen { scrollbar-color: rgba(255, 255, 255, 0.32) transparent; }
+.wapp .screen::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.3); }
+.wapp .screen::-webkit-scrollbar-thumb:hover { background: rgba(255, 255, 255, 0.45); }
+
+/* the full wordmark ("Vibe" + gold italic "Reel"), the VR monogram only
+   where room runs short */
+.wnav__mono { display: none; }
+.wnav__mark { align-items: center; }
+.wnav__mark .wordmark--short { font-size: 28px; }
+
+/* the section menu button exists below 640 px only */
+.wnav__menu { display: none; }
+
+/* ---- the trail: "‹ Movies › Pulp Fiction" ---- */
+/* the trail takes the room between the sections and the bell; what it shows
+   follows that room (container queries below), not the window */
+.wnav__trail { display: flex; align-items: center; gap: var(--s-2); min-width: 0; flex: 1 1 0; container: wtrail / inline-size; }
+/* a hairline between the sections and the trail */
+.wnav__trail::before {
+  content: ""; flex: none; width: 1px; height: 22px; background: var(--line);
+  margin-left: calc(clamp(16px, 2.4vw, 40px) / -2); margin-right: calc(clamp(16px, 2.4vw, 40px) / 2 - var(--s-2));
+}
+.wnav__crumbs { display: flex; align-items: center; gap: 2px; min-width: 0; margin: 0; padding: 0; list-style: none; }
+.wnav__crumbitem { display: flex; align-items: center; gap: 2px; min-width: 0; }
+.wnav__crumbitem--earlier { flex: 0 2 auto; }
+.wnav__sep, .wnav__gap { flex: none; padding: 0 2px; color: var(--text-faint); font: 600 15px/1 var(--font-ui); }
+.wnav__back {
+  display: inline-flex; align-items: center; gap: 2px; flex: none; min-width: 0; max-width: 260px;
+  height: 36px; padding: 0 14px 0 8px; border-radius: var(--r-pill);
+  font: 600 15px/1 var(--font-ui); color: var(--text);
+  background: var(--glass-bg);
+  -webkit-backdrop-filter: var(--glass-blur); backdrop-filter: var(--glass-blur);
+  box-shadow: inset 0 0 0 1px var(--glass-line);
+  transition: background-color var(--dur-fast) linear;
+}
+.wnav__back .i { flex: none; width: 18px; height: 18px; }
+.wnav__backto { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.wnav__backword { display: none; }
+.wnav__crumb {
+  min-width: 0; max-width: 220px; height: 36px; padding: 0 8px; border-radius: var(--r-pill);
+  font: 600 15px/1 var(--font-ui); color: var(--text-dim);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  transition: color var(--dur-fast) linear, background-color var(--dur-fast) linear;
+}
+.wnav__crumb--here { color: var(--text); max-width: min(40vw, 520px); }
+/* the page's own title joins the trail once the page has scrolled past it
+   (fades; nothing before it moves); hidden, it is no Tab stop either */
+.wnav__crumbitem--here { flex: 0 1 auto; opacity: 0; visibility: hidden; transition: opacity var(--dur-fast) linear, visibility 0s linear var(--dur-fast); }
+.wnav__crumbitem--here.wnav__crumbitem--on { opacity: 1; visibility: visible; transition: opacity var(--dur-fast) linear, visibility 0s; }
+.wnav__trailing { flex: none; display: flex; align-items: center; }
+/* little room: the page title goes first, then the earlier pages, then the
+   back control's words ("‹ Back") */
+@container wtrail (max-width: 360px) { .wnav__crumbitem--earlier { display: none; } }
+@container wtrail (max-width: 240px) { .wnav__crumbitem--here { display: none; } .wnav__back { max-width: 100%; } }
+@container wtrail (max-width: 110px) { .wnav__backto { display: none; } .wnav__backword { display: inline; } }
+.wnav__end { flex: none; }
+
+@media (hover: hover) and (pointer: fine) {
+  .wnav__tab--on:hover { background: rgba(230, 180, 80, 0.22); color: var(--gold); }
+  .wnav__back:hover { background: rgba(255, 255, 255, 0.16); }
+  .wnav__crumb:hover { color: var(--text); background: rgba(255, 255, 255, 0.08); }
+  .wnav__menu:hover { background: rgba(255, 255, 255, 0.08); }
+}
+
+/* ---- narrower windows ---- */
+@media (max-width: 900px) {
+  .wnav__word { display: none; }
+  .wnav__mono { display: inline; }
+}
+/* below ~640 px (a 1280 px window at 200 %, a phone-sized one): the four
+   sections fold into a menu, the trail into "‹ Back" */
+@media (max-width: 639.98px) {
+  .wnav { gap: var(--s-2); padding-left: 12px; padding-right: max(8px, calc(12px - var(--wnav-right-pad, 0px))); }
+  .wnav__menu {
+    display: inline-grid; place-items: center; flex: none;
+    width: 40px; height: 40px; border-radius: var(--r-pill); color: var(--text);
+  }
+  .wnav__tabs {
+    display: none; position: absolute; top: calc(var(--wnav-h) - 4px); left: 12px; z-index: 2;
+    flex-direction: column; align-items: stretch; gap: 2px; min-width: 180px; padding: 6px;
+    border-radius: var(--r-card, 14px); background: var(--surface-1);
+    box-shadow: 0 16px 40px rgba(0, 0, 0, 0.55), inset 0 0 0 1px var(--line);
+  }
+  .wnav--menu .wnav__tabs { display: flex; }
+  .wnav__tab { justify-content: flex-start; height: 40px; }
+  .wnav__trail::before { display: none; }
+  .wnav__crumbitem--earlier, .wnav__crumbitem--here, .wnav__backto { display: none; }
+  .wnav__backword { display: inline; }
+  .wnav__end { gap: 4px; }
+}
+/* a short window (a laptop at 200 %+): a lower bar */
+@media (max-height: 420px) {
+  :root { --wnav-h: 48px; }
+  .wnav__back, .wnav__crumb, .wnav__tab { height: 32px; }
+}
+
+/* ======================================================= pages under it */
+/* Pushed pages draw no bar of their own (NavBar → WebNav's trail): the room
+   their spacer kept for it is only the navigation's, and every page title
+   starts at the tab roots' y (the bar + 16). */
+.wapp .spacer-navbar { height: calc(var(--wnav-h) + var(--s-2)); }
+/* the series' season bar sticks right under the navigation */
+.wapp .detail__pills { top: var(--wnav-h); }
+/* Library's compact band repeated "Movies · Recently added" under the
+   navigation, which already says Movies */
+.wapp .lib__bar { display: none; }
+
+/* Focus scrolling clears the fixed bar (and the season bar on a series), and
+   doesn't park the focused element on the bottom edge either. */
+.wapp .screen { scroll-padding-top: calc(var(--wnav-h) + var(--s-3)); scroll-padding-bottom: var(--s-6); }
+.wapp .screen:has(> * .detail__pills, > .detail__pills) { scroll-padding-top: calc(var(--wnav-h) + var(--wpills-h, 56px) + var(--s-3)); }
+
+/* the mark App's IntersectionObserver watches: the page has scrolled 24 px
+   once it is out of view (the bar turns to glass) */
+.wtopmark { position: absolute; top: 0; left: 0; width: 1px; height: 24px; pointer-events: none; visibility: hidden; }
+
+/* ================================================================ toast */
+/* The toast's live region stays in the accessibility tree while idle (only
+   its text goes), so a new message is a change inside a region that already
+   exists — and is announced. */
+.toast--off { visibility: visible; }
+.toast--off > * { visibility: hidden; }
+/* its Undo names the shortcut (App: Ctrl+Z, ⌘Z on a Mac) */
+.toast__action::after { content: var(--wundo-key, ""); font-weight: 400; color: var(--text-faint); }

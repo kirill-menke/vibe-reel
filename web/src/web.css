@@ -121,8 +121,7 @@ html, body { overflow: hidden; }
 }
 .wnav__skip:focus-visible { opacity: 1; pointer-events: auto; outline-color: var(--text); }
 .wnav__mark { display: flex; align-items: baseline; gap: 10px; color: var(--text); text-decoration: none; flex: none; }
-.wnav__mark .wordmark--short { font-size: 30px; }
-.wnav__name { font: 400 26px/1 var(--font-display); letter-spacing: -0.01em; color: var(--text); }
+.wnav__mark .wordmark { font-size: 28px; line-height: 1; }
 .wnav__tabs { display: flex; align-items: center; gap: 4px; }
 .wnav__tab {
   display: inline-flex; align-items: center; gap: 6px;
@@ -131,8 +130,7 @@ html, body { overflow: hidden; }
   transition: color var(--dur-fast) linear, background-color var(--dur-fast) linear;
 }
 .wnav__tab .i { width: 17px; height: 17px; }
-.wnav__tab--on { color: var(--text); background: rgba(255, 255, 255, 0.10); }
-.wnav__tab--on::after { content: ""; }
+.wnav__tab--on { color: var(--gold); background: var(--gold-soft); }
 .wnav__end { margin-left: auto; display: flex; align-items: center; gap: var(--s-2); }
 .wnav__btn--on { background: var(--gold-soft); border-radius: var(--r-pill); }
 /* on Settings / My library no section is current (WebNav): the avatar wears
@@ -143,11 +141,8 @@ html, body { overflow: hidden; }
 
 /* the phone's top bars (TopBar variant: a large title only) */
 .wtopbar { padding: calc(var(--safe-top) + var(--s-4)) var(--gutter) var(--s-2); min-height: 0; }
-.wtopbar.topbar--overlay { position: static; }
 .wtopbar .topbar__title { font: var(--t-large); }
-/* the pushed pages' bar (back button, title once solid): its top padding is
-   --safe-top, so it sits right under the navigation */
-.navbar { padding-left: var(--gutter); padding-right: var(--gutter); }
+/* (the pushed pages' bar is WebNav's trail on the desktop: components/NavBar.svelte) */
 
 /* offline banner and toast sit bottom-centre */
 .banner { left: 50%; right: auto; width: 480px; margin-left: -240px; bottom: var(--s-6); }
