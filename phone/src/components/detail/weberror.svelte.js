@@ -13,6 +13,7 @@
  * shell keeps every route of every tab mounted (hidden ones display: none), and
  * a shared screen has no handle on its own root element. */
 import { mount, unmount } from 'svelte';
+import LoadError from '../LoadError.svelte';
 
 /** @param {string} sel @returns {HTMLElement | null} */
 export function visibleScreen(sel) {
@@ -29,7 +30,6 @@ export function visibleScreen(sel) {
  * @param {{ title: string, error: unknown, retry: () => Promise<unknown> }} o
  * @returns {Promise<PageError>} */
 export async function pageError(screen, { title, error, retry }) {
-  const { default: LoadError } = await import('../LoadError.svelte');
   const host = document.createElement('div');
   host.className = 'wpage__err';
   screen.append(host);
