@@ -178,32 +178,12 @@ html, body { overflow: hidden; }
 .wrail__edge[hidden] { display: none; }
 @media (hover: hover) { .wrail__wrap:hover .wrail__edge { opacity: 1; } }
 
-/* Home hero: wider type column, actions in a row */
-.hero__body { max-width: min(760px, 52vw); padding-left: var(--gutter); padding-right: var(--gutter); }
-.hero__scrim {
-  background:
-    linear-gradient(90deg, rgba(10, 10, 12, 0.78) 0%, rgba(10, 10, 12, 0.35) 38%, rgba(10, 10, 12, 0) 62%),
-    linear-gradient(180deg, rgba(10, 10, 12, 0.5) 0%, rgba(10, 10, 12, 0) 18%, rgba(10, 10, 12, 0) 55%, rgba(10, 10, 12, 0.85) 88%, #0a0a0c 100%);
-}
-.hero__meta, .hero__overview { max-width: 640px; }
-
-/* Home hero paddles (lib/heroarrows.js): shown while the pointer is over it */
-.whero__btn {
-  position: absolute; top: 50%; z-index: 5; translate: 0 -50%;
-  display: grid; place-items: center; width: 52px; height: 52px; border-radius: var(--r-pill);
-  color: var(--text); background: var(--glass-bg-strong); box-shadow: inset 0 0 0 1px var(--glass-line);
-  opacity: 0; transition: opacity var(--dur-fast) linear, background-color var(--dur-fast) linear;
-}
-.whero__btn .i { width: 28px; height: 28px; }
-.whero__btn--l { left: max(12px, calc(var(--gutter) / 3)); }
-.whero__btn--r { right: max(12px, calc(var(--gutter) / 3)); }
-.homehero:hover .whero__btn, .whero__btn:focus-visible { opacity: 1; }
-@media (hover: hover) { .whero__btn:hover { background: rgba(40, 40, 46, 0.9); } }
+/* Home hero: styles/home.css */
 
 /* title pages: the backdrop is a wide hero; over its lower edge a text
    column (title, meta, actions, overview) no wider than reads well, with the
    primary button and the secondary actions in one row instead of stacked */
-.detail__hero .art img, .hero .art img { object-position: 50% 25%; }
+.detail__hero .art img { object-position: 50% 25%; }
 .detail__scrim {
   background:
     linear-gradient(90deg, rgba(10, 10, 12, 0.72) 0%, rgba(10, 10, 12, 0.25) 40%, rgba(10, 10, 12, 0) 65%),
@@ -698,16 +678,6 @@ html, body { overflow: hidden; }
    everything jumped up when the real hero replaced it. A hero, skeleton or
    not, runs under the navigation. */
 .wapp .home.screen--below-topbar:has(> .hero) { padding-top: 0; }
-
-/* Home hero paddles in a narrow window: the text column starts at twice the
-   gutter (58 px at 900), and the 52-px paddle reached 64 — it sat on the
-   eyebrow and the title. A smaller one stays in the margin. */
-@media (max-width: 1000px) {
-  .whero__btn { width: 44px; height: 44px; }
-  .whero__btn .i { width: 24px; height: 24px; }
-  .whero__btn--l { left: 8px; }
-  .whero__btn--r { right: 8px; }
-}
 
 /* the quick-add "+" on a poster (Trending, Search, charts) answers the
    pointer before the click: gold, like the action it starts */
