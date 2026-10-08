@@ -62,44 +62,58 @@
     if (Math.abs(dx) >= 1) t.scrollBy({ left: dx, behavior: smooth() });
   }
 
-  /* Keyboard: with a tile focused, ← / → step to the neighbouring tile (Tab
-   * still walks everything; ↑ / ↓ keep scrolling the page). The track glides
-   * to it — a bare focus() would jump, and land it flush against the edge
-   * instead of inside the gutter. Home and Search wrap a
-   * tile in a cell (.home__cell); the cells are the track's children. */
+  /* A cell's own stop: the track's child itself when it takes focus (a cast
+   * member's button), else the first focusable inside it (Home and Search wrap
+   * a tile in a .home__cell). A nested control — the quick-add "+", the ⋯ —
+   * comes after its tile in the cell and is never the cell's stop. */
+  const STOP = 'a[href], button:not(:disabled), [tabindex]:not([tabindex="-1"])';
+  /** @param {Element | undefined} cell @returns {HTMLElement | null} */
+  const stopOf = (cell) => /** @type {HTMLElement | null} */ (!cell ? null : cell.matches(STOP) ? cell : cell.querySelector(STOP));
+  /** the target's cell when the target is that cell's stop @param {EventTarget | null} t */
+  function cellOf(t) {
+    const tr = track;
+    if (!tr || !(t instanceof HTMLElement)) return -1;
+    const cells = tr.children;
+    for (let i = 0; i < cells.length; i++) if (cells[i].contains(t)) return stopOf(cells[i]) === t ? i : -1;
+    return -1;
+  }
+
+  /* Keyboard: with a tile (or a cast member) focused, ← / → step to the
+   * neighbouring cell (Tab still walks everything; ↑ / ↓ keep scrolling the
+   * page). The track glides to it — a bare focus() would jump, and land it
+   * flush against the edge instead of inside the gutter. */
   let stepping = false;
   /** @param {KeyboardEvent} e */
   function onKey(e) {
     if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return;
     if (e.defaultPrevented || e.altKey || e.ctrlKey || e.metaKey || e.shiftKey) return;
     const t = track;
-    const tile = /** @type {HTMLElement | null} */ (e.target instanceof Element ? e.target : null);
-    if (!t || !tile?.matches('.tile')) return;
-    const cells = [...t.children];
-    const i = cells.findIndex((c) => c.contains(tile));
-    const next = cells[i + (e.key === 'ArrowLeft' ? -1 : 1)];
-    const to = /** @type {HTMLElement | null | undefined} */ (next?.matches('.tile') ? next : next?.querySelector('.tile'));
+    const i = cellOf(e.target);
+    if (!t || i < 0) return;
+    const to = stopOf(t.children[i + (e.key === 'ArrowLeft' ? -1 : 1)]);
     e.preventDefault();
-    if (i < 0 || !to) return;
+    if (!to) return;
     stepping = true;
     to.focus({ preventScroll: true, focusVisible: true }); // a key moved it: the ring shows
     stepping = false;
     reveal(to);
   }
 
-  /* Tab (or Shift+Tab) onto a tile: the same glide as ← / →. Keyboard focus
+  /* Tab (or Shift+Tab) onto a cell: the same glide as ← / →. Keyboard focus
    * only — a click focuses the tile too, and the track mustn't move under the
    * pointer (a right-click opens the context menu on it). */
   /** @param {FocusEvent} e */
   function onFocusIn(e) {
     const tile = e.target instanceof HTMLElement ? e.target : null;
-    if (stepping || !tile?.matches('.tile') || !tile.matches(':focus-visible')) return;
+    if (stepping || !tile || cellOf(tile) < 0 || !tile.matches(':focus-visible')) return;
     // after the browser's own focus scroll (which only acts on a tile that
     // is wholly out of view)
     requestAnimationFrame(() => document.activeElement === tile && reveal(tile));
   }
 
   const name = $derived(label || (title && sub ? title + ' ' + sub : title));
+  const leftName = $derived(name ? 'Scroll ' + name + ' left' : 'Scroll left');
+  const rightName = $derived(name ? 'Scroll ' + name + ' right' : 'Scroll right');
 </script>
 
 <section class="rail wrail {cls}" class:wrail--scrolls={!(atStart && atEnd)} aria-label={name || undefined}>
@@ -111,15 +125,17 @@
       <!-- mouse affordances: not Tab stops (← / → on a tile page the track
            from the keyboard, and paging left focus on the button while the
            tiles moved away); named after the rail for a screen reader -->
-      <button type="button" class="wrail__btn" tabindex="-1" aria-label={name ? 'Scroll ' + name + ' left' : 'Scroll left'} disabled={atStart} onclick={() => page(-1)}><Icon name="chevron-left" /></button>
-      <button type="button" class="wrail__btn" tabindex="-1" aria-label={name ? 'Scroll ' + name + ' right' : 'Scroll right'} disabled={atEnd} onclick={() => page(1)}><Icon name="chevron-right" /></button>
+      <button type="button" class="wrail__btn" tabindex="-1" aria-label={leftName} disabled={atStart} onclick={() => page(-1)}><Icon name="chevron-left" /></button>
+      <button type="button" class="wrail__btn" tabindex="-1" aria-label={rightName} disabled={atEnd} onclick={() => page(1)}><Icon name="chevron-right" /></button>
     </div>
   </div>
   <div class="wrail__wrap">
     <!-- tabindex -1: Firefox makes a scrolling track a Tab stop of its own (an
          empty one between the ◀ ▶ and the first tile); the tiles are the stops -->
     <div class="rail__track" bind:this={track} onkeydown={onKey} onfocusin={onFocusIn} role="presentation" tabindex="-1">{@render children?.()}</div>
-    <button type="button" class="wrail__edge wrail__edge--l" tabindex="-1" aria-hidden="true" hidden={atStart} onclick={() => page(-1)}><Icon name="chevron-left" /></button>
-    <button type="button" class="wrail__edge wrail__edge--r" tabindex="-1" aria-hidden="true" hidden={atEnd} onclick={() => page(1)}><Icon name="chevron-right" /></button>
+    <!-- hover paddles: out of the Tab order and the accessibility tree (the
+         head's buttons say the same); a mouse gets the head's words as a tooltip -->
+    <button type="button" class="wrail__edge wrail__edge--l" tabindex="-1" aria-hidden="true" title={leftName} hidden={atStart} onclick={() => page(-1)}><Icon name="chevron-left" /></button>
+    <button type="button" class="wrail__edge wrail__edge--r" tabindex="-1" aria-hidden="true" title={rightName} hidden={atEnd} onclick={() => page(1)}><Icon name="chevron-right" /></button>
   </div>
 </section>
