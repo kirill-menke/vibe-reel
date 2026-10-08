@@ -304,6 +304,21 @@ html, body { overflow: hidden; }
 .actsheet__btn::before { display: none; }
 .actsheet__btn--danger { background: var(--danger-soft); color: var(--danger); }
 .actsheet__btn--cancel { order: 1; background: var(--surface-2); color: var(--text); }
+/* (Tab follows this order, not the DOM's: web/src/lib/confirmtab.js) */
+/* never taller than the window (S1-2): at 320×200 (400 % zoom) the centred
+   card ran from y −63 to 263, its title above the window and Delete below
+   it, and nothing scrolled. The card now scrolls as a whole; in a short
+   window it hangs from the top, and the question scrolls inside it while
+   the answers stay in view under it — the destructive one is never off
+   screen. */
+.actsheet__box { max-height: calc(100% - 16px); overflow-y: auto; overscroll-behavior: contain; }
+@media (max-height: 420px) {
+  .actsheet__box { top: 8px; translate: none; padding: var(--s-4); gap: var(--s-2) var(--s-3); }
+  .actsheet__head {
+    max-height: calc(100vh - 16px - 2 * var(--s-4) - 44px - var(--s-2));
+    overflow-y: auto; overscroll-behavior: contain; padding-bottom: var(--s-2);
+  }
+}
 
 /* Login: a card centred in the window instead of a phone screen at the top
    of an empty page — a faint gold glow behind it, as the hero art would be */
