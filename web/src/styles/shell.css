@@ -100,6 +100,9 @@
   }
   .wnav--menu .wnav__tabs { display: flex; }
   .wnav__tab { justify-content: flex-start; height: 40px; }
+  /* one left edge for the four labels: Search's glyph pushed its label
+     22 px right of Home / Movies / Shows (S1-9) */
+  .wnav__tab .i { display: none; }
   .wnav__trail::before { display: none; }
   .wnav__crumbitem--earlier, .wnav__crumbitem--here, .wnav__backto { display: none; }
   .wnav__backword { display: inline; }
