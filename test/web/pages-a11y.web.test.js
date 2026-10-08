@@ -96,3 +96,13 @@ describe('initPagesA11y', () => {
     expect(b.hasAttribute('role')).toBe(false);
   });
 });
+
+describe('the pending page’s Cancel pill', () => {
+  it('is named "Cancel download"; other actions keep their names', () => {
+    document.body.innerHTML = '<div class="detail__body"><div class="actions"><button class="action"><span class="action__icon"></span>Trailer</button><button class="action"><span class="action__icon"></span>Cancel</button></div></div>';
+    fixPages(document.body);
+    const [trailer, cancel] = document.querySelectorAll('.action');
+    expect(cancel.getAttribute('aria-label')).toBe('Cancel download');
+    expect(trailer.hasAttribute('aria-label')).toBe(false);
+  });
+});

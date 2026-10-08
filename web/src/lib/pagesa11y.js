@@ -8,6 +8,8 @@
  *    progressbar named "Download", its value the % (none = indeterminate) and
  *    its text the visible line; not disabled, so a page can focus it (after
  *    Add, B-15), but out of the Tab order (tabindex −1).
+ *  - The pending page's "Cancel" pill names its object: "Cancel download"
+ *    (the visible word stays short — the action row fits one line at 1440).
  *  - Initials drawn under a photo (cast circles, the person page) and the
  *    avatar initial in a row that names the account joined the accessible
  *    names: "JT John Travolta Vincent Vega", "K kirill Signed in" (C-12). */
@@ -35,6 +37,7 @@ export function statusAsProgress(el) {
 export function fixPages(root) {
   for (const el of root.querySelectorAll('.btn--status')) statusAsProgress(/** @type {HTMLElement} */ (el));
   for (const el of root.querySelectorAll('.cast__initials:not([aria-hidden]), .row .avatar:not([aria-hidden])')) el.setAttribute('aria-hidden', 'true');
+  for (const el of root.querySelectorAll('.detail__body .action:not([aria-label])')) if (el.textContent?.trim() === 'Cancel') el.setAttribute('aria-label', 'Cancel download');
 }
 
 /** @param {MutationRecord[]} recs */
