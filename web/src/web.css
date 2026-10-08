@@ -409,11 +409,8 @@ html, body { overflow: hidden; }
 .wplayer .pload__body { width: min(60%, 760px); }
 .wplayer .pload__title { font: var(--t-title); }
 
-/* context menus (right-click / long-press on a tile): a centred column at the
-   tile's height instead of the phone's gutter-to-gutter card */
+/* context menus: see styles/ctx.css (a plain menu at the pointer / the ⋯) */
 .ctx { position: fixed; }
-.ctx__stack { left: 50%; right: auto; width: min(400px, calc(100vw - 2 * var(--gutter))); translate: -50% 0; }
-.ctx__preview:not(.ctx__preview--card) { margin-left: 0 !important; align-self: center; max-width: 100%; }
 
 /* settings-like pages read as a column, not a 2560-px-wide list */
 .wapp .mylib > * { max-width: 900px; }
@@ -630,11 +627,6 @@ html, body { overflow: hidden; }
 .wapp .person__bio { padding-left: calc(var(--gutter) + var(--person-photo) + var(--s-8)); }
 .wapp .person__bio .overview-wrap { max-width: 75ch; }
 @media (max-width: 700px) { .wapp .person__bio { padding-left: var(--gutter); } }
-
-/* Context menu (right-click on an episode, a season, a cast member): the list
-   hung off the left edge of a wider preview card; centred under it instead
-   (the phone aligns it to the pressed side by an inline style) */
-.ctx .ctx__menu { align-self: center !important; transform-origin: 50% 0 !important; }
 
 /* ========================================================== lane: browse */
 /* Home, Library, Search, Chart: tiles, rails and grids under a mouse and a

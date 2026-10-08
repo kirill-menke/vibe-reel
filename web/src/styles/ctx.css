@@ -1,3 +1,64 @@
 /* VibeReel Web — lane "ctx": context menus (pointer-anchored, keyboard), the
    visible "more actions" button on tiles, episode rows and season pills, tile
-   semantics. */
+   semantics. Logic: lib/ctxmenu.js (placement, keys, focus), lib/ctxmore.js
+   (the ⋯ buttons, tile roles/descriptions), lib/gestures.js (the hook). */
+
+/* ------------------------------------------------------------ the menu
+   A plain menu where it was asked for — at the pointer, or against the ⋯ /
+   the focused control — instead of the phone's lifted preview over a blurred
+   page. ctxmenu.js sets --wctx-x/-y (clamped into the viewport) and
+   --wctx-origin (the corner it grows from) on .ctx before the first paint;
+   !important beats the phone's inline `top` and alignment styles. */
+.ctx__backdrop { background: transparent; -webkit-backdrop-filter: none; backdrop-filter: none; }
+.ctx__stack {
+  left: var(--wctx-x, 50%) !important; top: var(--wctx-y, 30%) !important; right: auto;
+  width: auto; translate: none;
+}
+.ctx__preview { display: none !important; }
+.ctx .ctx__menu {
+  align-self: flex-start !important; transform-origin: var(--wctx-origin, left top) !important;
+  max-height: calc(100vh - 16px); overflow-y: auto; overscroll-behavior: contain;
+}
+/* desktop rows: denser than the phone's 44-px tap targets */
+.ctx .ctx__item { min-height: 40px; padding-block: 8px; }
+/* the item under the pointer / with keyboard focus — one look for both (the
+   pointer focuses the item it is over, so the keys continue from there). The
+   ring sits inside the item: the menu clips its overflow. */
+.ctx .ctx__item:not(:disabled):is(:hover, :focus-visible) { background: rgba(255, 255, 255, 0.1); transition-duration: 0s; }
+.ctx .ctx__item:focus-visible { outline-offset: -2px; border-radius: 6px; }
+
+/* ------------------------------------------------------------ the ⋯ */
+.ctxmore {
+  display: grid; place-items: center; flex: none;
+  width: 32px; height: 32px; border-radius: var(--r-pill); color: var(--text);
+}
+.ctxmore .i { width: 20px; height: 20px; }
+
+/* tiles: glass, at the art's top-right, on hover / keyboard focus / while its
+   menu is up (over the Watched tick or download count, which steps aside) */
+.ctxmore--tile {
+  position: absolute; top: 6px; right: 6px; z-index: calc(var(--z-media-ui) + 1);
+  background: var(--chip-bg); -webkit-backdrop-filter: var(--glass-blur); backdrop-filter: var(--glass-blur);
+  box-shadow: inset 0 0 0 1px var(--glass-line);
+  opacity: 0; pointer-events: none; transition: opacity var(--dur-fast) linear, background-color var(--dur-fast) linear;
+}
+.tile:is(:hover, :focus-within) .ctxmore--tile, .ctxmore--tile[aria-expanded="true"] { opacity: 1; pointer-events: auto; }
+.tile:is(:hover, :focus-within):has(.ctxmore--tile) .tile__corner,
+.tile:has(.ctxmore--tile[aria-expanded="true"]) .tile__corner { opacity: 0; }
+@media (hover: none) { .ctxmore--tile { opacity: 1; pointer-events: auto; } }
+
+/* episode rows: a permanent trailing button in the card's top-right corner */
+.episode > .ctxmore--episode { position: absolute; top: var(--s-2); right: var(--s-2); z-index: 1; color: var(--text-dim); }
+.episode:has(> .ctxmore--episode) .episode__head { padding-right: 36px; }
+
+/* season pills: one button right after the pills, for the selected season */
+.detail__pills:has(> .ctxmore) { display: flex; align-items: center; }
+.detail__pills:has(> .ctxmore) > .pills { flex: 0 1 auto; min-width: 0; padding-right: var(--s-2); }
+.detail__pills > .ctxmore--season { margin-right: var(--gutter); color: var(--text-dim); background: var(--surface-2); }
+
+@media (hover: hover) and (pointer: fine) {
+  .ctxmore--tile:hover { background: var(--surface-3); }
+  .ctxmore--episode:hover, .ctxmore--season:hover { color: var(--text); background: var(--surface-3); }
+  .ctxmore--episode:hover { background: rgba(255, 255, 255, 0.12); }
+}
+.ctxmore[aria-expanded="true"] { color: var(--text); }
