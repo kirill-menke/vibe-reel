@@ -155,7 +155,9 @@
 .chip { height: var(--btn-h-sm); }
 .wrail__btn { width: 36px; height: 36px; }
 .hero__actions > .btn { padding: 0 var(--s-8); }
-.hero__actions > .btn--primary { min-width: 200px; }
+/* …in a window with room for it: at 320 px (400 % zoom) a 200-px Resume
+   pushed Details past the edge (S1-1) */
+@media (min-width: 640px) { .hero__actions > .btn--primary { min-width: 200px; } }
 
 /* ================================================================ states */
 /* Pressed (F-06): every button-like control gives under the mouse, as the
