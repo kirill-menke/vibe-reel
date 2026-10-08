@@ -38,6 +38,62 @@ const READY_TIMEOUT_MS = 45000;   // yt-dlp resolves in ~2 s; this is "YouTube s
 
 const sleep = (/** @type {number} */ ms) => new Promise((r) => setTimeout(r, ms));
 
+/* Desktop: a request to reel-api that hangs (headers or body) becomes an error
+ * after this long, named 'TrailerStall' — the player's "This trailer stopped
+ * loading" card with Retry, not a loading card or a ring forever. A 4K segment
+ * is a few MB, so even a slow link that is still delivering finishes well
+ * inside it; a live stall while playing is the watchdog's (30 s, player). */
+const FETCH_DEADLINE_MS = 60000;
+/**
+ * @template T
+ * @param {string} url @param {RequestInit} init @param {AbortSignal} outer the run's abort
+ * @param {(r: Response) => Promise<T>} read reads the answer, inside the deadline
+ * @returns {Promise<T>}
+ */
+async function fetchWithin(url, init, outer, read) {
+  const c = new AbortController();
+  const off = () => c.abort();
+  if (outer.aborted) c.abort();
+  outer.addEventListener('abort', off);
+  let late = false;
+  const t = setTimeout(() => {
+    late = true;
+    c.abort();
+  }, FETCH_DEADLINE_MS);
+  try {
+    return await read(await fetch(url, { ...init, signal: c.signal }));
+  } catch (e) {
+    if (!late) throw e;
+    const err = new Error('no answer from the server for ' + FETCH_DEADLINE_MS / 1000 + ' s (' + url.slice(url.lastIndexOf('/') + 1) + ')');
+    err.name = 'TrailerStall';
+    throw err;
+  } finally {
+    clearTimeout(t);
+    outer.removeEventListener('abort', off);
+  }
+}
+/* (desktop) the status answer, as fetchJson reads it below */
+/** @param {Response} r @returns {Promise<Reel.TrailerStatus>} */
+async function readJson(r) {
+  const b = await r.json().catch(/** @returns {null} */ () => null);
+  if (!r.ok || !b) throw new Error((b && (b.detail || b.error)) || 'HTTP ' + r.status);
+  return b;
+}
+/* (desktop) the playlist's segments, as playlist() reads them below */
+/** @param {string} text @returns {VR.HlsPlaylist} */
+function parsePlaylist(text) {
+  /** @type {VR.HlsSegment[]} */
+  const segs = [];
+  const re = /#EXTINF:([\d.]+),?\s*\n(s\d+\.m4s)/g;
+  let t = 0;
+  for (let m; (m = re.exec(text)); ) {
+    const d = parseFloat(m[1]);
+    segs.push({ start: t, end: t + d, name: m[2] });
+    t += d;
+  }
+  return { segs, complete: text.includes('#EXT-X-ENDLIST') };
+}
+
 /* iPhone: iOS 17.1+ has no MediaSource on iPhone, only ManagedMediaSource —
  * the same API plus two rules: the page must turn remote playback off on the
  * <video> (startPlayback does, from `managed` below), and the UA says when it
@@ -73,6 +129,7 @@ export function createTrailerSource(id, { onFail, onInfo, onSubs, position, jump
 
   /** @param {string} path @param {string} [method] @returns {Promise<Reel.TrailerStatus>} */
   const fetchJson = async (path, method = 'GET') => {
+    if (__PHONE__ && __WEB__) return fetchWithin(base + path, { method, headers: mlHeaders(), cache: 'no-store' }, ac.signal, readJson);
     const r = await fetch(base + path, { method, headers: mlHeaders(), signal: ac.signal, cache: 'no-store' });
     const b = await r.json().catch(/** @returns {null} */ () => null);
     if (!r.ok || !b) throw new Error((b && (b.detail || b.error)) || 'HTTP ' + r.status);
@@ -80,6 +137,11 @@ export function createTrailerSource(id, { onFail, onInfo, onSubs, position, jump
   };
   /** @param {string} name @returns {Promise<ArrayBuffer>} */
   const fetchBuf = async (name) => {
+    if (__PHONE__ && __WEB__)
+      return fetchWithin(base + '/' + name, { headers: mlHeaders() }, ac.signal, async (r) => {
+        if (!r.ok) throw new Error(name + ': HTTP ' + r.status);
+        return r.arrayBuffer();
+      });
     const r = await fetch(base + '/' + name, { headers: mlHeaders(), signal: ac.signal });
     if (!r.ok) throw new Error(name + ': HTTP ' + r.status);
     return r.arrayBuffer();
@@ -87,6 +149,11 @@ export function createTrailerSource(id, { onFail, onInfo, onSubs, position, jump
   /* segments with their start/end on the media timeline */
   /** @returns {Promise<VR.HlsPlaylist>} */
   const playlist = async () => {
+    if (__PHONE__ && __WEB__)
+      return parsePlaylist(await fetchWithin(base + '/index.m3u8', { headers: mlHeaders(), cache: 'no-store' }, ac.signal, async (r) => {
+        if (!r.ok) throw new Error('playlist: HTTP ' + r.status);
+        return r.text();
+      }));
     const r = await fetch(base + '/index.m3u8', { headers: mlHeaders(), signal: ac.signal, cache: 'no-store' });
     if (!r.ok) throw new Error('playlist: HTTP ' + r.status);
     const text = await r.text();
@@ -139,6 +206,12 @@ export function createTrailerSource(id, { onFail, onInfo, onSubs, position, jump
       subsDone = true;
       if (!x.subs || !onSubs) return;
       try {
+        if (__PHONE__ && __WEB__) {
+          // a hung subtitle fetch gives up (no subtitles) instead of holding the start
+          const vtt = await fetchWithin(base + '/subs.vtt', { headers: mlHeaders() }, ac.signal, async (r) => (r.ok ? r.text() : null));
+          if (vtt != null && !dead) onSubs(vtt, x.subs);
+          return;
+        }
         const r = await fetch(base + '/subs.vtt', { headers: mlHeaders(), signal: ac.signal });
         if (r.ok && !dead) onSubs(await r.text(), x.subs);
       } catch {}
