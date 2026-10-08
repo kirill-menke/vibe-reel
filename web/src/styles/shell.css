@@ -116,8 +116,15 @@
    their spacer kept for it is only the navigation's, and every page title
    starts at the tab roots' y (the bar + 16). */
 .wapp .spacer-navbar { height: calc(var(--wnav-h) + var(--s-2)); }
-/* the series' season bar sticks right under the navigation */
+/* the series' season bar sticks right under the navigation — except in a
+   short window (a laptop at 200 %+), where the wrapped pills plus the bar
+   held a third of the height (720×450: 64 + 96 px) and at 320×200 the
+   whole of it: there it scrolls with the page */
 .wapp .detail__pills { top: var(--wnav-h); }
+@media (max-height: 600px) {
+  .wapp .detail__pills { position: relative; }
+  .wapp .screen:has(> * .detail__pills, > .detail__pills) { scroll-padding-top: calc(var(--wnav-h) + var(--s-3)); }
+}
 /* Library's compact band repeated "Movies · Recently added" under the
    navigation, which already says Movies */
 .wapp .lib__bar { display: none; }
