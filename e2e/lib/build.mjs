@@ -1,5 +1,5 @@
-/* Builds the TV and phone apps for the harness into the git-ignored
- * e2e/.build/{tv,phone}, pointed at the fake server: VITE_JELLYFIN_URL /
+/* Builds the TV, phone and (on request) desktop web apps for the harness into
+ * the git-ignored e2e/.build/{tv,phone,web}, pointed at the fake server: VITE_JELLYFIN_URL /
  * VITE_MEDIALIB_URL are set on the command line, which beats .env.local, so
  * no private address ever lands in these bundles. Always --outDir; dist/ and
  * phone/dist are never written.
@@ -18,8 +18,10 @@ export const REPO = path.resolve(here, '..', '..');
 export const BUILD_DIR = path.join(REPO, 'e2e', '.build');
 
 const INPUTS = ['src', 'public', 'phone/src', 'phone/public', 'phone/index.html', 'phone/vite.config.js', 'index.html', 'vite.config.js', 'svelte.config.js', 'vite.licenses.js', 'vite.svelte-consts.js', 'package-lock.json'];
+/* the web build reads the phone's sources and public/ plus its own tree (web/dist is its output, never an input) */
+const WEB_INPUTS = [...INPUTS, 'web/src', 'web/index.html', 'web/vite.config.js', 'web/dev'];
 
-function hashInputs(root = REPO) {
+function hashInputs(root = REPO, inputs = INPUTS) {
   const h = createHash('sha256');
   const walk = (p) => {
     const abs = path.join(root, p);
@@ -31,7 +33,7 @@ function hashInputs(root = REPO) {
       h.update(p).update('\0').update(readFileSync(abs)).update('\0');
     }
   };
-  for (const p of INPUTS) walk(p);
+  for (const p of inputs) walk(p);
   return h.digest('hex').slice(0, 16);
 }
 
@@ -48,15 +50,19 @@ function run(args, env, cwd = REPO) {
 /* dir: where the builds + stamps live (run.mjs's parallel workers each have
  * their own, because the fake's ports are baked into the bundles).
  * tvRoot: build the TV app from another source tree (a mutant copy under
- * e2e/.build, scripts/mutants.mjs) — the phone app always comes from REPO. */
-export async function buildApps({ jf, ml, log = () => {}, dir: buildDir = BUILD_DIR, tvRoot = REPO }) {
+ * e2e/.build, scripts/mutants.mjs) — the phone and web apps always come from REPO.
+ * web: also build the desktop web client (web/vite.config.js; run.mjs asks for
+ * it only when a selected test has app 'web'). Like the phone app it talks to
+ * its own origin's /jf + /ml, so no port is baked in; the VITE_* pair is set
+ * anyway so .env.local can never reach a harness bundle. */
+export async function buildApps({ jf, ml, log = () => {}, dir: buildDir = BUILD_DIR, tvRoot = REPO, web = false }) {
   mkdirSync(buildDir, { recursive: true });
   const env = { VITE_JELLYFIN_URL: jf, VITE_MEDIALIB_URL: ml };
   const out = {};
   let inputs;
-  for (const app of ['tv', 'phone']) {
+  for (const app of web ? ['tv', 'phone', 'web'] : ['tv', 'phone']) {
     const root = app === 'tv' ? tvRoot : REPO;
-    inputs = hashInputs(root);
+    inputs = hashInputs(root, app === 'web' ? WEB_INPUTS : INPUTS);
     const dir = path.join(buildDir, app);
     const stampFile = path.join(buildDir, app + '.stamp');
     const stamp = JSON.stringify({ inputs, ...env, ...(root !== REPO ? { root } : {}) });
@@ -64,12 +70,12 @@ export async function buildApps({ jf, ml, log = () => {}, dir: buildDir = BUILD_
       log(`${app} build cached (${inputs})`);
     } else {
       const t0 = Date.now();
-      const args = ['vite', 'build', ...(app === 'phone' ? ['--config', 'phone/vite.config.js'] : []), '--outDir', dir, '--emptyOutDir', '--logLevel', 'warn'];
+      const args = ['vite', 'build', ...(app === 'tv' ? [] : ['--config', app + '/vite.config.js']), '--outDir', dir, '--emptyOutDir', '--logLevel', 'warn'];
       await run(args, env, root);
       writeFileSync(stampFile, stamp);
       log(`${app} built in ${Date.now() - t0} ms`);
     }
     out[app] = dir;
   }
-  return { tvDir: out.tv, phoneDir: out.phone, inputs };
+  return { tvDir: out.tv, phoneDir: out.phone, webDir: out.web, inputs };
 }

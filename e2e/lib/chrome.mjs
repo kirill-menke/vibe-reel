@@ -93,6 +93,10 @@ export async function launchChrome({ runDir, allowPorts, picUrl, headless = true
     '--proxy-server=http://127.0.0.1:' + sinkPort,
     '--host-resolver-rules=MAP * ~NOTFOUND, EXCLUDE localhost, EXCLUDE 127.0.0.1',
     '--autoplay-policy=no-user-gesture-required', '--mute-audio', '--hide-scrollbars',
+    /* a mouse that hovers, as on a desktop (the web client's (hover: hover) and
+     * (pointer: fine) rules); headless reports none. Phone pages are unaffected:
+     * touch emulation switches a page to a coarse, non-hovering pointer itself */
+    '--blink-settings=primaryPointerType=4,availablePointerTypes=4,primaryHoverType=2,availableHoverTypes=2',
     '--window-size=1920,1080',
     'about:blank'
   ];
