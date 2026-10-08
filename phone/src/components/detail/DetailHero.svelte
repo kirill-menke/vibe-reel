@@ -10,7 +10,7 @@
   /** @type {WeakMap<HTMLImageElement, string> | undefined} */
   let sharpened;
   /** @param {HTMLImageElement} img @returns {boolean} true: this src is our own swap */
-  function sharpenHero(img) {
+  export function sharpenHero(img) {
     sharpened ||= new WeakMap();
     const src = img.getAttribute('src') || '';
     if (sharpened.get(img) === src) return true;
