@@ -132,3 +132,12 @@
   .wapp .detail__morph, .wapp .detail__morph:has(.btn__pct) { flex: 0 1 auto; min-width: 0; max-width: 100%; }
   .wapp .detail__morph .btn { padding: 0 var(--s-4); }
 }
+
+/* The resume line in a narrow window: the bar takes its own line and the text
+   ("S1 · E3 · 22 min left") the full width under it, instead of the phone's
+   62 % that left ~45 px at 320 px (integration, after the smoke pass). */
+@media (max-width: 480px) {
+  .wapp .detail__resume { flex-wrap: wrap; row-gap: var(--s-1); }
+  .wapp .detail__resume .progress { flex: 1 1 100%; }
+  .wapp .detail__resume > span { max-width: 100%; }
+}
