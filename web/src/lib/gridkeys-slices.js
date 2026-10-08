@@ -162,3 +162,20 @@ export function sliceAhead(scroller, gridSel, more) {
 
 /** whether a slicer runs for this scroller (tests) @param {Element} scroller */
 export const slicing = (scroller) => running.has(scroller);
+
+/* The first page of a grid waits (≤ ms) for what decides its leading tiles:
+ * Library's titles still downloading lead the grid, and they come from the
+ * activity feed, whose first answer can land after Jellyfin's. Painted
+ * first, the whole grid jumped one slot when they arrived (CLS 0.18 at 4×
+ * CPU). Polled, not subscribed: it's one check per 40 ms for at most a
+ * second, once per cold grid.
+ *   settleFirst(ready, ms) → a promise that resolves when ready() is true or
+ *   ms have passed */
+/** @param {() => boolean} ready @param {number} [ms] @returns {Promise<void>} */
+export function settleFirst(ready, ms = 1000) {
+  const end = performance.now() + ms;
+  return new Promise((res) => {
+    const look = () => (ready() || performance.now() >= end ? res() : setTimeout(look, 40));
+    look();
+  });
+}

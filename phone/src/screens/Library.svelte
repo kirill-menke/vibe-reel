@@ -169,7 +169,7 @@
   import { R, openSheet, scrollToTop } from '../lib/router.svelte.js';
   import { fadeIn } from '../lib/safe.js';
   import { onLibraryChange, rebase, whenSettled, keepScroll } from '../lib/freshness.svelte.js';
-  import { sliceAhead } from '../../../web/src/lib/gridkeys-slices.js';
+  import { sliceAhead, settleFirst } from '../../../web/src/lib/gridkeys-slices.js';
 
   let { params = {}, active = false } = $props();
 
@@ -333,6 +333,13 @@
       /** @type {Jf.QueryResult} */
       const r = await revalidate(u);
       if (g !== gen || dead) return;
+      if (__PHONE__ && __WEB__ && !hit && !act.loaded) {
+        // the web: a cold grid paints once the activity feed has answered too
+        // (≤ 1 s) — its pending tiles lead the grid, and arriving after the
+        // first rows they pushed every tile one slot on (gridkeys-slices.js)
+        await settleFirst(() => act.loaded);
+        if (g !== gen || dead) return;
+      }
       items = r.Items || [];
       total = r.TotalRecordCount ?? items.length;
       loadedCount.set(tab, items.length);
