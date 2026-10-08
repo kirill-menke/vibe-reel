@@ -319,21 +319,7 @@ html, body { overflow: hidden; }
   .skipchip:hover { background: #fff; }
   .catcard:hover, .card:hover { filter: brightness(1.1); }
 }
-/* keyboard focus: a solid gold ring (the half-alpha --gold-line one all but
-   vanished over posters and the bright hero). A tile rings its artwork, not
-   the box around artwork + caption — inside the artwork's edge, because a
-   tile's `content-visibility: auto` clips anything drawn outside its box
-   (an outer ring showed only along the caption side), on the frame's ::after
-   hairline layer, which paints over the positioned artwork (an outline on
-   the frame itself paints under it). A field rings its box. */
-:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
-.wsheet:focus-visible, .wplayer:focus-visible, .wplayer:focus { outline: none; }
-/* Firefox makes every scroll container a Tab stop (the page's .screen comes
-   right after the avatar): a ring round the whole page says nothing */
-.screen:focus-visible { outline: none; }
-/* tiles: see lane: browse (an outer ring + gold title; the grids there keep
-   content-visibility visible so it isn't clipped) */
-.field__input:focus-visible { outline: none; }
+/* keyboard focus: one ring language — styles/look.css */
 
 /* =============================================================== 6. player */
 .wplayer {
@@ -656,13 +642,7 @@ html, body { overflow: hidden; }
 .wapp :is(.lib__grid, .chart__grid, .srch__grid) > .tile { content-visibility: visible; }
 .wapp .rail__track { padding-block: 12px; margin-block: -12px; }
 
-/* Keyboard focus on a tile: a gold ring on the art (with a dark gap so it
-   reads on a gold poster too) and a gold title — not the square, half-
-   transparent outline around art + caption the generic rule drew. */
-.tile:focus-visible { outline: none; }
-.tile:focus-visible .tile__frame { box-shadow: 0 0 0 2px var(--bg), 0 0 0 4px var(--gold), var(--shadow-float); }
-.tile:focus-visible .tile__title { color: var(--gold); }
-.catcard:focus-visible { outline-offset: 3px; }
+/* keyboard focus on a tile (the art ring): styles/look.css */
 
 /* Continue Watching / Next Up tiles play on a click (the others open a page):
    say so with a play button over the art on hover and on keyboard focus.
