@@ -45,6 +45,13 @@
       root?.animate([{ opacity: 0 }, { opacity: 1 }], { duration: DUR.rm, easing: 'linear' });
       return;
     }
+    if (__PHONE__ && __WEB__) {
+      // a centred desktop dialog pops in where it stands (web.css); sliding
+      // up its own height from the middle of the window read as a glitch
+      scrim?.animate([{ opacity: 0 }, { opacity: 1 }], { duration: DUR.fast, easing: 'linear' });
+      box.animate([{ opacity: 0, transform: 'translateY(-6px) scale(0.98)' }, { opacity: 1, transform: 'none' }], { duration: DUR.fast, easing: EASE.out });
+      return;
+    }
     scrim?.animate([{ opacity: 0 }, { opacity: 1 }], { duration: DUR.sheetOut, easing: 'linear' });
     box.animate([{ transform: `translate3d(0,${box.offsetHeight + 16}px,0)` }, { transform: 'translate3d(0,0,0)' }], {
       duration: DUR.spring,
@@ -69,6 +76,7 @@
     /** @type {Animation} */
     let a;
     if (reducedMotion()) a = root.animate([{ opacity: 1 }, { opacity: 0 }], { duration: DUR.rm, easing: 'linear', fill: 'forwards' });
+    else if (__PHONE__ && __WEB__) a = root.animate([{ opacity: 1 }, { opacity: 0 }], { duration: DUR.fast, easing: 'linear', fill: 'forwards' });
     else {
       scrim?.animate([{ opacity: 1 }, { opacity: 0 }], { duration: DUR.sheetOut, easing: 'linear', fill: 'forwards' });
       a = box.animate([{ transform: 'translate3d(0,0,0)' }, { transform: `translate3d(0,${box.offsetHeight + 16}px,0)` }], {
