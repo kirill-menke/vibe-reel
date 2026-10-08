@@ -1,7 +1,8 @@
 # e2e — fake servers + headless end-to-end harness
 
-Runs both apps (TV build and phone PWA) against a stateful, in-memory fake
-**Jellyfin 12.1** and **reel-api**, in headless Chrome driven over raw CDP.
+Runs the apps (TV build, phone PWA and the desktop web client) against a
+stateful, in-memory fake **Jellyfin 12.1** and **reel-api**, in headless Chrome
+driven over raw CDP.
 Zero npm dependencies: Node 22 (`node:http`, global `WebSocket`), `google-chrome`,
 and `ffmpeg` (fixture video + trickplay sheets, generated once into `e2e/.cache/media`, ~1 min;
 without it the stream/trickplay routes 404 and `03-media` fails).
@@ -12,6 +13,7 @@ node e2e/scripts/reelapi-spec.mjs # reel-api's OpenAPI from the FastAPI app (uv,
 node e2e/run.mjs                  # everything
 node e2e/run.mjs --fast           # smoke subset (tests marked fast: true)
 node e2e/run.mjs --grep 'tv home' # by name (case-insensitive regex)
+node e2e/run.mjs --grep '^web'    # the desktop web client only (builds web/ on first use)
 node e2e/run.mjs --list           # what would run
 node e2e/run.mjs --jobs 1         # in-process, one server + one Chrome (default: E2E_JOBS, else min(3, cores/4) workers)
 node e2e/run.mjs --repeat 5 --grep X  # flake check: each selected test 5×, pass counts per test
@@ -52,6 +54,42 @@ request with its violations) in `e2e/.out/`. Every run also writes
 The console prints one PASS/FAIL line per test, then a short block: known
 deviations grouped per id (one line each), fake-server notes and guard hits
 capped at 8 lines (the rest is in summary.json), and the totals line.
+
+## The web target (desktop browser client, `web/`)
+
+Tests with `app: 'web'` drive the desktop web client (`web/vite.config.js`,
+`__PHONE__` + `__WEB__`). `run.mjs` builds it into `e2e/.build/[w<k>/]web` only
+when a selected test needs it (cached like the others, its stamp covering
+`web/src`, `web/index.html`, `web/vite.config.js`, `web/dev` on top of the
+phone's inputs). The fake serves it on its own origin (`srv.urls.web`) in the
+production shape of vr.kirill.es: `/jf` → fake Jellyfin, `/ml` → fake
+reel-api, every other path the build with an SPA fallback to `index.html`, and
+the NAS's `/net.json` (`{"via":"lan"}`; `srv.world.webVia = 'tunnel'` answers
+like the Cloudflare tunnel — the quality default then is 8 Mbit/s). Requests
+through `/jf` and `/ml` are logged and validated exactly like the TV's (origin
+`jf` / `ml`; `entry.host` says which page origin sent them).
+
+The page is a desktop: 1440×900 at dpr 1, no touch, a desktop Chrome UA
+(`DESKTOP`), keyboard focus emulated (`:focus-visible` works headless), and a
+hovering fine pointer — `(hover: hover) and (pointer: fine)` match, set
+browser-wide by `--blink-settings` in `lib/chrome.mjs` (phone pages still get
+a coarse, non-hovering pointer from their touch emulation; the TV app reads no
+pointer media). Drive it with trusted mouse clicks (`page.click`, `clickOn`)
+and desktop keys (`webKey`); the browser's own Back/Forward is `historyBack` /
+`historyGo` (a real history navigation, so popstate fires as for a user).
+
+The scenarios (`80-web-routes`, `81-web-nav`, `82-web-overlays`) are
+**UI-agnostic on purpose**: they assert the address, the active route's
+`data-route`, its `<main>` and h1, the tab title, roles + aria-labels
+(`dialog`, `menu`/`menuitem`, `radio`, the player's `role="application"`
+labelled "Video player"), the section links' `href`s, the world's data and the
+requests — never the classes of a UI that is being redesigned. A Jellyfin
+title's start is covered up to its first segment (PlaybackInfo with the web
+profile, `main.m3u8` fed through MSE, Stopped + `DELETE /Videos/ActiveEncodings`
+on Esc — `82-web-overlays`, segments held with a `hang` fault because the fake
+has no transcoder); trailers play for real (the fixture fMP4). Not covered
+yet: frames of a Jellyfin stream, Firefox, the keyboard-only paths of the
+redesigned widgets.
 
 ## Before bumping Jellyfin on the NAS
 
@@ -148,7 +186,7 @@ Both lists are exceptions to the oracle, so both are kept tiny and justified:
 | path | what |
 |---|---|
 | `run.mjs` | entry: start fake server → build apps → launch Chrome → run scenarios → summary |
-| `server/index.mjs` | five loopback origins (jf, ml, tv, phone with `/jf` + `/ml`, pic), faults, request log |
+| `server/index.mjs` | six loopback origins (jf, ml, tv, phone and web with `/jf` + `/ml`, pic), faults, request log |
 | `server/jellyfin.mjs` | fake Jellyfin routes (templates must exist in the spec), DTO projection honouring `Fields` |
 | `server/reelapi.mjs` | fake reel-api routes (backend/README.md contract, models.py shapes) |
 | `server/seed.mjs` | deterministic synthetic world: users, 140 movies, 6 series, people, play state, activity, charts, … |
@@ -157,13 +195,13 @@ Both lists are exceptions to the oracle, so both are kept tiny and justified:
 | `scripts/route-inventory.mjs` | static inventory of every request path in src/ + phone/src (read as text) → shapes; `02-inventory` checks spec + fake |
 | `lib/bodies.mjs` | copies of the JSON bodies the apps POST (device profiles, play reports) for the oracle self-tests |
 | `server/png.mjs`, `server/media.mjs` | generated artwork (pure Node PNG); fixture media (ffmpeg, cached): a 60 min 2 fps WebM with the time burned in, trickplay sheets cut from it, a VTT on the same clock |
-| `lib/build.mjs` | TV + phone builds into `e2e/.build/` with `VITE_*` pointed at the fake (cached by content hash + ports) |
+| `lib/build.mjs` | TV + phone (+ web, when a test needs it) builds into `e2e/.build/` with `VITE_*` pointed at the fake (cached by content hash + ports) |
 | `lib/chrome.mjs`, `lib/cdp.mjs`, `lib/page.mjs` | Chrome launch + network guard, CDP client, page driver (keys, touch, eval, waitFor) |
 | `lib/runner.mjs` | `test()`, `assert`, the runner |
-| `lib/tv.mjs`, `lib/invariants.mjs`, `lib/phone.mjs` | app helpers: boot signed in/out, focus, scope, focus invariants |
+| `lib/tv.mjs`, `lib/invariants.mjs`, `lib/phone.mjs`, `lib/web.mjs` | app helpers: boot signed in/out, focus, scope, focus invariants, routes |
 | `lib/world.mjs`, `lib/player.mjs`, `lib/crawler.mjs`, `lib/visual.mjs` | world builders, TV player helpers, the D-pad invariant crawler, screenshot baselines |
 | `baselines/*.png` | 4 committed 960×540 screenshot baselines (`25-tv-visual`) |
-| `scenarios/NN-*.test.mjs` | the tests; `00–09` oracle/guard self-tests, `10–49` TV, `50–59` phone, `60–69` TV player, `70–79` crawler, `90–99` meta |
+| `scenarios/NN-*.test.mjs` | the tests; `00–09` oracle/guard self-tests, `10–49` TV, `50–59` phone, `60–69` TV player, `70–79` crawler, `80–89` desktop web, `90–99` meta |
 
 ## Writing a test
 
@@ -192,7 +230,7 @@ weaken a check to get green — fix the test, the fake, or record a finding.
 | member | what | example |
 |---|---|---|
 | `srv.world` | the in-memory world of this test (fresh per test, `seed.mjs`) | `srv.world.list('Movie')[0]` · `srv.world.byName('Series', 'Northern Line')` |
-| `srv.urls` | `{ jf, ml, tv, phone, pic }` loopback origins | `page.goto(srv.urls.tv + '/index.html')` |
+| `srv.urls` | `{ jf, ml, tv, phone, web, pic }` loopback origins | `page.goto(srv.urls.tv + '/index.html')` |
 | `srv.requests(filter)` | the request log, filtered by `origin`, `method`, `path` (prefix or RegExp) | `srv.requests({ origin: 'ml', path: '/api/activity' }).length` |
 | `srv.quiet({ ms, max })` | resolves once no request is open and none came for `ms` (bounded by `max`); `srv.inflight` is the open count | `await srv.quiet({ ms: 300 })` |
 | `srv.log` | every request: `{ t, origin, host, method, path, search, status, auth?, fault?, violations }` | `srv.log.at(-1).status` |
@@ -311,7 +349,7 @@ names, so they are stable across runs. Details: the header of `server/seed.mjs`.
 Every exported name, one line each. `t` is the test context, `page` a `Page`, `w` = `t.srv.world`.
 
 ### `lib/runner.mjs`
-- `test(name, opts, fn)` — register a test: `test('tv x', { fast: true, seed: { preset: 'empty' }, allowErrors: [/…/] }, async (t) => {…})`
+- `test(name, opts, fn)` — register a test: `test('tv x', { fast: true, seed: { preset: 'empty' }, allowErrors: [/…/] }, async (t) => {…})`; `opts.app` is `'tv'` (default), `'phone'`, `'web'` or `'none'`
 - `innerTest(name, opts, fn)` — an unregistered test for `t.runInner([...])` (runner self-tests only)
 - `assert(cond, msg)`, `assert.equal(a, b)`, `assert.deepEqual(a, b)`, `assert.match(s, re)` — `assert.equal(n, 2, 'two polls')`
 - `AssertionError` — what `assert` throws (printed without a stack)
@@ -324,7 +362,8 @@ Every exported name, one line each. `t` is the test context, `page` a `Page`, `w
 ### `lib/page.mjs` (`Page`, one per test, own browser context)
 - `KEYS` — key names → webOS keycodes: `Left Up Right Down Enter OK Back Escape Backspace Play Pause Stop Rewind FastForward`
 - `IPHONE` — the phone emulation metrics + iOS Safari UA
-- `Page` — `await page.goto(url)` · `page.reload()` · `page.eval(fn, ...args)` · `page.waitFor(fn, { timeout, what }, ...args)` · `page.holds(fn, { ms, what })` · `page.key('Down', { settle })` · `page.hold('OK', 700)` · `page.chars('dune')` (USB keys) · `page.type('alice')` (insertText) · `page.frames(2)` · `page.tap(x, y)` · `page.press(x, y, 700)` (touch long-press) · `page.tapSel('.tabbar__item')` · `page.swipe(x0, y0, x1, y1)` · `page.screenshot(file)` · `page.errors` / `page.console`
+- `DESKTOP` — the web client's metrics (1440×900, dpr 1) + a desktop Chrome UA
+- `Page` — `await page.goto(url)` · `page.reload()` · `page.eval(fn, ...args)` · `page.waitFor(fn, { timeout, what }, ...args)` · `page.holds(fn, { ms, what })` · `page.key('Down', { settle })` · `page.hold('OK', 700)` · `page.chars('dune')` (USB keys) · `page.type('alice')` (insertText) · `page.frames(2)` · `page.tap(x, y)` · `page.press(x, y, 700)` (touch long-press) · `page.tapSel('.tabbar__item')` · `page.swipe(x0, y0, x1, y1)` · `page.click(x, y, { button: 'right', count })` (trusted mouse, web) · `page.move(x, y)` (hover) · `page.screenshot(file)` · `page.errors` / `page.console`
 - `sleep(ms)` — `await sleep(200)` (prefer `waitFor`/`holds`; no fixed sleeps > 500 ms)
 - `holds(fn, ms, what)` — Node-side observation window: `await holds(() => polls() === n, 2500, 'no poll after sign-in')`
 
@@ -363,6 +402,17 @@ Every exported name, one line each. `t` is the test context, `page` a `Page`, `w
 - `sheetUp(page, 'Sort & filter')` — wait for a sheet with that title
 - `setHidden(page, true)` — real visibilitychange by minimising the window (works for the TV page too)
 
+### `lib/web.mjs` (desktop web client, app `'web'`)
+- `bootWeb(t, { signedIn, user, storage, path })` — seed localStorage on the web origin, load `path`: `await bootWeb(t, { user: 'nicole', path: '/my-library' })`
+- `webState(page)` — `{ path, search, route, key, main, h1, h1s, title, modal: 'player'|'login'|null, dialog, menu }`
+- `waitRoute(page, route, { h1, path, timeout })` — the active route is `route` with its `<main>`, an h1 (string/RegExp; `h1: false` = none needed) and the address: `await waitRoute(page, 'detail', { h1: m.Name, path: '/movie/' + m.Id })`
+- `SECTIONS` — header section → href (`{ Home: '/', Movies: '/movies', … }`); `openSection(page, 'Movies')` — click its header link, wait for the root
+- `clickOn(page, css, re, { scope: 'route'|'dialog'|'doc', button, count })` — trusted click on the first visible match by aria-label/text: `await clickOn(page, '[role="button"]', /^The Silent Harbor/, { button: 'right' })`
+- `webKey(page, 'Escape', { shift, ctrl, alt, meta })` — a trusted desktop key (`'Enter'`, `'Tab'`, `'/'`, `'?'`, `'k'` …)
+- `historyBack(page)`, `historyGo(page, 1)` — the browser's own Back/Forward
+- `dialogUp(page, 'Accounts')`, `dialogGone(page, 'Accounts')` — a `role="dialog"` by aria-label settled / closed
+- `menuItems(page)` — the open `role="menu"`'s item labels, or null
+
 ### `lib/world.mjs` (scenario builders; only change memory)
 - `series(w, 'Northern Line')`, `season(w, s, 2)`, `ep(w, 'Northern Line', 1, 3)` — items by name/number
 - `movie(w, 0)` / `movie(w, 'The Silent Harbor')` — a Movie by library index or name
@@ -398,6 +448,6 @@ Every exported name, one line each. `t` is the test context, `page` a `Page`, `w
 ### `lib/chrome.mjs`, `lib/cdp.mjs`, `lib/build.mjs` (plumbing; run.mjs uses them)
 - `launchChrome({ runDir, allowPorts, picUrl, headless })` → `browser` (`browser.newPage({ mobile })`, `browser.guard.blocked`, `browser.close()`)
 - `CDP` — `await CDP.connect(wsUrl)`; `cdp.send(method, params, sessionId)`, `cdp.on(event, fn)`, `cdp.session(id)`
-- `buildApps({ jf, ml, dir })` — TV + phone builds pointed at the fake (cached); `REPO`, `BUILD_DIR`
+- `buildApps({ jf, ml, dir, web })` — TV + phone (+ web with `web: true`) builds pointed at the fake (cached); `REPO`, `BUILD_DIR`
 
 A fast self-test (`04-docs`) fails when an export of `lib/*.mjs` is missing here.

@@ -1,13 +1,14 @@
 /* Desktop web client: what opens over a page — the header's Accounts and
  * Notifications popovers, the library's Sort & filter dialog, a tile's
- * context menu (right-click) and the player (a fixture trailer).
+ * context menu (right-click) and the player (a fixture trailer; a Jellyfin
+ * movie's start up to its first segment).
  * Each opens from a real mouse click, shows its content from the fake world,
  * closes with Esc, and leaves the page (route, address) as it was — or does
  * what its control says (a sort re-queries Jellyfin, Settings navigates).
  * UI-agnostic: roles + aria-labels (dialog, menu/menuitem, radio, the
  * player's role="application"), routes, requests. */
 import { test, assert } from '../lib/runner.mjs';
-import { movie } from '../lib/world.mjs';
+import { movie, TICKS } from '../lib/world.mjs';
 import { until } from '../lib/player.mjs';
 import { bootWeb, waitRoute, webState, clickOn, webKey, dialogUp, dialogGone, menuItems } from '../lib/web.mjs';
 
@@ -124,4 +125,45 @@ test('web trailer: Trailer on a movie plays the fixture through MSE in the playe
   await page.waitFor((n) => document.title === n + ' · VibeReel', { what: 'the tab names the page again', timeout: 4000 }, m.Name);
   assert.equal(srv.requests({ origin: 'jf', path: /^\/Sessions\/Playing/ }).length, 0, 'a trailer reports nothing to Jellyfin');
   assert.equal(await page.eval(() => document.querySelector('[role="application"] video').paused), true, 'the video stopped');
+});
+
+test('web play: Play on a movie asks PlaybackInfo with the web profile (MediaSourceId, no MKV DirectPlay) as "VibeReel Web", feeds main.m3u8 through MSE; Esc stops the job and reports Stopped', { app: 'web', timeout: 60000 }, async (t) => {
+  const { page, srv } = t;
+  const w = srv.world;
+  const m = movie(w, 5);
+  await bootWeb(t, { path: '/movie/' + m.Id });
+  await waitRoute(page, 'detail', { h1: m.Name });
+  // the fake has no transcoder: its segments would 404 — hold them, the player stays on its loading card
+  const hold = srv.fault({ origin: 'jf', path: /^\/videos\/[^/]+\/hls1\//i }, { hang: true });
+  const s0 = w.sessions.length;
+  await clickOn(page, 'button, a, [role="button"]', /^(Play|Resume)$/);
+  await page.waitFor(() => document.querySelector('[role="application"][aria-label="Video player"]')?.checkVisibility(), { what: 'the player', timeout: 8000 });
+
+  const pi = await until(() => srv.requests({ origin: 'jf', method: 'POST', path: '/Items/' + m.Id + '/PlaybackInfo' })[0], 'PlaybackInfo', 8000);
+  assert.equal(pi.auth.Client, 'VibeReel Web', 'as the web client');
+  const b = srv.events.filter((e) => e.kind === 'playbackinfo' && e.itemId === m.Id).at(-1).body;
+  assert.equal(b.MediaSourceId, m.MediaSources[0].Id, 'MediaSourceId sent');
+  assert(!(b.DeviceProfile.DirectPlayProfiles || []).some((p) => /mkv|matroska/.test(p.Container || '')), 'the web profile does not DirectPlay MKV');
+  /* jfhls.js reads the master once, as text, for its variant's codec string;
+   * what it feeds is the media playlist, main.m3u8 — never a master the
+   * browser could hop variants on (each hop restarts the server's job) */
+  const m3u = await until(() => srv.requests({ origin: 'jf', path: new RegExp('^/videos/' + m.Id + '/main\\.m3u8$', 'i') })[0], 'main.m3u8', 8000);
+  const sess = new URLSearchParams(m3u.search).get('PlaySessionId');
+  assert(sess && w.playSessions.has(sess), 'main.m3u8 carries the PlaybackInfo session');
+  assert.equal(new URLSearchParams(m3u.search).get('MediaSourceId'), m.MediaSources[0].Id, "the TranscodingUrl's query (MediaSourceId) kept");
+  await until(() => hold.hits > 0, 'a segment request', 8000);
+  assert.match(srv.log.find((e) => e.fault)?.path || '', /\/hls1\/main\//, 'segments come from the main playlist');
+  assert(srv.requests({ origin: 'jf' }).filter((e) => /master\.m3u8$/i.test(e.path)).length <= 1, 'the master is read at most once (codecs)');
+  assert.match(await page.eval(() => document.querySelector('[role="application"] video')?.src || ''), /^blob:/, 'the <video> plays a MediaSource, never a playlist URL');
+  await page.waitFor((n) => document.title === n + ' · VibeReel' && history.state?.player === true, { what: 'the player\'s own history entry, titled after the movie', timeout: 4000 }, m.Name);
+
+  await webKey(page, 'Escape');
+  await page.waitFor(() => !document.querySelector('[role="application"][aria-label="Video player"]')?.checkVisibility(), { what: 'the player closed', timeout: 8000 });
+  const stop = await until(() => w.sessions.slice(s0).find((x) => x.kind === 'stopped'), 'Stopped report', 8000);
+  assert.equal(stop.body.PlaySessionId, sess, 'Stopped for that session');
+  assert(stop.body.PositionTicks >= 0 && stop.body.PositionTicks < 5 * TICKS, 'closed before the first frame: position ~0: ' + stop.body.PositionTicks);
+  await until(() => srv.requests({ origin: 'jf', method: 'DELETE', path: '/Videos/ActiveEncodings' }).length, 'the HLS job stopped (DELETE /Videos/ActiveEncodings)', 8000);
+  hold.remove();
+  const back = await waitRoute(page, 'detail', { h1: m.Name, path: '/movie/' + m.Id });
+  assert.equal(back.modal, null, 'back on the page');
 });
