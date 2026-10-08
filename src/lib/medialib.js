@@ -13,7 +13,7 @@
  *   .body       the parsed JSON body of a non-OK, non-503 answer (null when
  *               it wasn't JSON) — the quota 409 carries its numbers there
  * so the screen can branch on kind without re-reading the response. */
-import { qs } from './api.js';
+import { qs, pickSize } from './api.js';
 import { cfg } from './config.js';
 
 const ML_TIMEOUT = 30000;
@@ -33,6 +33,16 @@ export function mlHeaders(extra) {
 /** @param {string} path a reel-api path, query allowed @returns {string} the absolute URL with the token as `api_key` when signed in */
 export function mlUrl(path) {
   return cfg.medialib + path + (cfg.token ? (path.includes('?') ? '&' : '?') + 'api_key=' + encodeURIComponent(cfg.token) : '');
+}
+
+/* The web build's words for a reel-api answer without a reason of its own —
+ * the same as api()'s for Jellyfin (api.js httpMessage). */
+/** @param {number} status @returns {string} */
+function webHttpText(status) {
+  if (status === 401 || status === 403) return 'The server refused this sign-in (HTTP ' + status + ')';
+  if (status === 404) return 'Not found on the server (HTTP 404)';
+  if (status >= 500) return 'The server had a problem (HTTP ' + status + ')';
+  return 'The server answered HTTP ' + status;
 }
 
 /** @template [T=unknown] @param {string} path @param {VR.MlOptions} [options] @returns {Promise<T>} the JSON answer; rejects with a VR.ApiError */
@@ -66,6 +76,7 @@ async function mlFetch(path, { retryOn503 = false, method = 'GET', body, signal 
     const e = /** @type {VR.ApiError} */ (new Error(opts.signal.aborted ? 'media library timed out' : 'media library unreachable'));
     e.status = 0;
     e.retriable = true;
+    if (__PHONE__ && __WEB__) e.userMessage = opts.signal.aborted ? 'The media library took too long to answer' : 'Can’t reach the media library';
     throw e;
   }
 
@@ -103,6 +114,9 @@ async function mlFetch(path, { retryOn503 = false, method = 'GET', body, signal 
     e.status = r.status;
     e.code = body && body.error;
     e.body = body;
+    // the web: a bare status reads like api()'s Jellyfin failures ("The server
+    // had a problem (HTTP 500)"), not "HTTP 500" next to them
+    if (__PHONE__ && __WEB__ && !(body && (body.detail || body.error))) e.userMessage = webHttpText(r.status);
     throw e;
   }
 
@@ -427,8 +441,18 @@ export function mlProbe(id) {
 export function posterThumb(url) {
   if (!url) return url;
   const tmdb = /^(https?:\/\/image\.tmdb\.org\/t\/p\/)[^/]+(\/.+)$/.exec(url);
-  if (tmdb) return tmdb[1] + 'w342' + tmdb[2];
+  if (tmdb) return tmdb[1] + (__PHONE__ && __WEB__ ? 'w' + webPosterW() : 'w342') + tmdb[2];
   const tvdb = /^(https?:\/\/artworks\.thetvdb\.com\/\S+?)(\.[a-z]{3,4})$/i.exec(url);
-  if (tvdb && !tvdb[1].endsWith('_t')) return tvdb[1] + '_t' + tvdb[2];
+  // TVDB has nothing between the 340-wide `_t` and the 680-wide original
+  if (tvdb && !tvdb[1].endsWith('_t')) return __PHONE__ && __WEB__ && webPosterW() > 342 ? url : tvdb[1] + '_t' + tvdb[2];
   return url;
+}
+
+/* The web build's TMDB poster width (342 / 500 / 780): a poster is 148–236
+ * CSS px wide there (a rail's --poster-w-rail, clamp(148px, 10.4vw, 236px);
+ * the grids' columns land in the same range), so on a dpr-2 screen past
+ * ~1700 px the 342-wide variant was upscaled (0.85 at 1920, 0.72 at 2560). */
+function webPosterW() {
+  const css = Math.min(236, Math.max(148, (globalThis.innerWidth || 1440) * 0.104));
+  return pickSize(css, [342, 500, 780]);
 }
