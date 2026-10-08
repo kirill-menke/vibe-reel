@@ -33,6 +33,7 @@
   import { fmtDate } from '$lib/format.js';
   import { quotaFull, quotaLine, quotaWords, refreshMe } from '$lib/me.svelte.js';
   import { push } from '../lib/router.svelte.js';
+  import { pageError, visibleScreen } from '../components/detail/weberror.svelte.js';
 
   let { params = {}, active = false } = $props();
   const item = untrack(() => params.item) || {};
@@ -190,6 +191,63 @@
   function add() {
     if (addPhase !== 'plus') return;
     addToLibrary(item);
+  }
+
+  if (__PHONE__ && __WEB__) {
+    /* A-07: a page born from the URL (reload, shared link) knows only the
+     * type and id. When the metadata fails as well it had no title, nothing
+     * but "Add to library" for a title nobody could see: the page is the
+     * LoadError card then, its Retry asks again. */
+    if (!item.title) {
+      /** @type {import('../components/detail/weberror.svelte.js').PageError | null} */
+      let card = null;
+      let opening = false;
+      const retry = () =>
+        mlMetadata(item.type, item.id).then(
+          (m) => {
+            if (dead) return;
+            meta = m;
+            metaDone = true;
+            card?.close();
+            card = null;
+          },
+          (e) => {
+            card?.update(e);
+            throw e;
+          }
+        );
+      mlMetadata(item.type, item.id).catch((e) => {
+        const screen = !dead && !opening && visibleScreen('.detail__morph');
+        if (!screen) return;
+        opening = true;
+        pageError(screen, { title: 'Couldn’t load this title', error: e, retry }).then((c) => {
+          if (dead) c.close();
+          else card = c;
+        });
+      });
+      onDestroy(() => card?.close());
+    }
+
+    /* B-15: Add replaces its button by the live status a moment later (the
+     * ✓ "Added" holds 1.2 s): focus, on that button until then, would fall to
+     * <body>. It moves to the status (a progressbar on the web, pagesa11y.js
+     * — set up from a MutationObserver, so one frame later). */
+    let wasAdd = false;
+    $effect(() => {
+      const isAdd = addPhase === 'busy' || addPhase === 'done'; // pressed here, not just offered
+      const status = !addPhase && !full;
+      if (wasAdd && status) {
+        const ae = document.activeElement;
+        const morph = ae && ae !== document.body ? ae.closest('.detail__morph') : visibleScreen('.detail__morph')?.querySelector('.detail__morph');
+        if (morph)
+          requestAnimationFrame(() => {
+            const to = /** @type {HTMLElement | null} */ (morph.querySelector('.btn--status'));
+            const now = document.activeElement;
+            if (to && (!now || now === document.body || !now.isConnected || morph.contains(now))) to.focus({ preventScroll: true });
+          });
+      }
+      wasAdd = isAdd;
+    });
   }
 
   /* ---- nav bar: solid once the backdrop has scrolled under it ---- */

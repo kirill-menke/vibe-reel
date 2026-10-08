@@ -1,2 +1,99 @@
 /* VibeReel Web — lane "pages": title pages (Movie/Series/Lookup/Pending
    detail), Person, Settings, My library, Login. */
+
+/* My library's poster slot (A-02). The phone styles .dl__art in offline.css
+   (its Downloads list), which the web doesn't load: the slot was 0×0 and the
+   rows' hairlines, inset past a 44-px poster, started right of the titles. */
+.wapp .dl__art {
+  width: 44px; height: 66px; flex: none; border-radius: 6px; overflow: hidden;
+  background: var(--surface-3); display: grid; place-items: center; color: var(--text-faint);
+}
+.wapp .dl__art img { width: 100%; height: 100%; object-fit: cover; }
+.wapp .dl__art .art__label { left: 6%; right: 6%; bottom: 7%; font-size: calc(9 * var(--tu)); line-height: 1.1; }
+
+/* One unbreakable word (a long title without spaces) breaks instead of
+   spilling past the page edge or clipping mid-word without an ellipsis (A-05) */
+.wapp :is(.detail__title, .episode__title, .person__name, .mylib .row__title) { overflow-wrap: anywhere; }
+
+/* The season bar's glass on the bar itself (not a z-index −1 ::before), and
+   nearly opaque: episode text under the pinned bar must not read through even
+   where backdrop-filter doesn't render (Firefox's WebRender on some GPUs).
+   The blur stays on permanently — only the tint fades in at the pin point —
+   so the layer isn't created mid-scroll (the phone's MOT-09 reason). */
+.wapp .detail__pills::before { content: none; }
+.wapp .detail__pills {
+  --pages-bar-bg: rgba(18, 18, 22, 0.94);
+  background-color: rgba(18, 18, 22, 0);
+  -webkit-backdrop-filter: var(--glass-blur); backdrop-filter: var(--glass-blur);
+  transition: background-color var(--dur-fast) linear, box-shadow var(--dur-fast) linear;
+}
+.wapp .detail__pills.pills--sticky { background-color: var(--pages-bar-bg); box-shadow: inset 0 -1px 0 var(--line); }
+
+/* Settings fits a 1440×900 window (A-17): the page kept the phone's 64-px
+   tab-bar clearance under its last footnote — 22 px of scroll for nothing */
+.wapp .screen.settings { padding-bottom: var(--s-8); }
+
+/* Settings' pickers (D-02): the <select> is the phone's invisible overlay on
+   its row; Chrome builds its popup from the select's own colours, which were
+   the UA's — a light grey slab, the selected row pale blue under white text
+   (1.6:1). Dark list, gold selection, in both browsers. The select itself
+   stays invisible (opacity 0), so only the popup changes. */
+.wapp .setrow__select {
+  --pages-menu-bg: #1c1c21;
+  color-scheme: dark; background-color: var(--pages-menu-bg); color: var(--text);
+}
+.wapp .setrow__select option { background-color: var(--pages-menu-bg); color: var(--text); }
+.wapp .setrow__select option:checked { background-color: #3a3220; color: var(--gold); }
+/* Chrome ≥ 135 draws the list itself (customizable select): its own
+   highlight was Chrome's light-theme pale blue whatever the colours above.
+   A dark menu card under the row, the app's menu-row look; Firefox keeps its
+   native (dark) popup with the colours above. */
+@supports (appearance: base-select) {
+  .wapp .setrow__select, .wapp .setrow__select::picker(select) { appearance: base-select; }
+  .wapp .setrow__select::picker(select) {
+    min-width: 240px; max-height: min(420px, 60vh); padding: 6px; margin-top: 4px;
+    border: 0; border-radius: 12px; background: var(--pages-menu-bg); color: var(--text);
+    box-shadow: 0 16px 40px rgba(0, 0, 0, 0.55), inset 0 0 0 1px var(--line);
+    position-area: block-end span-inline-start; position-try-fallbacks: flip-block;
+  }
+  .wapp .setrow__select option {
+    display: flex; align-items: center; gap: 10px; min-height: 36px; padding: 0 12px;
+    border-radius: 8px; font: 400 calc(15 * var(--tu))/1.2 var(--font-ui); background: transparent; color: var(--text);
+  }
+  .wapp .setrow__select option::checkmark { order: 1; margin-left: auto; color: var(--gold); content: "●"; font-size: 9px; }
+  .wapp .setrow__select option:checked { background: transparent; color: var(--gold); }
+  .wapp .setrow__select option:is(:hover, :focus-visible) { background: var(--surface-2); outline: none; }
+}
+
+/* A title page that failed in a way its phone markup has no card for (a
+   deep-linked lookup without metadata, a person that didn't load): the
+   page's content steps aside for the full-page LoadError
+   (components/detail/weberror.svelte.js) */
+.wapp .screen.wpage--error > :not(.wpage__err) { display: none; }
+.wapp .wpage__err { min-height: 100%; display: flex; flex-direction: column; }
+.wapp .wpage__err > .state { flex: 1; }
+
+/* A person without a photo shows their initials, as the cast circles do —
+   the empty Art's tonal placeholder painted over them (A-09) */
+.wapp .person__photo > .art:not(:has(img)) { background: none; }
+
+/* Loading skeletons in the desktop layout (A-14): the title page's
+   placeholders were the phone's — a 990-px block button, round actions on a
+   line of their own, overview lines across the whole column — so everything
+   jumped when the page landed. Title at the title's size, the 200-px Play
+   pill and two action pills on one row, the overview at its reading width. */
+.wapp .detail__skel-late .detail__head > .skel--line-lg { width: min(440px, 100%) !important; height: 47px !important; }
+.wapp .detail__skel-late .detail__head > .skel--line { height: 18px; }
+.wapp .detail__body > .skel--pill { flex: 0 0 200px; }
+.wapp .detail__skelaction { width: 124px; height: var(--btn-h); border-radius: var(--r-pill); background: var(--surface-2); opacity: 0.7; }
+.wapp .detail__skelaction:nth-child(2) { width: 144px; }
+.wapp .detail__skelaction:nth-child(3) { display: none; }
+.wapp .detail__skelaction > .skel { display: none; }
+.wapp .detail__body > .skel-stack { max-width: 75ch; }
+/* a person opened from a link has no name until the record lands: a name and
+   a facts line in the header's text column, beside the photo */
+.wapp .person__name:empty { width: min(320px, 100%); min-height: 47px; border-radius: var(--r-xs); background: var(--surface-2); opacity: 0.7; }
+.wapp .person__name:empty::after {
+  content: ""; display: block; position: relative; top: calc(47px + var(--s-2)); width: 55%; height: 16px;
+  border-radius: var(--r-pill); background: var(--surface-2);
+}

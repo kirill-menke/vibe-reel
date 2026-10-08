@@ -1,3 +1,36 @@
+<script module>
+  /* Web build only (heroScroll's `__PHONE__ && __WEB__` branch; dropped from the
+   * phone bundle): sharpen a lookup page's TMDB backdrop on a wide or HiDPI
+   * window (E-02). fanartUrl() asks TMDB for w1280 — TMDB has nothing between
+   * that and `original` (often 3840 px, ~6× the bytes) — which reads soft on a
+   * hero more than 1440 device px wide. Called for every src the hero's <img>
+   * gets: a w1280 src starts a detached load + decode of the original and swaps
+   * it in once decoded (the w1280 stays up meanwhile); the swap itself answers
+   * true, so the hero doesn't fade it in like a late image. */
+  /** @type {WeakMap<HTMLImageElement, string> | undefined} */
+  let sharpened;
+  /** @param {HTMLImageElement} img @returns {boolean} true: this src is our own swap */
+  export function sharpenHero(img) {
+    sharpened ||= new WeakMap();
+    const src = img.getAttribute('src') || '';
+    if (sharpened.get(img) === src) return true;
+    const m = /^(https:\/\/image\.tmdb\.org\/t\/p\/)w1280(\/.+)$/.exec(src);
+    if (!m || innerWidth * (devicePixelRatio || 1) <= 1440) return false;
+    const big = m[1] + 'original' + m[2];
+    const pre = new Image();
+    pre.src = big;
+    pre.decode().then(
+      () => {
+        if (!img.isConnected || img.getAttribute('src') !== src) return;
+        /** @type {WeakMap<HTMLImageElement, string>} */ (sharpened).set(img, big);
+        img.src = big;
+      },
+      () => {} // the w1280 stays
+    );
+    return false;
+  }
+</script>
+
 <script>
   /* DetailHero — `.detail__hero`: the 440-high backdrop (decoded off the main
    * thread before it is shown) under the hero scrim.
@@ -82,6 +115,7 @@
       for (const r of recs) {
         const img = r.target;
         if (!(img instanceof HTMLImageElement) || !img.getAttribute('src')) continue;
+        if (__PHONE__ && __WEB__ && sharpenHero(img)) continue;
         if ((!lateOn && performance.now() - born < 150) || route?.classList.contains('zoom-hide')) continue;
         img.animate([{ opacity: 0 }, { opacity: 1 }], { duration: DUR.img, easing: 'linear' });
       }

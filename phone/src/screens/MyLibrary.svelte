@@ -108,7 +108,7 @@
     </List>
 
     {#if titles.length}
-      <List group label={me.admin ? 'Titles you added' : 'Your titles'} foot="Tap a title to open it. Deleting removes it and its files from the server, for everyone.">
+      <List group label={me.admin ? 'Titles you added' : 'Your titles'} foot={__WEB__ ? 'Click a title to open it. Deleting removes it and its files from the server, for everyone.' : 'Tap a title to open it. Deleting removes it and its files from the server, for everyone.'}>
         {#each titles as t (titleKey(t))}
           {@const busy = !!deleting[titleKey(t)]}
           <div class="mylib__item {busy ? 'is-deleting' : ''}" data-key={titleKey(t)}>

@@ -89,7 +89,7 @@
         selected={me}
         check={me}
         title={a.userName || 'Unnamed'}
-        sub={me ? 'Signed in' : host(a.server) === here ? 'Tap to switch' : 'Tap to switch · ' + host(a.server)}
+        sub={me ? 'Signed in' : host(a.server) === here ? (__WEB__ ? 'Click to switch' : 'Tap to switch') : (__WEB__ ? 'Click to switch · ' : 'Tap to switch · ') + host(a.server)}
         role="radio"
         aria-checked={me}
         disabled={busy || undefined}
