@@ -258,8 +258,12 @@ function onPop(e) {
 /* ------------------------------------------------------------ the title */
 
 let titleT = 0;
+/** @type {MutationObserver | null} */
+let titleMo = null;
 function retitle() {
   clearTimeout(titleT);
+  titleMo?.disconnect();
+  titleMo = null;
   const set = () => {
     /* the modals first: the browser tab names what is playing ("The White
      * Lotus — Arrivals", "Dune: Part Two · Trailer") or the sign-in, not the
@@ -285,13 +289,26 @@ function retitle() {
     const page = document.querySelector(`.route[data-key="${s[s.length - 1].key}"]`);
     const h = page?.querySelector('.screen h1, h1, .navbar__title');
     const t = h?.textContent?.trim();
-    document.title = t ? t + ' · ' + SITE : SITE;
+    const want = t ? t + ' · ' + SITE : SITE;
+    if (document.title !== want) document.title = want;
   };
   set();
   titleT = setTimeout(() => {
     set();
     titleT = setTimeout(set, 1500);
   }, 400);
+  /* a pushed page names itself once its h1 lands, and its data can take
+   * longer than any fixed wait (a slow server, a retry): follow the page's
+   * DOM (one read per frame at most) until the next retitle */
+  const s = R.stacks[R.tab];
+  const page = !R.modal && s.length > 1 ? document.querySelector(`.route[data-key="${s[s.length - 1].key}"]`) : null;
+  if (page && typeof MutationObserver === 'function') {
+    let raf = 0;
+    titleMo = new MutationObserver(() => {
+      if (!raf) raf = requestAnimationFrame(() => ((raf = 0), set()));
+    });
+    titleMo.observe(page, { subtree: true, childList: true, characterData: true });
+  }
 }
 
 /* ---------------------------------------------------------------- start */
