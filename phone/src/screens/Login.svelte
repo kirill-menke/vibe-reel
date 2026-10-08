@@ -130,6 +130,52 @@
     closeLoginModal();
   }
 
+  /* Web (C-04), done from here because the markup is the phone's: each field
+   * is named by its label alone (the reveal button and the hint sat inside
+   * the <label> and joined the name: "Password Show password Wrong username
+   * or password"), the hint is an alert tied to the field it is about
+   * (aria-invalid + aria-describedby; "Enter your username" shows under the
+   * password but is about the username), and the wordmark is the page's h1. */
+  if (__PHONE__ && __WEB__) {
+    const NO_USER = 'Enter your username';
+    $effect(() => {
+      const e = err;
+      const se = serverErr;
+      /** @type {[HTMLInputElement | null, string, boolean, string][]} input, key, invalid, hint's field */
+      const fields = [
+        [srvEl, 'srv', !!se, 'srv'],
+        [userEl, 'user', e === NO_USER, 'pw'],
+        [pwEl, 'pw', !!e && e !== NO_USER, 'pw']
+      ];
+      for (const [input, k, bad, hintOf] of fields) {
+        const field = input?.closest('.field');
+        if (!input || !field) continue;
+        const label = field.querySelector('.field__label');
+        if (label) {
+          label.id = 'login-' + k + '-label';
+          input.setAttribute('aria-labelledby', label.id);
+        }
+        const hint = field.querySelector('.field__hint');
+        if (hint) {
+          hint.id = 'login-' + k + '-hint';
+          hint.setAttribute('role', 'alert');
+        }
+        if (bad) {
+          input.setAttribute('aria-invalid', 'true');
+          input.setAttribute('aria-describedby', 'login-' + hintOf + '-hint');
+        } else {
+          input.removeAttribute('aria-invalid');
+          input.removeAttribute('aria-describedby');
+        }
+      }
+      const mark = (userEl || pwEl)?.closest('.login')?.querySelector('.login__brand .wordmark');
+      if (mark) {
+        mark.setAttribute('role', 'heading');
+        mark.setAttribute('aria-level', '1');
+      }
+    });
+  }
+
   onDestroy(() => {
     gone = true;
     if (before && !authed && cfg.server !== before.server) {
