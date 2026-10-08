@@ -144,11 +144,11 @@
       const f = t && t.closest ? /** @type {HTMLElement | null} */ (t.closest('button, a[href], input, select, [tabindex]')) : null;
       if (f && f !== document.body && !rootEl?.contains(f)) lastOutside = f;
     };
-    document.addEventListener('focusin', note, true);
-    document.addEventListener('pointerdown', note, true);
+    // (keydown too: the key that opens it may come before any focusin is seen)
+    const evs = ['focusin', 'pointerdown', 'keydown'];
+    for (const ev of evs) document.addEventListener(ev, note, true);
     return () => {
-      document.removeEventListener('focusin', note, true);
-      document.removeEventListener('pointerdown', note, true);
+      for (const ev of evs) document.removeEventListener(ev, note, true);
     };
   });
   /** @type {HTMLElement | null} */
@@ -494,8 +494,9 @@
   let full = $state(false);
   onMount(() => {
     const on = () => (full = !!document.fullscreenElement);
-    /** @param {Event} e */
-    const err = (e) => fullFail(new Error('the browser refused (fullscreenerror on ' + (/** @type {Element} */ (e.target)?.className || 'the page') + ')'));
+    // a refusal of our own request also rejects its promise (fullFail below,
+    // with the browser's reason): this one only speaks for the others
+    const err = () => Date.now() - fsAskAt > 2000 && fullFail(new Error('the browser refused it'));
     document.addEventListener('fullscreenchange', on);
     document.addEventListener('fullscreenerror', err);
     return () => {
@@ -503,6 +504,7 @@
       document.removeEventListener('fullscreenerror', err);
     };
   });
+  let fsAskAt = 0;
   /* Synchronous from the key / click handler (a request after an await loses
    * the user activation, which Firefox insists on), on the whole layer so the
    * controls come along. A refusal says why in a toast, and the console has
@@ -515,6 +517,7 @@
     const el = rootEl;
     if (!el || typeof el.requestFullscreen !== 'function') return fullFail(new Error('this browser has no Fullscreen API'));
     if (document.fullscreenEnabled === false) return fullFail(new Error('full screen is turned off for this page'));
+    fsAskAt = Date.now();
     el.requestFullscreen({ navigationUI: 'hide' }).then(() => {
       // a window manager can accept the request and still not make the window
       // full screen (seen as: F does nothing) — say so instead of nothing
@@ -740,7 +743,7 @@
   /* hover preview over the scrubber (the phone's shows only while dragging),
    * and a lighter fill up to the pointer (--hov on the bar, drawn by the
    * track's ::before in web.css) */
-  let hover = $state(/** @type {{ x: number, w: number, at: number, f: number } | null} */ (null));
+  let hover = $state(/** @type {{ x: number, w: number, l: number, at: number, f: number } | null} */ (null));
   /** @param {PointerEvent} e */
   function onBarMove(e) {
     const hit = /** @type {Element} */ (e.target).closest?.('.vr-scrub__hit');
@@ -752,18 +755,18 @@
     const r = track.getBoundingClientRect();
     const host = /** @type {HTMLElement} */ (e.currentTarget).getBoundingClientRect();
     const f = Math.max(0, Math.min(1, (e.clientX - r.left) / (r.width || 1)));
-    hover = { x: r.left - host.left + f * r.width, w: host.width, at: f * P.dur, f };
+    hover = { x: r.left - host.left + f * r.width, w: host.width, l: host.left, at: f * P.dur, f };
   }
   const hoverTp = $derived(hover && P.trick ? trickAt(hover.at) : null);
   const HW = 240;
   /* the preview's drawn width (240 px with a trickplay frame, else just the
    * time pill or the chapter name): it is centred on the pointer and kept
-   * 8 px inside the bar by that, not by the frame's width */
+   * 8 px inside the window by that, not by the frame's width */
   let trickW = $state(0);
   const hoverLeft = $derived.by(() => {
     if (!hover) return 0;
     const half = (trickW || (hoverTp ? HW : 56)) / 2;
-    return Math.max(half + 8, Math.min(hover.w - half - 8, hover.x));
+    return Math.max(half + 8 - hover.l, Math.min(window.innerWidth - hover.l - half - 8, hover.x));
   });
   const hoverScale = $derived(P.trick ? HW / P.trick.w : 1);
   const hoverH = $derived(P.trick ? Math.round(P.trick.h * hoverScale) : 135);

@@ -9,11 +9,11 @@
 .wplayer { --wp-text-2: rgba(243, 239, 230, 0.86); }
 .wplayer__chrome .player__scrim--top {
   height: 180px;
-  background: linear-gradient(180deg, rgba(0, 0, 0, 0.8) 0, rgba(0, 0, 0, 0.7) 84px, rgba(0, 0, 0, 0) 180px);
+  background: linear-gradient(180deg, rgba(0, 0, 0, 0.8) 0, rgba(0, 0, 0, 0.7) 84px, rgba(0, 0, 0, 0.38) 128px, rgba(0, 0, 0, 0.12) 160px, rgba(0, 0, 0, 0) 180px);
 }
 .wplayer__chrome .player__scrim--bottom {
   height: 230px;
-  background: linear-gradient(0deg, rgba(0, 0, 0, 0.8) 0, rgba(0, 0, 0, 0.7) 96px, rgba(0, 0, 0, 0) 230px);
+  background: linear-gradient(0deg, rgba(0, 0, 0, 0.8) 0, rgba(0, 0, 0, 0.7) 96px, rgba(0, 0, 0, 0.36) 160px, rgba(0, 0, 0, 0.1) 205px, rgba(0, 0, 0, 0) 230px);
 }
 .wplayer__top .player__show { color: var(--wp-text-2); }
 .wplayer__dur { color: var(--wp-text-2); }
@@ -74,3 +74,7 @@
   font: var(--t-micro); letter-spacing: var(--t-micro-ls); text-transform: uppercase; color: var(--text-dim);
 }
 .wplayer .pcard a.btn { text-decoration: none; }
+/* three actions (Retry · Open on YouTube · Close) fit, and wrap rather than
+   overflow the card in a narrow window */
+.wplayer .pcard:not(.pcard--bare) { width: min(440px, calc(100% - 2 * var(--gutter))); }
+.wplayer .pcard__actions { flex-wrap: wrap; justify-content: center; }
