@@ -93,6 +93,14 @@ export class HeroCarousel {
   /** Auto-advance: the same transition as a swipe, over ~700 ms. */
   advance() {
     if (this.busy || this.anim || this.n < 2 || !this.node) return;
+    // web: the pointer rests on the hero, keyboard focus is in it or the
+    // Pause button is down (web/src/lib/heroarrows.js) — park the step; the
+    // hold's end runs it a full interval later
+    if (__WEB__) {
+      const self = /** @type {HeroCarousel & { parked?: boolean }} */ (this);
+      self.parked = !!(/** @type {VR.HeroNode & { __held?: () => boolean }} */ (this.node).__held?.());
+      if (self.parked) return;
+    }
     const from = Math.round(this.p), to = from + 1;
     const media = (/** @type {number} */ i) => /** @type {VR.HeroMedia | null} */ (/** @type {VR.HeroNode} */ (this.node).querySelector(`:scope > .homehero__media[data-i="${mod(i, this.n)}"]`));
     // never auto-advance onto a backdrop that isn't decoded yet (a slow
@@ -464,15 +472,20 @@ export function heroArt(node, arg) {
       if (!node.__blurred && img.complete) blurJob(node, bu, img);
       return;
     }
+    // web: nothing while Home is a hidden route; the shown slide's backdrop
+    // first, the rest once it has decoded (see "web: what loads when")
+    if (__WEB__ && webWait(node, () => want === u && set({ url: u, blur: bu, hash }))) return;
     // a first image starts out of focus; a changed one swaps in when decoded
     if (!img?.getAttribute('src')) node.__r = 0;
     node.__failed = false;
     start = performance.now();
     const pre = new Image();
+    if (__WEB__) pre.fetchPriority = webLead.has(node) ? 'high' : 'low';
     pre.src = u;
     // the small rendition loads alongside: it is usually there first
     blurJob(node, bu, null);
     const apply = (/** @type {boolean} */ ok) => {
+      if (__WEB__ && webLead.has(node)) openGate(node.parentElement);
       if (want !== u) return;
       if (img) img.src = u;
       const c = car();
@@ -550,6 +563,7 @@ function blurJob(m, bu, big) {
   if (!bu) j.fail = true; // nothing small to load: the full image is the source
   else {
     const s = new Image();
+    if (__WEB__) s.fetchPriority = 'low';
     s.src = bu;
     s.decode().then(
       () => jobs.get(m) === j && ((j.src = s), kickBlurs()),
@@ -666,6 +680,16 @@ function drawBlur(cv, img, w) {
   if (!ctx) return;
   ctx.imageSmoothingQuality = 'high';
   ctx.drawImage(src, 0, 0, w, h);
+  if (__WEB__) {
+    // the engine's own blur (Chrome, Firefox) instead of reading the pixels
+    // back for three JS passes (~65 ms of main thread per Home mount at 1×);
+    // drawn over the unfiltered copy, so the soft edge it leaves at the
+    // canvas border has colour under it, not black
+    ctx.filter = 'blur(1.4px)';
+    ctx.drawImage(src, 0, 0, w, h);
+    ctx.filter = 'none';
+    return;
+  }
   try {
     const d = ctx.getImageData(0, 0, w, h);
     for (let p = 0; p < 3; p++) boxBlur(d.data, w, h, 1);
@@ -704,3 +728,72 @@ function boxBlur(px, w, h, r) {
   pass(tmp, px, h, w, w * 4, 4); // columns
 }
 
+
+/* ------------------------------------------------ web: what loads when ---- */
+/* The phone's Home is the first screen and its hero is all that is on it. On
+ * the web Home can be a hidden route under a deep link, and a backdrop is up
+ * to 3840 wide, so (web build only — the phone drops all of this):
+ *   - a slide under a hidden route (an ancestor with [hidden]) loads nothing
+ *     until that route shows;
+ *   - the slide on screen loads first, at fetchpriority high; its neighbours
+ *     wait until it has decoded (or failed, or GATE_MS passed) and load at low
+ *     priority — five backdrops used to start in the same millisecond. */
+const GATE_MS = 4000;
+/** @type {WeakSet<Element>} */
+const webLead = new WeakSet(); // media whose backdrop opens its hero's gate
+/** @type {WeakMap<Element, { open: boolean, waiters: Array<() => void>, timer: ReturnType<typeof setTimeout> | 0 }>} */
+const gates = new WeakMap();
+/** @type {WeakMap<Element, Array<() => void>>} */
+const shown = new WeakMap();
+
+/** true: `again` runs later (the route shows / the gate opens)
+ * @param {VR.HeroMedia} m @param {() => void} again @returns {boolean} */
+function webWait(m, again) {
+  const route = m.closest('[hidden]');
+  if (route) {
+    whenShown(route, again);
+    return true;
+  }
+  const hero = /** @type {VR.HeroNode | null} */ (m.parentElement);
+  if (!hero) return false;
+  const c = /** @type {HeroCarousel | undefined} */ (/** @type {unknown} */ (hero.__carousel));
+  const cur = c && c.n ? mod(Math.round(c.p), c.n) : 0;
+  let g = gates.get(hero);
+  if (!g) gates.set(hero, (g = { open: false, waiters: [], timer: 0 }));
+  if (Number(m.dataset.i) === cur) {
+    webLead.add(m);
+    return false;
+  }
+  webLead.delete(m);
+  if (g.open) return false;
+  g.waiters.push(again);
+  if (!g.timer) g.timer = setTimeout(() => openGate(hero), GATE_MS);
+  return true;
+}
+
+/** @param {Element | null} hero */
+function openGate(hero) {
+  const g = hero && gates.get(hero);
+  if (!g || g.open) return;
+  g.open = true;
+  clearTimeout(g.timer);
+  for (const f of g.waiters.splice(0)) f();
+}
+
+/** @param {Element} route @param {() => void} fn @returns {void} */
+function whenShown(route, fn) {
+  const fns = shown.get(route);
+  if (fns) {
+    fns.push(fn);
+    return;
+  }
+  shown.set(route, [fn]);
+  const mo = new MutationObserver(() => {
+    if (route.closest('[hidden]')) return;
+    mo.disconnect();
+    const all = shown.get(route) || [];
+    shown.delete(route);
+    for (const f of all) f();
+  });
+  mo.observe(route, { attributes: true, attributeFilter: ['hidden'] });
+}
