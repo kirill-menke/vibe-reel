@@ -51,6 +51,7 @@
   import { holdInert, releaseInert } from '../lib/modal.svelte.js';
   import { SEEK_STEP, VOL_STEP, keyAction, shortcutRows, wheelSteps, clampVolume, loadVolume, saveVolume } from './shortcuts.js';
   import { choiceIn, panelStep, trapTab, canRefocus, routeAction } from './focusnav.js';
+  import { stageClicks, fullScreenStuck, chipName } from './stage.js';
 
   const SPIN_DELAY = 450;
 
@@ -518,11 +519,12 @@
     if (!el || typeof el.requestFullscreen !== 'function') return fullFail(new Error('this browser has no Fullscreen API'));
     if (document.fullscreenEnabled === false) return fullFail(new Error('full screen is turned off for this page'));
     fsAskAt = Date.now();
+    const before = { w: window.innerWidth, h: window.innerHeight };
     el.requestFullscreen({ navigationUI: 'hide' }).then(() => {
       // a window manager can accept the request and still not make the window
       // full screen (seen as: F does nothing) — say so instead of nothing
       setTimeout(() => {
-        if (document.fullscreenElement === el && window.innerWidth < screen.width * 0.85 && window.innerHeight < screen.height * 0.85)
+        if (document.fullscreenElement === el && fullScreenStuck(before, window, screen))
           fullFail(new Error('the browser entered full screen, but the window stayed ' + window.innerWidth + '×' + window.innerHeight + ' on a ' + screen.width + '×' + screen.height + ' screen'));
       }, 1200);
     }, fullFail);
@@ -704,14 +706,10 @@
     closePanel();
     if (!isControl(t)) e.stopPropagation();
   }
-  /* A click on the picture pauses — a moment later, so the two clicks of a
-   * double click (full screen) don't pause and resume the film on the way
-   * (YouTube does the same). A double click slower than DBL_MS has already
-   * paused once: its dblclick puts that back. */
-  const DBL_MS = 250;
-  /** @type {ReturnType<typeof setTimeout> | undefined} */
-  let clickT;
-  let pausedByClick = 0;
+  /* A click on the picture pauses, a double click is full screen
+   * (stageClicks: the pause waits out the double click, and a slow one puts
+   * back the pause its own first click fired — never an earlier click's). */
+  const stage = stageClicks({ pause: () => pauseWithFlash(), full: () => toggleFull(), can: () => open && !busy });
   /** @param {MouseEvent} e */
   function onStageClick(e) {
     if (!open || isControl(/** @type {Element} */ (e.target))) return;
@@ -719,25 +717,13 @@
       closePanel();
       return;
     }
-    if (busy) return;
-    clearTimeout(clickT);
-    clickT = undefined;
-    if (e.detail > 1) return; // the second click of a double click
-    clickT = setTimeout(() => {
-      clickT = undefined;
-      if (!open || busy) return;
-      pauseWithFlash();
-      pausedByClick = Date.now();
-    }, DBL_MS);
+    if (busy) return stage.cancel();
+    stage.click(e.detail);
   }
   /** @param {MouseEvent} e */
   function onStageDbl(e) {
     if (!open || isControl(/** @type {Element} */ (e.target))) return;
-    clearTimeout(clickT);
-    clickT = undefined;
-    if (Date.now() - pausedByClick < 600 && !busy) pauseWithFlash();
-    pausedByClick = 0;
-    toggleFull();
+    stage.dbl();
   }
 
   /* hover preview over the scrubber (the phone's shows only while dragging),
@@ -1040,10 +1026,10 @@
           <button class="pchip" class:pchip--on={P.panel === 'chapters'} type="button" data-ptoggle data-tip="Chapters" aria-haspopup="dialog" aria-expanded={P.panel === 'chapters'} onclick={openChapters}><Icon name="chapters" />Chapters</button>
         {/if}
         {#if hasAudioChoice}
-          <button class="pchip" class:pchip--on={P.panel === 'tracks' && trackTab === 'audio'} type="button" data-ptoggle data-tip="Audio track" aria-haspopup="dialog" aria-expanded={P.panel === 'tracks' && trackTab === 'audio'} onclick={() => openTracks('audio')}><Icon name="audio" />{audioChip.main} {#if audioChip.dim}<span class="pchip__dim">{audioChip.dim}</span>{/if}</button>
+          <button class="pchip" class:pchip--on={P.panel === 'tracks' && trackTab === 'audio'} type="button" data-ptoggle data-tip="Audio track" aria-label={chipName('Audio', audioChip)} aria-haspopup="dialog" aria-expanded={P.panel === 'tracks' && trackTab === 'audio'} onclick={() => openTracks('audio')}><Icon name="audio" />{audioChip.main} {#if audioChip.dim}<span class="pchip__dim">{audioChip.dim}</span>{/if}</button>
         {/if}
         {#if hasSubs}
-          <button class="pchip" class:pchip--on={P.panel === 'tracks' && trackTab === 'subs'} type="button" data-ptoggle data-tip="Subtitles (C on / off)" aria-haspopup="dialog" aria-expanded={P.panel === 'tracks' && trackTab === 'subs'} onclick={() => openTracks('subs')}><Icon name="subtitles" />{subChip.main} {#if subChip.dim}<span class="pchip__dim">{subChip.dim}</span>{/if}</button>
+          <button class="pchip" class:pchip--on={P.panel === 'tracks' && trackTab === 'subs'} type="button" data-ptoggle data-tip="Subtitles (C on / off)" aria-label={chipName('Subtitles', subChip)} aria-haspopup="dialog" aria-expanded={P.panel === 'tracks' && trackTab === 'subs'} onclick={() => openTracks('subs')}><Icon name="subtitles" />{subChip.main} {#if subChip.dim}<span class="pchip__dim">{subChip.dim}</span>{/if}</button>
         {/if}
         {#if quality}
           <button class="pchip" class:pchip--on={P.panel === 'tracks' && trackTab === 'quality'} type="button" data-ptoggle data-tip="Streaming quality" aria-haspopup="dialog" aria-expanded={P.panel === 'tracks' && trackTab === 'quality'} aria-label="Streaming quality: {quality.label}" onclick={() => openTracks('quality')}><Icon name="settings" />{quality.reduced ? quality.res || 'Reduced' : 'Original'} <span class="pchip__dim">{quality.reduced ? quality.mbit + ' Mbit/s' : 'fits ' + quality.mbit + ' Mbit/s'}</span></button>
@@ -1127,7 +1113,9 @@
 
   {#if busy}
     <div class="wplayer__top wplayer__top--busy">
-      <button class="iconbtn" type="button" aria-label="Cancel and close" data-tip="Close (Esc)" onclick={() => exitPlayer()}><Icon name="x" /></button>
+      <!-- while a card is up it has its own Close (the keyboard's stop): this one
+           is the pointer's, named like the top bar's, nothing left to cancel -->
+      <button class="iconbtn" type="button" aria-label={P.error ? (P.trailer ? 'Close trailer' : 'Close player') : 'Cancel and close'} tabindex={P.error ? -1 : undefined} data-tip="Close (Esc)" onclick={() => exitPlayer()}><Icon name="x" /></button>
     </div>
   {/if}
 
