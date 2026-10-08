@@ -11,7 +11,8 @@
  * label as a tooltip too ("Add Dune to library", "Adding Dune") — a bare "+"
  * on a poster doesn't say what it does.
  *
- * Icon-only buttons (back, bell, avatar, rail and hero paddles, close) say
+ * Icon-only buttons (back, bell, avatar, rail and hero paddles, close, a
+ * tile's or row's ⋯) say
  * what they do the same way: their aria-label becomes the native tooltip,
  * refreshed on every entry (the bell's count changes). A `title` the markup
  * set itself is left alone, so nothing shows two tooltips.
@@ -25,11 +26,12 @@
  * then. */
 
 /** the icon-only buttons whose aria-label is their tooltip (outside the player) */
-export const ICON_BUTTONS = '.iconbtn, .avatarbtn, .closebtn, .wrail__btn, .whero__btn, .wrail__edge, .tile__add';
+export const ICON_BUTTONS = '.iconbtn, .avatarbtn, .closebtn, .wrail__btn, .whero__btn, .wrail__edge, .tile__add, .ctxmore';
 const SCROLL_IDLE_MS = 150;
 
+/* cut off sideways (a one-line ellipsis) or below (a grid's two-line clamp) */
 /** @param {Element | null} el */
-const clipped = (el) => !!el && el.scrollWidth > el.clientWidth + 1;
+const clipped = (el) => !!el && (el.scrollWidth > el.clientWidth + 1 || el.scrollHeight > el.clientHeight + 1);
 
 let scrolling = false;
 /** @type {ReturnType<typeof setTimeout> | undefined} */

@@ -38,8 +38,8 @@ describe('icon-only buttons', () => {
     expect(b.title).toBe('Notifications');
   });
 
-  it('cover the paddles, the avatar and the quick-add', () => {
-    for (const cls of ['wrail__btn', 'whero__btn', 'wrail__edge', 'avatarbtn', 'closebtn', 'tile__add']) expect(ICON_BUTTONS).toContain('.' + cls);
+  it('cover the paddles, the avatar, the quick-add and the ⋯', () => {
+    for (const cls of ['wrail__btn', 'whero__btn', 'wrail__edge', 'avatarbtn', 'closebtn', 'tile__add', 'ctxmore']) expect(ICON_BUTTONS).toContain('.' + cls);
   });
 
   it('leave a title the markup set alone (no second tooltip)', () => {
@@ -83,6 +83,16 @@ describe('cut-off tile captions', () => {
     widths(/** @type {HTMLElement} */ (t.querySelector('.tile__title')), 140, 140);
     over(t);
     expect(t.hasAttribute('title')).toBe(false);
+  });
+
+  it('count a two-line clamp cut on its second line as clipped', () => {
+    const t = tile('The Lord of the Rings: The Return of the King', '2003');
+    const title = /** @type {HTMLElement} */ (t.querySelector('.tile__title'));
+    widths(title, 140, 140); // wraps instead of overflowing sideways
+    Object.defineProperty(title, 'scrollHeight', { configurable: true, get: () => 54 });
+    Object.defineProperty(title, 'clientHeight', { configurable: true, get: () => 36 });
+    over(t);
+    expect(t.title).toBe('The Lord of the Rings: The Return of the King · 2003');
   });
 
   it('are not re-measured for a move inside the tile', () => {

@@ -19,6 +19,13 @@ import { moreFor } from './ctxmore.js';
 
 export * from '../../../phone/src/lib/gestures.js';
 
+/* The desktop has no rubber band to stretch Home's hero into: a page scroller
+ * never goes above 0 under a mouse or a trackpad. The phone's action reads
+ * offsetHeight at mount (a forced layout on every Home mount) and keeps a
+ * scroll listener and a ResizeObserver for nothing, so the web's is a no-op
+ * (a local export wins over the `export *` above). */
+export function pullStretch() {}
+
 /** @param {VR.LongPressOptions | ((d: VR.LongPressDetail) => void) | null | undefined} n @returns {VR.LongPressOptions} */
 const norm = (n) => (typeof n === 'function' ? { onlongpress: n } : { ...(n || {}) });
 
