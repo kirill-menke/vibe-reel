@@ -24,7 +24,7 @@
 /* the item under the pointer / with keyboard focus — one look for both (the
    pointer focuses the item it is over, so the keys continue from there). The
    ring sits inside the item: the menu clips its overflow. */
-.ctx .ctx__item:not(:disabled):is(:hover, :focus-visible) { background: rgba(255, 255, 255, 0.1); transition-duration: 0s; }
+.ctx .ctx__item:not(:disabled):is(:hover, :focus-visible) { background-image: linear-gradient(var(--hover-tint), var(--hover-tint)); transition-duration: 0s; }
 .ctx .ctx__item:focus-visible { outline-offset: -2px; border-radius: 6px; }
 
 /* ------------------------------------------------------------ the ⋯ */
@@ -50,15 +50,25 @@
 /* episode rows: a permanent trailing button in the card's top-right corner */
 .episode > .ctxmore--episode { position: absolute; top: var(--s-2); right: var(--s-2); z-index: 1; color: var(--text-dim); }
 .episode:has(> .ctxmore--episode) .episode__head { padding-right: 36px; }
+/* A narrow window (under 480 px: 400 % zoom, a phone-sized one): the still
+   takes a third of the card instead of its 200 px, and the ⋯ keeps clear of
+   the episode-number line only, a little higher up, so the title gets the
+   whole text column (S1-3). At 320 px the 200-px still and the 36-px pad
+   had left the title 14 px: one letter a line. (Stacked, a full-width still
+   filled a 200-px-tall window by itself.) */
+@media (max-width: 479.98px) {
+  .wapp .detail__episodes .episode { grid-template-columns: minmax(0, 34%) minmax(0, 1fr); }
+  .wapp .detail__episodes .episode__still { width: 100%; }
+  .wapp .detail__episodes .episode > .ctxmore--episode { top: var(--s-1); }
+  .wapp .episode:has(> .ctxmore--episode) .episode__head:has(> .episode__num) { padding-right: 0; }
+  .wapp .episode:has(> .ctxmore--episode) .episode__num { padding-right: 36px; }
+}
 
 /* season pills: one button right after the pills, for the selected season */
 .detail__pills:has(> .ctxmore) { display: flex; align-items: center; }
 .detail__pills:has(> .ctxmore) > .pills { flex: 0 1 auto; min-width: 0; padding-right: var(--s-2); }
 .detail__pills > .ctxmore--season { margin-right: var(--gutter); color: var(--text-dim); background: var(--surface-2); }
 
-@media (hover: hover) and (pointer: fine) {
-  .ctxmore--tile:hover { background: var(--surface-3); }
-  .ctxmore--episode:hover, .ctxmore--season:hover { color: var(--text); background: var(--surface-3); }
-  .ctxmore--episode:hover { background: rgba(255, 255, 255, 0.12); }
-}
+/* hover: web.css §5 (a tile's glass ⋯ takes the over-media tint, the
+   others the plain one) */
 .ctxmore[aria-expanded="true"] { color: var(--text); }

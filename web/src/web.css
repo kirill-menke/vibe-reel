@@ -304,6 +304,21 @@ html, body { overflow: hidden; }
 .actsheet__btn::before { display: none; }
 .actsheet__btn--danger { background: var(--danger-soft); color: var(--danger); }
 .actsheet__btn--cancel { order: 1; background: var(--surface-2); color: var(--text); }
+/* (Tab follows this order, not the DOM's: web/src/lib/confirmtab.js) */
+/* never taller than the window (S1-2): at 320×200 (400 % zoom) the centred
+   card ran from y −63 to 263, its title above the window and Delete below
+   it, and nothing scrolled. The card now scrolls as a whole; in a short
+   window it hangs from the top, and the question scrolls inside it while
+   the answers stay in view under it — the destructive one is never off
+   screen. */
+.actsheet__box { max-height: calc(100% - 16px); overflow-y: auto; overscroll-behavior: contain; }
+@media (max-height: 420px) {
+  .actsheet__box { top: 8px; translate: none; padding: var(--s-4); gap: var(--s-2) var(--s-3); }
+  .actsheet__head {
+    max-height: calc(100vh - 16px - 2 * var(--s-4) - 44px - var(--s-2));
+    overflow-y: auto; overscroll-behavior: contain; padding-bottom: var(--s-2);
+  }
+}
 
 /* Login: a card centred in the window instead of a phone screen at the top
    of an empty page — a faint gold glow behind it, as the hero art would be */
@@ -329,23 +344,47 @@ html, body { overflow: hidden; }
      one white tint over whatever they are filled with — a background-image,
      so glass stays glass and a selected (gold-soft) one stays gold;
    - artwork (tiles, cast photos, category cards) gets the gold-line ring.
-   Only the gold primary button brightens. Pressed, selected and disabled
-   looks: styles/look.css. */
-:root { --hover-tint: rgba(255, 255, 255, 0.08); }
+   Glass over artwork or video takes the stronger over-media tint; gold fills
+   brighten. No lane file adds a hover of its own (S3-5): they were eight
+   looks — solid greys, white .1 / .12 / .16 fills — and the confirm's and
+   the player cards' buttons had none. Pressed, selected and disabled looks:
+   styles/look.css. */
+:root {
+  --hover-tint: rgba(255, 255, 255, 0.08);
+  /* the over-media variant: on glass over artwork or the moving picture (the
+     hero's Pause / ‹ ›, the navigation's back pill over a backdrop, a tile's
+     ⋯, the player's controls and cards) .08 doesn't read — twice that */
+  --hover-tint-media: rgba(255, 255, 255, 0.16);
+}
 @media (hover: hover) and (pointer: fine) {
-  a, button, [role="button"], .tile, .row, .chip, .option, select { cursor: pointer; }
+  /* a pointer only where a click does something: a row is clickable as a
+     button / link (or a Settings picker row, whose select covers it) — not a
+     plain label row or a switch row, whose switch is the control (S3-6) */
+  a, button, [role="button"], .tile, .chip, .option, select { cursor: pointer; }
   button:disabled, [aria-disabled="true"], .row[disabled] { cursor: default; }
 
-  :is(.chip, .pill:not(.pill--active), .seg__opt:not(.seg__opt--active), .action, .wrail__btn, .iconbtn, .avatarbtn,
-    .closebtn, .wnav__tab, .row, .notif, .ctx__item, .option, .btn--glass, .btn--surface, .btn--danger):not(:disabled, .wplayer *):hover {
+  /* the tint, never over a selected one: a selected chip / tab / action pill /
+     open bell keeps its gold, a stronger gold-soft under the pointer
+     (look.css) — the tint and the cream text turned the current nav tab
+     into an unselected one (S3-4) */
+  :is(.chip:not(.chip--on), .pill:not(.pill--active), .seg__opt:not(.seg__opt--active), .action:not(.action--on), .wrail__btn,
+    .iconbtn:not(.wnav__btn--on), .avatarbtn:not(.wnav__btn--on), .closebtn, .wnav__tab:not(.wnav__tab--on), .wnav__crumb, .wnav__menu,
+    .row:where(a, button, [role="button"], [tabindex]:not([tabindex="-1"]), .setrow), .notif, .ctx__item, .option,
+    .ctxmore:not(.ctxmore--tile), .actsheet__btn--cancel, .actsheet__btn--danger,
+    .btn--glass, .btn--surface, .btn--danger):not(:disabled, .wplayer *):hover {
     background-image: linear-gradient(var(--hover-tint), var(--hover-tint));
   }
-  /* over the moving picture the player's controls light up more */
-  .wplayer :is(.pchip, .wpbtn, .iconbtn, .closebtn):hover { background-color: rgba(255, 255, 255, 0.16); }
+  :is(.whero__btn, .wnav__back, .ctxmore--tile):not(:disabled):hover {
+    background-image: linear-gradient(var(--hover-tint-media), var(--hover-tint-media));
+  }
+  /* over the moving picture the player's controls and its cards' buttons
+     (Retry, Open on YouTube, Back to this tab) light up more */
+  .wplayer :is(.pchip, .wpbtn, .iconbtn, .closebtn, .btn--glass, .btn--surface):not(:disabled):hover { background-color: var(--hover-tint-media); }
   .wplayer .option:hover { background-color: var(--hover-tint); }
-  :is(.pill:not(.pill--active), .seg__opt, .wnav__tab, .chip:not(.chip--on)):not(:disabled):hover { color: var(--text); }
-  .btn--primary { transition: filter var(--dur-fast) linear, transform var(--dur-release) var(--spring-snappy); }
-  .btn--primary:not(:disabled):hover { filter: brightness(1.12); }
+  :is(.pill:not(.pill--active), .seg__opt, .wnav__tab:not(.wnav__tab--on), .chip:not(.chip--on), .wnav__crumb, .ctxmore):not(:disabled):hover { color: var(--text); }
+  /* gold fills brighten: Play / Resume, and the confirm's gold answer */
+  :is(.btn--primary, .actsheet__btn:not(.actsheet__btn--danger, .actsheet__btn--cancel)) { transition: filter var(--dur-fast) linear, transform var(--dur-release) var(--spring-snappy); }
+  :is(.btn--primary, .actsheet__btn:not(.actsheet__btn--danger, .actsheet__btn--cancel)):not(:disabled):hover { filter: brightness(1.12); }
   .switch:not([disabled]):hover { filter: brightness(1.15); }
   .skipchip:hover { background: #fff; }
 
@@ -614,8 +653,6 @@ html, body { overflow: hidden; }
 }
 
 @media (hover: hover) and (pointer: fine) {
-  .wapp .action:not(:disabled):hover { background: #303038; }
-  .wapp .action--on:not(:disabled):hover { background: rgba(230, 180, 80, 0.24); }
   .wapp .episode:not([tabindex]):hover { background-color: transparent; }
   .wapp .episode[tabindex]:hover { background-color: var(--surface-1); }
   .wapp .episode[tabindex]:hover .episode__title { color: var(--gold); }

@@ -66,40 +66,6 @@
 .tile:focus-visible .tile__title { color: var(--gold); }
 .catcard:focus-visible { outline-offset: 3px; }
 
-/* ========================================================= forced colors */
-/* Windows High Contrast (C-05): the system repaints backgrounds as Canvas and
-   drops every box-shadow, which took away the tile's focus ring (a shadow),
-   both colours of a switch, the segmented thumb, the current nav tab, the
-   progress fills. Rings become outlines; fills that carry meaning keep it in
-   system colours (forced-color-adjust: none + Highlight / CanvasText). */
-@media (forced-colors: active) {
-  .tile:focus-visible .tile__frame { outline: 3px solid Highlight; outline-offset: 2px; }
-  .tile:focus-visible .tile__title { color: Highlight; }
-  .field--focus .field__box, .search__field--focus .search__bg { outline: 2px solid Highlight; outline-offset: -2px; }
-
-  .switch { forced-color-adjust: none; background: Canvas; box-shadow: inset 0 0 0 1px CanvasText; }
-  .switch::after { background: CanvasText; box-shadow: none; }
-  .switch--on { background: Highlight; box-shadow: none; }
-  .switch--on::after { background: HighlightText; }
-  .switch[disabled] { opacity: 1; box-shadow: inset 0 0 0 1px GrayText; }
-  .switch[disabled]::after { background: GrayText; }
-
-  /* the current / selected one of a set */
-  :is(.seg__opt--active, .wnav__tab--on, .pill--active, .chip--on, .action--on, .wnav__btn--on) {
-    forced-color-adjust: none; background: Highlight; color: HighlightText;
-  }
-  .seg__thumb { display: none; }
-  :is(.seg__opt, .pill, .chip, .action) { border: 1px solid ButtonText; }
-
-  /* progress: a framed track with a Highlight fill */
-  .progress { forced-color-adjust: none; background: Canvas; box-shadow: inset 0 0 0 1px CanvasText; }
-  .progress__fill { forced-color-adjust: none; background: Highlight; }
-  .dots__dot { forced-color-adjust: none; background: GrayText; }
-  .dots__dot--active { background: Highlight; }
-  .ring__track { stroke: GrayText; }
-  .ring__value { stroke: Highlight; }
-}
-
 /* ============================================================== the font */
 /* Inter for the UI (D-03). `system-ui` is DejaVu Sans on Linux — 14 % wider
    than Liberation, no 500/600 (500 drew Book, 600 Bold) — and Segoe or Arial
@@ -155,7 +121,9 @@
 .chip { height: var(--btn-h-sm); }
 .wrail__btn { width: 36px; height: 36px; }
 .hero__actions > .btn { padding: 0 var(--s-8); }
-.hero__actions > .btn--primary { min-width: 200px; }
+/* …in a window with room for it: at 320 px (400 % zoom) a 200-px Resume
+   pushed Details past the edge (S1-1) */
+@media (min-width: 640px) { .hero__actions > .btn--primary { min-width: 200px; } }
 
 /* ================================================================ states */
 /* Pressed (F-06): every button-like control gives under the mouse, as the
@@ -178,7 +146,7 @@
    are on the thumb. (The current nav tab is the shell's: see its notes.) */
 .pill--active { background: var(--gold-soft); color: var(--gold); box-shadow: inset 0 0 0 1px var(--gold-line); }
 @media (hover: hover) and (pointer: fine) {
-  :is(.pill--active, .chip--on, .action--on, .wnav__btn--on):not(:disabled):hover {
+  :is(.pill--active, .chip--on, .action--on, .wnav__btn--on, .wnav__tab--on):not(:disabled):hover {
     background-color: rgba(230, 180, 80, 0.22); background-image: none;
   }
 }
@@ -224,4 +192,42 @@
 .wplayer .vr-scrub__hit:focus-visible .scrubber__thumb { transform: scale(1.45); box-shadow: 0 0 0 var(--ring-gap) #000, 0 0 0 calc(var(--ring-gap) + var(--ring-w)) var(--ring); }
 @media (forced-colors: active) {
   .wplayer .vr-scrub__hit:focus-visible { outline: 3px solid Highlight; outline-offset: 2px; }
+}
+
+/* ========================================================= forced colors */
+/* Windows High Contrast (C-05): the system repaints backgrounds as Canvas and
+   drops every box-shadow, which took away the tile's focus ring (a shadow),
+   both colours of a switch, the segmented thumb, the current nav tab, the
+   progress fills. Rings become outlines; fills that carry meaning keep it in
+   system colours (forced-color-adjust: none + Highlight / CanvasText).
+   Last in the file, after the selected / hover looks it overrides. */
+@media (forced-colors: active) {
+  .tile:focus-visible .tile__frame { outline: 3px solid Highlight; outline-offset: 2px; }
+  .tile:focus-visible .tile__title { color: Highlight; }
+  .field--focus .field__box, .search__field--focus .search__bg { outline: 2px solid Highlight; outline-offset: -2px; }
+
+  .switch { forced-color-adjust: none; background: Canvas; box-shadow: inset 0 0 0 1px CanvasText; }
+  .switch::after { background: CanvasText; box-shadow: none; }
+  .switch--on { background: Highlight; box-shadow: none; }
+  .switch--on::after { background: HighlightText; }
+  .switch[disabled] { opacity: 1; box-shadow: inset 0 0 0 1px GrayText; }
+  .switch[disabled]::after { background: GrayText; }
+
+  /* the current / selected one of a set — under the pointer too. !important:
+     every selected and selected-hover look (here, shell.css, web.css) is a
+     gold rule of up to 0,4,0 that comes later or weighs more; the season
+     pill's kept gold on gold-soft (~1.8:1 in a light theme, S2-4) */
+  :is(.seg__opt--active, .wnav__tab--on, .pill--active, .chip--on, .action--on, .wnav__btn--on) {
+    forced-color-adjust: none; background: Highlight !important; color: HighlightText !important;
+  }
+  .seg__thumb { display: none; }
+  :is(.seg__opt, .pill, .chip, .action) { border: 1px solid ButtonText; }
+
+  /* progress: a framed track with a Highlight fill */
+  .progress { forced-color-adjust: none; background: Canvas; box-shadow: inset 0 0 0 1px CanvasText; }
+  .progress__fill { forced-color-adjust: none; background: Highlight; }
+  .dots__dot { forced-color-adjust: none; background: GrayText; }
+  .dots__dot--active { background: Highlight; }
+  .ring__track { stroke: GrayText; }
+  .ring__value { stroke: Highlight; }
 }

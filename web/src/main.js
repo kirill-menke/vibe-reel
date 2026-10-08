@@ -28,6 +28,7 @@ import { initTileTips } from './lib/tiletips.js';
 import { initCtxMenu } from './lib/ctxmenu.js';
 import { initPagesA11y } from './lib/pagesa11y.js';
 import { initRoving } from './lib/roving.js';
+import { initConfirmTab } from './lib/confirmtab.js';
 
 /* Cloudflare Access: an expired session turns API calls into network errors
  * — wrap fetch first, before anything can fetch (lib/access.js). */
@@ -50,5 +51,6 @@ initTileTips(); // the whole title of a cut-off tile caption on hover
 initCtxMenu(); // context menus: at the pointer / the ⋯, keyboard, focus return; nested-button keys
 initPagesA11y(); // title pages: download state as a progressbar, initials out of names
 initRoving(); // arrow keys in radio groups, tab lists and poster grids; live regions
+initConfirmTab(); // Tab / Shift+Tab walk the confirm's answers as drawn (Keep, Delete) and stay inside it
 
 export default mount(App, { target: /** @type {HTMLElement} */ (document.getElementById('app')) });

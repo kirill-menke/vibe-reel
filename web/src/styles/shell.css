@@ -72,12 +72,8 @@
 @container wtrail (max-width: 110px) { .wnav__backto { display: none; } .wnav__backword { display: inline; } }
 .wnav__end { flex: none; }
 
-@media (hover: hover) and (pointer: fine) {
-  .wnav__tab--on:hover { background: rgba(230, 180, 80, 0.22); color: var(--gold); }
-  .wnav__back:hover { background: rgba(255, 255, 255, 0.16); }
-  .wnav__crumb:hover { color: var(--text); background: rgba(255, 255, 255, 0.08); }
-  .wnav__menu:hover { background: rgba(255, 255, 255, 0.08); }
-}
+/* hover: web.css §5 (the back pill takes the over-media tint, crumbs and
+   the menu button the plain one; the current tab stays gold, look.css) */
 
 /* ---- narrower windows ---- */
 @media (max-width: 900px) {
@@ -100,6 +96,9 @@
   }
   .wnav--menu .wnav__tabs { display: flex; }
   .wnav__tab { justify-content: flex-start; height: 40px; }
+  /* one left edge for the four labels: Search's glyph pushed its label
+     22 px right of Home / Movies / Shows (S1-9) */
+  .wnav__tab .i { display: none; }
   .wnav__trail::before { display: none; }
   .wnav__crumbitem--earlier, .wnav__crumbitem--here, .wnav__backto { display: none; }
   .wnav__backword { display: inline; }
@@ -121,8 +120,15 @@
    held a third of the height (720×450: 64 + 96 px) and at 320×200 the
    whole of it: there it scrolls with the page */
 .wapp .detail__pills { top: var(--wnav-h); }
+/* …and ends where the navigation does: with an overlay scrollbar (GTK
+   Firefox) the bar leaves the thumb its strip too — the stuck bar ran 12 px
+   past the navigation's end, a notch of page beside the glass (S1-7). A
+   classic gutter is outside the page already (--wnav-right-pad is 0). */
+.wapp .detail__pills { margin-right: var(--wnav-right-pad, 0px); }
 @media (max-height: 600px) {
-  .wapp .detail__pills { position: relative; }
+  /* top: auto — a relative box still moves by its top, and the sticky
+     offset pushed the bar 64 px down over the first episodes (S2-1) */
+  .wapp .detail__pills { position: relative; top: auto; }
   .wapp .screen:has(> * .detail__pills, > .detail__pills) { scroll-padding-top: calc(var(--wnav-h) + var(--s-3)); }
 }
 /* Library's compact band repeated "Movies · Recently added" under the
@@ -147,6 +153,22 @@
 /* its Undo names the shortcut (App: Ctrl+Z, ⌘Z on a Mac) */
 .toast__action { white-space: nowrap; }
 .toast__action::after { content: var(--wundo-key, ""); font-weight: 400; color: var(--text-faint); }
+/* both stay inside a narrow window (S1-6): the toast's 480-px cap and the
+   banner's fixed 480 px ran past a 320-px one on both sides; the message
+   wraps instead. Under 480 px the shortcut goes (a window that small is
+   zoomed or touch-sized: "Undo" says it). */
+.toast { max-width: min(var(--toast-max-w), calc(100vw - 16px)); }
+.banner { width: min(480px, calc(100vw - 16px)); margin-left: calc(min(480px, 100vw - 16px) / -2); }
+@media (max-width: 479.98px) {
+  .toast__action::after { content: none; }
+}
+/* where the banner is narrower than its 480 px it keeps to its title
+   ("Check your connection…" is still read out: font-size 0 hides a text node
+   from sight only), or at 320 px its four lines (103 px) reached up under the
+   toast, which is raised for a two-line banner */
+@media (max-width: 539.98px) {
+  .banner__text { font-size: 0; }
+}
 
 /* Person's profile head cleared the old second bar (photo at y 128): it now
    starts where every other page head does, under the one bar */

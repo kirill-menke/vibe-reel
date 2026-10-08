@@ -21,11 +21,29 @@
    the hero leaves about a fifth of it, so the first rail's head and the top of
    its tiles show. Home is the token's only user (.hero). */
 .wapp .home { --hero-h: clamp(min(480px, 78vh), min(68vh, 40vw), 940px); }
-/* the phone's landscape rule (max-height 500) lifts the text block over its
-   floating tab bar; the desktop has none */
-@media (orientation: landscape) and (max-height: 500px) {
-  .wapp .home .hero__body { bottom: var(--s-5); }
+/* …and never shorter than its text under the navigation (S1-1). The text
+   blocks (one per slide, stacked) were absolute at the hero's foot: in a
+   320 × 200 window (400 % zoom) the 156-px hero put the eyebrow and title
+   above the window, where nothing could scroll to them. They now share one
+   grid cell at the hero's foot, so the hero grows past --hero-h when its
+   text needs it — and keeps exactly --hero-h whenever the text fits (every
+   window over ~250 px tall): the padding only counts once the text reaches
+   the navigation (border-box min-height). Media, scrim, dots and the pager
+   controls stay absolute over the whole hero. */
+.wapp .home > .hero {
+  display: grid; height: auto; min-height: var(--hero-h);
+  padding-top: calc(var(--wnav-h) + var(--s-2));
 }
+.wapp .home > .hero > .hero__body {
+  position: relative; inset: auto; grid-area: 1 / 1; align-self: end;
+  margin: 0 var(--gutter) var(--s-5);
+}
+/* a narrow window: the text column takes the width (the phone's landscape
+   rule halves it), and the buttons wrap instead of running off the edge */
+@media (max-width: 639.98px) {
+  .wapp .home > .hero > .hero__body { width: auto; max-width: none; }
+}
+.wapp .home .hero__actions { flex-wrap: wrap; }
 
 /* ---- the pager row: dots on the text column, controls at the right --------
    The dots were centred in the window, under nothing; they now start where
@@ -45,7 +63,7 @@
 }
 .whero__btn .i { width: 18px; height: 18px; }
 .whero__pause .i { width: 14px; height: 14px; }
-@media (hover: hover) and (pointer: fine) { .whero__btn:hover { background: rgba(40, 40, 46, 0.9); } }
+/* (hover: the over-media tint, web.css §5) */
 /* one slide: nothing to page or pause */
 .homehero:not(:has(> .homehero__dots)) > .whero__ctl { display: none; }
 /* reduced motion: the hero never moves by itself — no Pause to offer */
