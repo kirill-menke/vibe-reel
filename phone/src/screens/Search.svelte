@@ -127,7 +127,9 @@
   function submit(e) {
     e.preventDefault();
     run();
-    inputEl?.blur(); // dismiss the keyboard; the results stay
+    // dismiss the keyboard; the results stay. A desktop has none to put
+    // away: there the cursor stays in the field (a blur dropped focus to <body>)
+    if (!__WEB__) inputEl?.blur();
   }
 
   function clear() {
