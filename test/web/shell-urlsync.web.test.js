@@ -24,3 +24,11 @@ describe('lookup URLs', () => {
     expect(parseUrl('/lookup/movie/7', '?y=abc').stack[0].params?.item).toEqual({ id: '7', type: 'movie', title: '' });
   });
 });
+
+describe('chart URLs', () => {
+  it('a genre chart linked without ?t= is titled by its genre', () => {
+    expect(parseUrl('/search/chart/genre-Science%20Fiction', '').stack).toEqual([{ name: 'chart', params: { key: 'genre-Science Fiction', title: 'Science Fiction' } }]);
+    expect(parseUrl('/search/chart/genre-Drama', '?t=Drama%20picks').stack[0].params).toEqual({ key: 'genre-Drama', title: 'Drama picks' });
+    expect(parseUrl('/search/chart/top-movie', '').stack[0].params).toEqual({ key: 'top-movie', title: '' });
+  });
+});

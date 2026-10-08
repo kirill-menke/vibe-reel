@@ -104,7 +104,8 @@ export function parseUrl(pathname, search = '') {
     if (Number.isInteger(y) && y > 1800) item.year = y;
     return at('search', [{ name: 'lookup', params: { item } }]);
   }
-  if (a === 'search' && b === 'chart' && c) return at('search', [{ name: 'chart', params: { key: c, title: q.get('t') || '' } }]);
+  // a genre chart's title is its genre (reel-api's index says so): a link without ?t= keeps it
+  if (a === 'search' && b === 'chart' && c) return at('search', [{ name: 'chart', params: { key: c, title: q.get('t') || (/^genre-./.test(c) ? c.slice(6) : '') } }]);
   if (a === 'pending' && b) return at('home', [{ name: 'pending', params: { key: b } }]);
   if (a === 'settings') return at('home', [{ name: 'settings', params: {} }]);
   if (a === 'my-library') return at('home', [{ name: 'mylibrary', params: {} }]);
