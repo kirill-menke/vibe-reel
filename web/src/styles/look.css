@@ -206,3 +206,8 @@
   .tile .tile__frame { transition: box-shadow var(--dur-base) var(--ease-out); }
   .tile:hover .tile__frame { transform: none; }
 }
+
+/* `text-wrap: pretty` alone (web.css, title pages' note) is dropped by
+   Firefox, which then kept the phone's `balance`: `wrap` first, so both
+   browsers wrap the note normally and Chrome also evens its last line (D-07) */
+.wapp .detail__noteslot .detail__note { text-wrap: wrap; text-wrap: pretty; }

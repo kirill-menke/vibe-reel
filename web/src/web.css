@@ -38,7 +38,6 @@
   --wgrid-cols: 6;
   --hero-h: clamp(480px, min(68vh, 40vw), 940px);
   --backdrop-h: clamp(480px, min(72vh, 42vw), 920px);
-  --content-max: 1560px;      /* text columns on title pages */
   --catcard-h: 180px;
   --toast-max-w: 480px;
   --sheet-side-w: 620px;
@@ -83,15 +82,12 @@
 @media (min-width: 1440px) { :root { --wgrid-cols: 8; } }
 @media (min-width: 1800px) { :root { --wgrid-cols: 9; } }
 @media (min-width: 2200px) { :root { --wgrid-cols: 10; --tu: 1.08px; } }
-@media (max-width: 900px) { :root { --wgrid-cols: 4; --poster-w-rail: 132px; } }
 /* poster grids (Library, Search results, charts): the phone's landscape rule
    pins them at 6 */
-.wapp .lib, .wapp .srch, .wapp .chart, .wapp .person { --grid-cols: var(--wgrid-cols); }
+.wapp .lib, .wapp .srch, .wapp .chart { --grid-cols: var(--wgrid-cols); }
 
-/* the phone's 380 / 420 px breakpoints set rail widths too: ours win */
-@media (min-width: 420px) {
-  :root { --poster-w-rail: clamp(148px, 10.4vw, 236px); --thumb-w-rail: clamp(280px, 19vw, 420px); --hero-h: clamp(480px, min(68vh, 40vw), 940px); --still-w: clamp(200px, 14vw, 280px); }
-}
+/* (the phone's 380 / 420 px breakpoints in app.css set rail widths too: this
+   :root comes later in the cascade, so ours win without repeating them) */
 
 /* scrollbars: the phone hides them all (touch has no use for them); a mouse
    wants the page's — thin, dark — while rails keep theirs hidden (◀ ▶) */
@@ -104,7 +100,7 @@
    nor on the rows, switches and segmented pickers that act as one (a
    double-click on a settings row used to select its label) */
 body { -webkit-user-select: text; user-select: text; }
-button, .tile, .chip, .pchip, .wnav, .rail__head, .player, .wplayer,
+button, .tile, .chip, .pchip, .wnav, .rail__head, .wplayer,
 .row, .seg, .switch, .sheet__head, .navbar, .group__label, .wtopbar { -webkit-user-select: none; user-select: none; }
 .row.selectable, .row.selectable * { -webkit-user-select: text; user-select: text; }
 
