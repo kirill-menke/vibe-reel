@@ -690,6 +690,7 @@ function startTrailer(pos) {
         // out of the blue, never the app navigated away, and the raw yt-dlp
         // message goes to the console, not into the card.
         console.warn('Trailer failed:', e);
+        if (e && e.name === 'TrailerStall') return trailerStalled(60);   // a request hung (trailerstream's deadline)
         const m = String((e && e.message) || '');
         showPlayError(
           'This trailer can’t play here',
@@ -707,6 +708,17 @@ function startTrailer(pos) {
   });
   trailerSrc = src;
   startPlayback(src.url, 'Trailer', pos);
+}
+
+/* Desktop: the trailer stopped arriving — the watchdog saw neither the
+ * playhead nor the buffer move for 30 s, or a request to reel-api hung past
+ * its deadline. The error card offers Retry from here and the YouTube link. */
+/** @param {number} secs how long nothing has arrived */
+function trailerStalled(secs) {
+  stallFail(
+    'This trailer stopped loading',
+    'Nothing has arrived from the server for ' + secs + '\u00a0s. Retry from ' + fmtTime(lastPos) + ', or watch it on YouTube.'
+  );
 }
 
 /* Desktop: the YouTube id of the trailer up (its error card links to it). */
@@ -1220,6 +1232,12 @@ function startStallWatch() {
     if (still >= STALL_SPIN_MS && !P.spinner) {
       P.spinner = true;
       wdSpinner = true;
+    }
+    // Desktop trailer: no "can wait" as for a download — the same 30 s of
+    // neither playhead nor buffer moving brings its own card (Retry, YouTube).
+    if (__PHONE__ && __WEB__ && P.trailer && still >= STALL_FAIL_MS && now - bufMovedAt >= STALL_FAIL_MS) {
+      trailerStalled(Math.round((now - Math.max(movedAt, bufMovedAt)) / 1000));
+      return;
     }
     // A slow link that is still delivering (buffered end advancing) is not a
     // dead one: keep the ring (and the slow-link hint) instead of the card. The

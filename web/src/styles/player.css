@@ -78,3 +78,12 @@
    overflow the card in a narrow window */
 .wplayer .pcard:not(.pcard--bare) { width: min(440px, calc(100% - 2 * var(--gutter))); }
 .wplayer .pcard__actions { flex-wrap: wrap; justify-content: center; }
+
+/* ---- the cards' buttons light up like the player's other controls (S3-5) ----
+   web.css §5's tint skips everything in .wplayer, and its player rule covers
+   only the round buttons and chips: the error / PiP / buffering cards' glass
+   buttons (Open on YouTube, Close, Back to this tab, Switch to N Mbit/s) had
+   no hover at all. */
+@media (hover: hover) and (pointer: fine) {
+  .wplayer :is(.btn--glass, .btn--surface):not(:disabled):hover { background-color: rgba(255, 255, 255, 0.16); }
+}

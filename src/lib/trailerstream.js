@@ -38,6 +38,41 @@ const READY_TIMEOUT_MS = 45000;   // yt-dlp resolves in ~2 s; this is "YouTube s
 
 const sleep = (/** @type {number} */ ms) => new Promise((r) => setTimeout(r, ms));
 
+/* Desktop: a request to reel-api that hangs (headers or body) becomes an error
+ * after this long, named 'TrailerStall' — the player's "This trailer stopped
+ * loading" card with Retry, not a loading card or a ring forever. A 4K segment
+ * is a few MB, so even a slow link that is still delivering finishes well
+ * inside it; a live stall while playing is the watchdog's (30 s, player). */
+const FETCH_DEADLINE_MS = 60000;
+/* The answer with its whole body read inside the deadline, handed back as an
+ * equivalent Response (whose json()/text()/arrayBuffer() then can't hang), so
+ * the reading code below is the same for every build. */
+/** @param {string} url @param {RequestInit} init @param {AbortSignal} outer the run's abort @returns {Promise<Response>} */
+async function fetchWhole(url, init, outer) {
+  const c = new AbortController();
+  const off = () => c.abort();
+  if (outer.aborted) c.abort();
+  outer.addEventListener('abort', off);
+  let late = false;
+  const t = setTimeout(() => {
+    late = true;
+    c.abort();
+  }, FETCH_DEADLINE_MS);
+  try {
+    const r = await fetch(url, { ...init, signal: c.signal });
+    const body = await r.arrayBuffer();
+    return new Response(r.status === 204 || r.status === 304 ? null : body, { status: r.status, statusText: r.statusText, headers: r.headers });
+  } catch (e) {
+    if (!late) throw e;
+    const err = new Error('no answer from the server for ' + FETCH_DEADLINE_MS / 1000 + ' s (' + url.slice(url.lastIndexOf('/') + 1) + ')');
+    err.name = 'TrailerStall';
+    throw err;
+  } finally {
+    clearTimeout(t);
+    outer.removeEventListener('abort', off);
+  }
+}
+
 /* iPhone: iOS 17.1+ has no MediaSource on iPhone, only ManagedMediaSource —
  * the same API plus two rules: the page must turn remote playback off on the
  * <video> (startPlayback does, from `managed` below), and the UA says when it
@@ -73,21 +108,27 @@ export function createTrailerSource(id, { onFail, onInfo, onSubs, position, jump
 
   /** @param {string} path @param {string} [method] @returns {Promise<Reel.TrailerStatus>} */
   const fetchJson = async (path, method = 'GET') => {
-    const r = await fetch(base + path, { method, headers: mlHeaders(), signal: ac.signal, cache: 'no-store' });
+    const r = __PHONE__ && __WEB__
+      ? await fetchWhole(base + path, { method, headers: mlHeaders(), cache: 'no-store' }, ac.signal)
+      : await fetch(base + path, { method, headers: mlHeaders(), signal: ac.signal, cache: 'no-store' });
     const b = await r.json().catch(/** @returns {null} */ () => null);
     if (!r.ok || !b) throw new Error((b && (b.detail || b.error)) || 'HTTP ' + r.status);
     return b;
   };
   /** @param {string} name @returns {Promise<ArrayBuffer>} */
   const fetchBuf = async (name) => {
-    const r = await fetch(base + '/' + name, { headers: mlHeaders(), signal: ac.signal });
+    const r = __PHONE__ && __WEB__
+      ? await fetchWhole(base + '/' + name, { headers: mlHeaders() }, ac.signal)
+      : await fetch(base + '/' + name, { headers: mlHeaders(), signal: ac.signal });
     if (!r.ok) throw new Error(name + ': HTTP ' + r.status);
     return r.arrayBuffer();
   };
   /* segments with their start/end on the media timeline */
   /** @returns {Promise<VR.HlsPlaylist>} */
   const playlist = async () => {
-    const r = await fetch(base + '/index.m3u8', { headers: mlHeaders(), signal: ac.signal, cache: 'no-store' });
+    const r = __PHONE__ && __WEB__
+      ? await fetchWhole(base + '/index.m3u8', { headers: mlHeaders(), cache: 'no-store' }, ac.signal)
+      : await fetch(base + '/index.m3u8', { headers: mlHeaders(), signal: ac.signal, cache: 'no-store' });
     if (!r.ok) throw new Error('playlist: HTTP ' + r.status);
     const text = await r.text();
     /** @type {VR.HlsSegment[]} */
@@ -139,7 +180,10 @@ export function createTrailerSource(id, { onFail, onInfo, onSubs, position, jump
       subsDone = true;
       if (!x.subs || !onSubs) return;
       try {
-        const r = await fetch(base + '/subs.vtt', { headers: mlHeaders(), signal: ac.signal });
+        // (desktop: a hung one gives up — no subtitles — instead of holding the start)
+        const r = __PHONE__ && __WEB__
+          ? await fetchWhole(base + '/subs.vtt', { headers: mlHeaders() }, ac.signal)
+          : await fetch(base + '/subs.vtt', { headers: mlHeaders(), signal: ac.signal });
         if (r.ok && !dead) onSubs(await r.text(), x.subs);
       } catch {}
     };

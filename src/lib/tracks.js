@@ -357,6 +357,10 @@ export function describeTracks(src, item) {
     }
   }
   numberDupes(out.audio);
+  // desktop: a trailer's one audio track carries no language tag, but it is
+  // the original-language one (reel-api picks it): "Original audio · Opus",
+  // not "Unknown · Opus"
+  if (__PHONE__ && __WEB__ && src.Id === 'trailer') for (const a of out.audio) if (!a.lang) a.label = a.label.replace(/^Unknown\b/, 'Original audio');
   numberDupes(subRows);
   out.subs.push(...subRows);
   if (out.audio.length) {
