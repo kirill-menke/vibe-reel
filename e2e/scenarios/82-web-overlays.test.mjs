@@ -80,7 +80,7 @@ test('web context menu: a right-click on a tile opens its menu (Open, Mark as wa
   const m = movie(srv.world, 0);
   await bootWeb(t, { path: '/movies' });
   await waitRoute(page, 'movies', { h1: 'Movies' });
-  await clickOn(page, '[role="button"], button, a', new RegExp('^' + m.Name), { button: 'right' });
+  await clickOn(page, '[role="button"], [role="link"], button, a', new RegExp('^' + m.Name), { button: 'right' });
   const items = await page.waitFor(() => {
     const m = [...document.querySelectorAll('[role="menu"]')].find((x) => x.checkVisibility());
     return m && [...m.querySelectorAll('[role="menuitem"]')].length && true;

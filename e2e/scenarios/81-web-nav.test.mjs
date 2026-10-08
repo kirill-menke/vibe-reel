@@ -20,7 +20,7 @@ test('web nav: a tile click pushes /movie/<id>; the browser\'s Back and Forward 
   const m = movie(srv.world, 0);
   await bootWeb(t, { path: '/movies' });
   await waitRoute(page, 'movies', { h1: 'Movies' });
-  await clickOn(page, '[role="button"], button, a', new RegExp('^' + m.Name));
+  await clickOn(page, '[role="button"], [role="link"], button, a', new RegExp('^' + m.Name));
   await waitRoute(page, 'detail', { h1: m.Name, path: '/movie/' + m.Id });
 
   await historyBack(page);
