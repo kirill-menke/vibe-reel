@@ -175,6 +175,7 @@
   import { seedAdds } from '$lib/lookup.svelte.js';
   import { scrollPast } from '../lib/gestures.js';
   import { DUR, rm, fadeInRest } from '../lib/safe.js';
+  import { sliceAhead } from '../../../web/src/lib/gridkeys-slices.js';
 
   let { params = {}, active = false } = $props();
 
@@ -240,6 +241,15 @@
   let raf = 0;
   $effect(() => {
     if (!chart || raf) return;
+    if (__PHONE__ && __WEB__) {
+      // the web: more only as the viewport nears the end (gridkeys-slices.js)
+      untrack(() => el && limit < totalCount && sliceAhead(el, '.chart__grid', (k) => {
+        if (dead) return false;
+        limit += k;
+        return limit < totalCount;
+      }));
+      return;
+    }
     const step = () => {
       raf = 0;
       if (dead) return;

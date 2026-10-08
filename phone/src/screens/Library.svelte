@@ -169,6 +169,7 @@
   import { R, openSheet, scrollToTop } from '../lib/router.svelte.js';
   import { fadeIn } from '../lib/safe.js';
   import { onLibraryChange, rebase, whenSettled, keepScroll } from '../lib/freshness.svelte.js';
+  import { sliceAhead } from '../../../web/src/lib/gridkeys-slices.js';
 
   let { params = {}, active = false } = $props();
 
@@ -614,6 +615,19 @@
     if (rendered > n || loading) rendered = n; // a re-query / refresh: paint at once
     else if (rendered < n && !raf) {
       if (rendered === 0) rendered = Math.min(n, FIRST);
+      if (__PHONE__ && __WEB__) {
+        // the web: a slice only as the viewport nears the grid's end, not one
+        // every frame through a wheel scroll (web/src/lib/gridkeys-slices.js)
+        untrack(() => el && sliceAhead(el, '.lib__grid', (k) => {
+          if (dead) return false;
+          rendered = Math.min(items.length, rendered + k);
+          flushSync();
+          if (rendered < items.length) return true;
+          rearm();
+          return false;
+        }));
+        return;
+      }
       const step = () => {
         if (dead) return;
         const t0 = performance.now();
