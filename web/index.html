@@ -12,6 +12,10 @@
 <link rel="icon" type="image/png" href="/icons/favicon-64.png">
 <link rel="preload" href="/fonts/InstrumentSerif-Regular-latin.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="preload" href="/fonts/InstrumentSerif-Italic-latin.woff2" as="font" type="font/woff2" crossorigin>
+<!-- the UI font (styles/look.css): through Vite, so the build writes the same
+     hashed file the @font-face asks for. Unpreloaded it was requested only
+     after app.js, and the nav tabs narrowed by 7 px each when it swapped in. -->
+<link rel="preload" href="/src/fonts/Inter-latin.woff2" as="font" type="font/woff2" crossorigin>
 </head>
 <body>
 <div id="app" class="app"></div>
