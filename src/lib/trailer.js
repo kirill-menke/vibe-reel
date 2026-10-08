@@ -36,6 +36,15 @@ export function openTrailer(id, { title, art } = {}) {
     title,
     art,
     onFail: (/** @type {Error} */ e) => {
+      if (__PHONE__ && __WEB__) {
+        // (the desktop player shows its own error card and never gets here —
+        // playTrailerStream — but should it: one sentence, the raw yt-dlp
+        // error in the console, not an 8-line toast over the page)
+        console.warn('Trailer failed:', e);
+        toast('This trailer can’t play here — opening it on YouTube');
+        playTrailer(id).then((ok) => ok || toast('Your browser blocked the YouTube tab'));
+        return;
+      }
       toast('Couldn’t load the trailer here (' + ((e && e.message) || 'error') + ') — opening YouTube');
       playTrailer(id).then((ok) => ok || toast('Couldn’t open YouTube either'));
     }
@@ -90,6 +99,8 @@ export function playTrailer(id) {
     try {
       w = window.open(web, '_blank');   // no 'noopener': that makes open() return null always
     } catch {}
+    // desktop: never navigate the app itself away — a blocked tab is a "no"
+    if (!w && __WEB__) return Promise.resolve(false);
     if (!w) {
       try {
         location.href = web;

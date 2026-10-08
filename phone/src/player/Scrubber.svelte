@@ -117,14 +117,16 @@
     apos = P.scrub;
     rate = 1;
     rateLabel = '';
-    showTip = tipsLeft-- > 0;
+    showTip = (__WEB__ && e.pointerType === 'mouse' ? 0 : tipsLeft--) > 0;
     showOsd();
   }
   /** @param {PointerEvent} e */
   function move(e) {
     if (!dragging || e.pointerId !== pid) return;
     e.preventDefault();
-    const [, r, label] = /** @type {[number, number, string]} */ (RATES.find(([d]) => Math.abs(e.clientY - y0) < d)); // the last row's Infinity always matches
+    // (desktop: a mouse drag follows the pointer 1:1 — fine scrubbing is a
+    // touch gesture, and a hand on a mouse drifts up 100 px without meaning to)
+    const [, r, label] = __WEB__ && e.pointerType === 'mouse' ? RATES[0] : /** @type {[number, number, string]} */ (RATES.find(([d]) => Math.abs(e.clientY - y0) < d)); // the last row's Infinity always matches
     if (r !== rate) {
       // re-anchor at the current target: a change of speed never jumps the thumb
       apos = P.scrub != null ? P.scrub : apos;

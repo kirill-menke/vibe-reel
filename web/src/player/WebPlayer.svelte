@@ -27,14 +27,14 @@
    *             right-hand panels), the skip chip, loading / buffering /
    *             error cards; volume slider, Picture in Picture (where the
    *             browser has it) and full screen in the bottom row. */
-  import { onMount, untrack } from 'svelte';
+  import { onMount, untrack, tick, flushSync } from 'svelte';
   import { fade } from 'svelte/transition';
   import Icon from '$p/components/Icon.svelte';
   import Scrubber from '$p/player/Scrubber.svelte';
   import TrackPanel from '$p/player/TrackPanel.svelte';
   import ChapterPanel from '$p/player/ChapterPanel.svelte';
   import UpNextCard from '$p/player/UpNextCard.svelte';
-  import { imgUrl } from '$lib/api.js';
+  import { imgUrl, pickSize } from '$lib/api.js';
   import { fmtTime } from '$lib/format.js';
   import { decoded } from '$lib/decoded.js';
   import { SET } from '$lib/settings.svelte.js';
@@ -44,10 +44,13 @@
   import { S } from '$lib/nav.svelte.js';
   import {
     P, setVideoEl, setPgsCanvas, showOsd, hideOsd, togglePause, seekTo, seekBy, effectivePos, trickAt,
-    skipVisible, skipSegment, upNextVisible, playNext, retryPlayback, exitPlayer, closePanel, pmSetSub, pmSetQuality, QUALITY_CAPS
+    skipVisible, skipSegment, upNextVisible, playNext, dismissUpNext, retryPlayback, exitPlayer, closePanel, pmSetSub, pmSetQuality, QUALITY_CAPS,
+    trailerId
   } from '$lib/player.svelte.js';
   import { markQualityChosen } from '../lib/net.js';
-  import { SEEK_STEP, VOL_STEP, SHORTCUTS, keyAction, clampVolume, loadVolume, saveVolume } from './shortcuts.js';
+  import { holdInert, releaseInert } from '../lib/modal.svelte.js';
+  import { SEEK_STEP, VOL_STEP, keyAction, shortcutRows, wheelSteps, clampVolume, loadVolume, saveVolume } from './shortcuts.js';
+  import { choiceIn, panelStep, trapTab, canRefocus, routeAction } from './focusnav.js';
 
   const SPIN_DELAY = 450;
 
@@ -89,21 +92,180 @@
   /* ---------------- state ---------------- */
   let scrubbing = $state(false);
   let overControls = $state(false); // the pointer rests on the control bar: keep it up
+  /* keyboard focus (:focus-visible) rests on a control: keep the bar up too —
+   * Tab never walks through invisible buttons (a mouse click's focus doesn't
+   * count, or a clicked Pause would hold the bar for good) */
+  let kbdIn = $state(false);
   const busy = $derived(P.loading || !!P.error);
-  const ctl = $derived(open && !busy && (P.osdShown || P.paused || scrubbing || overControls || !!P.panel));
+  const ctl = $derived(open && !busy && (P.osdShown || P.paused || scrubbing || overControls || kbdIn || !!P.panel));
   const skip = $derived(open && !busy && !scrubbing ? skipVisible() : null);
   const upNext = $derived(open && !busy && upNextVisible());
 
   let help = $state(false); // the "?" keyboard-shortcut list
-
-  $effect(() => {
-    if (!open) {
-      scrubbing = false;
-      overControls = false;
-      help = false;
-      if (document.fullscreenElement) document.exitFullscreen().catch(() => {});
-    }
+  /* The controls are `inert` while hidden, behind a loading / error card and
+   * under the "?" list: Tab then reaches only what is on screen (the card's
+   * Retry / Close, the list's Close). Tab itself brings hidden controls up
+   * first (onTab). Never aria-hidden: that hid a focused button from screen
+   * readers (Chrome: "Blocked aria-hidden on an element because its
+   * descendant retained focus"). */
+  const chromeOff = $derived(!ctl || help);
+  let chromeEl = $state(/** @type {HTMLDivElement | null} */ (null));
+  /* focus inside the controls when they go: onto the layer, before `inert`
+   * would drop it on <body> */
+  $effect.pre(() => {
+    if (!chromeOff) return;
+    untrack(() => {
+      const a = document.activeElement;
+      if (chromeEl && a && chromeEl.contains(a) && !help) rootEl?.focus({ preventScroll: true });
+    });
   });
+  /** @param {FocusEvent} e */
+  function onChromeFocusIn(e) {
+    const t = /** @type {HTMLElement} */ (e.target);
+    kbdIn = !!t?.matches?.(':focus-visible');
+    if (kbdIn) showOsd();
+  }
+  /** @param {FocusEvent} e */
+  function onChromeFocusOut(e) {
+    if (!chromeEl || !chromeEl.contains(/** @type {Node | null} */ (e.relatedTarget))) kbdIn = false;
+  }
+
+  /* Who opened the player — the Trailer or Play button, an episode row, a
+   * Continue Watching tile: focus goes back there when it closes (Esc, ✕, the
+   * browser's Back), else to the page's main action. The last element focused
+   * or pressed outside the layer, noted as it happens: by the time `open`
+   * flips, the page under the player is already inert and has lost focus. */
+  /** @type {HTMLElement | null} */
+  let lastOutside = null;
+  onMount(() => {
+    /** @param {Event} e */
+    const note = (e) => {
+      const t = /** @type {Element | null} */ (e.target);
+      const f = t && t.closest ? /** @type {HTMLElement | null} */ (t.closest('button, a[href], input, select, [tabindex]')) : null;
+      if (f && f !== document.body && !rootEl?.contains(f)) lastOutside = f;
+    };
+    // (keydown too: the key that opens it may come before any focusin is seen)
+    const evs = ['focusin', 'pointerdown', 'keydown'];
+    for (const ev of evs) document.addEventListener(ev, note, true);
+    return () => {
+      for (const ev of evs) document.removeEventListener(ev, note, true);
+    };
+  });
+  /** @type {HTMLElement | null} */
+  let opener = null;
+  let wasOpen = false;
+  $effect(() => {
+    const o = open;
+    untrack(() => {
+      if (o && !wasOpen) {
+        wasOpen = true;
+        opener = lastOutside;
+        // the shell (nav + pages) is inert under the player: Tab stays in it
+        holdInert('player');
+        // the layer takes keyboard focus (Space must not click whatever button
+        // on the page had it)
+        rootEl?.focus({ preventScroll: true });
+      } else if (!o && wasOpen) {
+        wasOpen = false;
+        scrubbing = false;
+        overControls = false;
+        kbdIn = false;
+        help = false;
+        if (document.fullscreenElement) document.exitFullscreen().catch(() => {});
+        releaseInert('player');
+        const back = opener;
+        opener = null;
+        tick().then(() =>
+          requestAnimationFrame(() => {
+            if (open) return;
+            const a = document.activeElement;
+            if (a && a !== document.body && !rootEl?.contains(a)) return; // already placed (a new page)
+            const to = canRefocus(back) ? back : routeAction(document);
+            to?.focus({ preventScroll: true });
+          })
+        );
+      }
+    });
+  });
+
+  /* Focus never falls out of an open player onto <body> (a card or popover
+   * unmounting under it, Retry, the controls going inert): back onto the layer. */
+  function keepFocus() {
+    tick().then(() => {
+      const a = document.activeElement;
+      if (open && rootEl && (!a || a === document.body)) rootEl.focus({ preventScroll: true });
+    });
+  }
+  $effect(() => {
+    void P.error, P.loading, P.panel, help, ctl;
+    if (open) untrack(keepFocus);
+  });
+  /** @param {FocusEvent} e */
+  function onRootFocusOut(e) {
+    if (!open || (e.relatedTarget && rootEl?.contains(/** @type {Node} */ (e.relatedTarget)))) return;
+    setTimeout(keepFocus, 0);
+  }
+
+  /* An error / stall card takes focus on its Retry, so Enter retries. */
+  $effect(() => {
+    const err = open ? P.error : null;
+    if (!err) return;
+    untrack(() =>
+      tick().then(() => {
+        if (P.error === err) /** @type {HTMLElement | null} */ (rootEl?.querySelector('.pcard [data-retry]'))?.focus({ preventScroll: true });
+      })
+    );
+  });
+
+  /** the TrackPanel column the open popover was asked for (its radiogroup's label) */
+  const panelGroup = () => (P.panel !== 'tracks' ? undefined : trackTab === 'subs' ? 'Subtitles' : trackTab === 'quality' ? 'Streaming quality' : 'Audio');
+  /* The popovers (tracks, chapters) take focus on their selected option, and
+   * give it back to the chip that opened them (or the layer) when they close. */
+  /** @type {HTMLElement | null} */
+  let panelFrom = null;
+  let panelWas = false;
+  $effect(() => {
+    const p = P.panel;
+    untrack(() => {
+      if (p && open) {
+        const a = /** @type {HTMLElement | null} */ (document.activeElement);
+        if (a && a.matches?.('[data-ptoggle]')) panelFrom = a;
+        else if (!panelWas) panelFrom = a && rootEl?.contains(a) && !a.closest('.panel') ? a : null;
+        panelWas = true;
+        tick().then(() => {
+          const panel = rootEl?.querySelector('.panel');
+          if (P.panel === p && panel && !panel.contains(document.activeElement)) choiceIn(panel, panelGroup())?.focus();
+        });
+      } else if (panelWas) {
+        panelWas = false;
+        const back = panelFrom;
+        panelFrom = null;
+        tick().then(() => {
+          if (!open || P.panel) return;
+          const a = document.activeElement;
+          if (a && a !== document.body && a !== rootEl && !a.closest('.panel')) return;
+          (canRefocus(back) ? back : rootEl)?.focus({ preventScroll: true });
+        });
+      }
+    });
+  });
+
+  /* The "?" list: focus on its Close, back where it was when it closes. */
+  /** @type {HTMLElement | null} */
+  let helpFrom = null;
+  function openHelp() {
+    const a = /** @type {HTMLElement | null} */ (document.activeElement);
+    helpFrom = a && rootEl?.contains(a) && !a.closest('.wkeys') ? a : null;
+    help = true;
+    tick().then(() => /** @type {HTMLElement | null} */ (rootEl?.querySelector('.wkeys .closebtn'))?.focus({ preventScroll: true }));
+  }
+  function closeHelp() {
+    help = false;
+    const back = helpFrom;
+    helpFrom = null;
+    if (back && chromeEl?.contains(back)) showOsd(); // back onto a control: bring the bar up with it
+    tick().then(() => (canRefocus(back) ? back : rootEl)?.focus({ preventScroll: true }));
+  }
 
   /* ---------------- feedback flashes on the picture ----------------
    *   seek  ∓N s on the side it went, adding up while the key repeats
@@ -204,7 +366,9 @@
     const it = item;
     if (it && it._art) return it._art;
     if (!it || !it.Id) return null;
-    return imgUrl(it, 'Backdrop', { w: 1920 }) || imgUrl(it, 'Thumb', { w: 1920 }) || (isEp ? imgUrl(it, 'Primary', { w: 1280 }) : null);
+    // as wide as the window in device pixels, in the backdrop sizes the pages ask for
+    const w = pickSize(window.innerWidth, [1920, 2880, 3840]);
+    return imgUrl(it, 'Backdrop', { w }) || imgUrl(it, 'Thumb', { w }) || (isEp ? imgUrl(it, 'Primary', { w: 1280 }) : null);
   });
   const loadSub = $derived([P.trailer ? '' : epCode, P.loadingFrom > 30 ? 'resuming at ' + fmtTime(P.loadingFrom) : ''].filter(Boolean).join(' · '));
 
@@ -305,17 +469,21 @@
     if (show) showFlash({ kind: 'vol' });
   }
   const volIcon = $derived(muted || volume === 0 ? 'mute' : volume < 0.5 ? 'low' : 'high');
-  /* the wheel over the speaker / slider: one notch = one step (a non-passive
-   * listener, so the page behind the player doesn't scroll as well) */
+  /* the wheel over the speaker / slider: one step per notch, or per WHEEL_PX
+   * of trackpad travel (wheelSteps) — a non-passive listener, so the page
+   * behind the player doesn't scroll as well */
   let volEl = $state(/** @type {HTMLDivElement | null} */ (null));
   $effect(() => {
     const el = volEl;
     if (!el) return;
+    let acc = 0;
     /** @param {WheelEvent} e */
     const onWheel = (e) => {
       if (!e.deltaY) return;
       e.preventDefault();
-      setVolume(volume + (e.deltaY < 0 ? VOL_STEP : -VOL_STEP), true);
+      const w = wheelSteps(acc, e.deltaY, e.deltaMode);
+      acc = w.acc;
+      if (w.steps) setVolume(volume + w.steps * VOL_STEP, true);
       showOsd();
     };
     el.addEventListener('wheel', onWheel, { passive: false });
@@ -326,12 +494,44 @@
   let full = $state(false);
   onMount(() => {
     const on = () => (full = !!document.fullscreenElement);
+    // a refusal of our own request also rejects its promise (fullFail below,
+    // with the browser's reason): this one only speaks for the others
+    const err = () => Date.now() - fsAskAt > 2000 && fullFail(new Error('the browser refused it'));
     document.addEventListener('fullscreenchange', on);
-    return () => document.removeEventListener('fullscreenchange', on);
+    document.addEventListener('fullscreenerror', err);
+    return () => {
+      document.removeEventListener('fullscreenchange', on);
+      document.removeEventListener('fullscreenerror', err);
+    };
   });
+  let fsAskAt = 0;
+  /* Synchronous from the key / click handler (a request after an await loses
+   * the user activation, which Firefox insists on), on the whole layer so the
+   * controls come along. A refusal says why in a toast, and the console has
+   * the error — so a desktop where it doesn't work can tell us what happened. */
   function toggleFull() {
-    if (document.fullscreenElement) document.exitFullscreen().catch(() => {});
-    else rootEl?.requestFullscreen?.({ navigationUI: 'hide' }).catch(() => toast('Full screen isn’t available here'));
+    if (document.fullscreenElement) {
+      document.exitFullscreen().catch(fullFail);
+      return;
+    }
+    const el = rootEl;
+    if (!el || typeof el.requestFullscreen !== 'function') return fullFail(new Error('this browser has no Fullscreen API'));
+    if (document.fullscreenEnabled === false) return fullFail(new Error('full screen is turned off for this page'));
+    fsAskAt = Date.now();
+    el.requestFullscreen({ navigationUI: 'hide' }).then(() => {
+      // a window manager can accept the request and still not make the window
+      // full screen (seen as: F does nothing) — say so instead of nothing
+      setTimeout(() => {
+        if (document.fullscreenElement === el && window.innerWidth < screen.width * 0.85 && window.innerHeight < screen.height * 0.85)
+          fullFail(new Error('the browser entered full screen, but the window stayed ' + window.innerWidth + '×' + window.innerHeight + ' on a ' + screen.width + '×' + screen.height + ' screen'));
+      }, 1200);
+    }, fullFail);
+  }
+  /** @param {unknown} e */
+  function fullFail(e) {
+    console.warn('Full screen failed:', e);
+    const why = e instanceof Error ? e.message : String((e && /** @type {any} */ (e).message) || e || '');
+    toast('Full screen didn’t work' + (why ? ': ' + why : ''));
   }
 
   let pip = $state(false);
@@ -504,6 +704,14 @@
     closePanel();
     if (!isControl(t)) e.stopPropagation();
   }
+  /* A click on the picture pauses — a moment later, so the two clicks of a
+   * double click (full screen) don't pause and resume the film on the way
+   * (YouTube does the same). A double click slower than DBL_MS has already
+   * paused once: its dblclick puts that back. */
+  const DBL_MS = 250;
+  /** @type {ReturnType<typeof setTimeout> | undefined} */
+  let clickT;
+  let pausedByClick = 0;
   /** @param {MouseEvent} e */
   function onStageClick(e) {
     if (!open || isControl(/** @type {Element} */ (e.target))) return;
@@ -512,18 +720,30 @@
       return;
     }
     if (busy) return;
-    pauseWithFlash();
+    clearTimeout(clickT);
+    clickT = undefined;
+    if (e.detail > 1) return; // the second click of a double click
+    clickT = setTimeout(() => {
+      clickT = undefined;
+      if (!open || busy) return;
+      pauseWithFlash();
+      pausedByClick = Date.now();
+    }, DBL_MS);
   }
   /** @param {MouseEvent} e */
   function onStageDbl(e) {
     if (!open || isControl(/** @type {Element} */ (e.target))) return;
+    clearTimeout(clickT);
+    clickT = undefined;
+    if (Date.now() - pausedByClick < 600 && !busy) pauseWithFlash();
+    pausedByClick = 0;
     toggleFull();
   }
 
   /* hover preview over the scrubber (the phone's shows only while dragging),
    * and a lighter fill up to the pointer (--hov on the bar, drawn by the
    * track's ::before in web.css) */
-  let hover = $state(/** @type {{ x: number, w: number, at: number, f: number } | null} */ (null));
+  let hover = $state(/** @type {{ x: number, w: number, l: number, at: number, f: number } | null} */ (null));
   /** @param {PointerEvent} e */
   function onBarMove(e) {
     const hit = /** @type {Element} */ (e.target).closest?.('.vr-scrub__hit');
@@ -535,10 +755,19 @@
     const r = track.getBoundingClientRect();
     const host = /** @type {HTMLElement} */ (e.currentTarget).getBoundingClientRect();
     const f = Math.max(0, Math.min(1, (e.clientX - r.left) / (r.width || 1)));
-    hover = { x: r.left - host.left + f * r.width, w: host.width, at: f * P.dur, f };
+    hover = { x: r.left - host.left + f * r.width, w: host.width, l: host.left, at: f * P.dur, f };
   }
   const hoverTp = $derived(hover && P.trick ? trickAt(hover.at) : null);
   const HW = 240;
+  /* the preview's drawn width (240 px with a trickplay frame, else just the
+   * time pill or the chapter name): it is centred on the pointer and kept
+   * 8 px inside the window by that, not by the frame's width */
+  let trickW = $state(0);
+  const hoverLeft = $derived.by(() => {
+    if (!hover) return 0;
+    const half = (trickW || (hoverTp ? HW : 56)) / 2;
+    return Math.max(half + 8 - hover.l, Math.min(window.innerWidth - hover.l - half - 8, hover.x));
+  });
   const hoverScale = $derived(P.trick ? HW / P.trick.w : 1);
   const hoverH = $derived(P.trick ? Math.round(P.trick.h * hoverScale) : 135);
   const hoverChapter = $derived.by(() => {
@@ -560,15 +789,60 @@
   const shownPos = $derived(P.scrub ?? P.pos);
 
   /* ---------------- keyboard ---------------- */
+  const LIST_KEYS = ['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Home', 'End'];
+  /* Tab: inside the "?" list it stays there; elsewhere it first brings hidden
+   * controls up (and takes their `inert` off) so focus lands on something
+   * visible — synchronously, before the browser moves focus. */
+  /** @param {KeyboardEvent} e */
+  function onTab(e) {
+    if (help) {
+      const card = rootEl?.querySelector('.wkeys__card');
+      const to = card && trapTab(card, /** @type {Element} */ (e.target), e.shiftKey);
+      e.preventDefault();
+      to?.focus({ preventScroll: true });
+      return;
+    }
+    if (busy) return; // the card's buttons and Close are the stops; the controls stay inert
+    showOsd();
+    if (!ctl) flushSync();
+  }
+
   /** @param {KeyboardEvent} e */
   function onKey(e) {
     if (!open || e.defaultPrevented) return;
     const t = /** @type {HTMLElement} */ (e.target);
+    const mods = e.ctrlKey || e.metaKey || e.altKey;
+    if (e.key === 'Tab' && !e.ctrlKey && !e.metaKey && !e.altKey) return onTab(e);
     if (t && (t.tagName === 'INPUT' && /** @type {HTMLInputElement} */ (t).type !== 'range')) return;
+    /** @param {() => void} fn */
+    const take = (fn) => {
+      e.preventDefault();
+      e.stopPropagation();
+      fn();
+    };
+    // the volume slider keeps its own ← → Home End (in volume steps, with the flash)
+    if (!mods && t?.classList?.contains('wvol__range') && ['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(e.key))
+      return take(() => (setVolume(e.key === 'Home' ? 0 : e.key === 'End' ? 1 : volume + (e.key === 'ArrowRight' ? VOL_STEP : -VOL_STEP), true), showOsd()));
+    // the position slider: Home / End (← → seek everywhere)
+    if (!mods && !busy && P.dur && t?.classList?.contains('vr-scrub__hit') && (e.key === 'Home' || e.key === 'End'))
+      return take(() => (seekTo(e.key === 'Home' ? 0 : Math.max(0, P.dur - SEEK_STEP)), showOsd()));
+    // a popover: the arrows, Home and End move through its options (↑ ↓ from
+    // its own chip or the picture go into it); Space / Enter choose one
+    const panel = P.panel ? rootEl?.querySelector('.panel') : null;
+    if (panel && !mods && LIST_KEYS.includes(e.key)) {
+      const inside = panel.contains(t);
+      const intoIt = !inside && (e.key === 'ArrowUp' || e.key === 'ArrowDown') && (t === rootEl || !!t?.matches?.('[data-ptoggle]'));
+      if (inside || intoIt) {
+        const to = inside ? panelStep(panel, t, e.key) : choiceIn(panel, panelGroup());
+        if (to) return take(() => (to.focus(), showOsd()));
+        if (inside && e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return take(() => {}); // at the end of the list: stay
+      }
+    }
     const a = keyAction(e);
     if (!a) return;
-    // arrows inside an open panel's list move through it instead
-    if (P.panel && (e.key === 'ArrowUp' || e.key === 'ArrowDown') && t?.closest?.('.panel')) return;
+    // Space on a button of a card, the list, a popover, Up Next or the skip
+    // chip is that button's; from the bar or the picture it pauses
+    if (a.act === 'pause' && e.key === ' ' && t?.closest?.('.panel, .wkeys, .pcard, .upnext, .skipchip, .wpip')) return;
     const live = !P.error && !P.loading;
     const arg = a.arg || 0;
     /** @type {(() => void) | null} */
@@ -576,13 +850,14 @@
     switch (a.act) {
       case 'close':
         act = () => {
-          if (help) help = false;
+          if (help) closeHelp();
           else if (P.panel) closePanel();
           else if (document.fullscreenElement) document.exitFullscreen().catch(() => {});
+          else if (upNext) dismissUpNext();
           else exitPlayer();
         };
         break;
-      case 'pause': // a focused button would also click on Space: the key is ours
+      case 'pause': // a focused bar button would also click on Space: the key is ours
         if (live) act = pauseWithFlash;
         break;
       case 'seek':
@@ -613,19 +888,32 @@
         if (P.next && !P.trailer) act = () => playNext(true);
         break;
       case 'help':
-        act = () => (help = !help);
+        act = () => (help ? closeHelp() : openHelp());
         break;
     }
     if (!act) return;
-    e.preventDefault();
-    e.stopPropagation();
-    act();
+    take(act);
   }
 
-  /* the layer takes keyboard focus when it opens (Space must not click
-   * whatever button on the page had it) */
+  /* the "?" list names only the keys that do something now */
+  const keyRows = $derived(shortcutRows({ pip: pipOk, skip: !P.trailer && P.skips.length > 0, next: !!P.next && !P.trailer, subs: hasSubs }));
+
+  /* the position slider is a Tab stop here (the phone's is touch-only): ← →
+   * seek, Home / End, and its aria-valuetext reads "0:42 of 1:52:10" */
   $effect(() => {
-    if (open && rootEl) untrack(() => rootEl?.focus({ preventScroll: true }));
+    const hit = /** @type {HTMLElement | null} */ (chromeEl?.querySelector('.vr-scrub__hit'));
+    if (hit) hit.tabIndex = 0;
+  });
+
+  /* error card: what failed, and for a trailer the way to it on YouTube (a
+   * link — a fresh click — never a popup the browser may block) */
+  const errLine = $derived(
+    P.trailer ? ['Trailer', item.Name].filter(Boolean).join(' · ') : isEp ? [item.SeriesName, epCode, item.Name].filter(Boolean).join(' · ') : [item.Name, item.ProductionYear].filter(Boolean).join(' · ')
+  );
+  const ytHref = $derived.by(() => {
+    if (!P.error || !P.trailer) return null;
+    const id = trailerId();
+    return id ? 'https://www.youtube.com/watch?v=' + encodeURIComponent(id) : null;
   });
 </script>
 
@@ -646,12 +934,13 @@
   onpointermove={onMove}
   onpointerleave={onLeave}
   onclickcapture={onClickOutside}
+  onfocusout={onRootFocusOut}
   data-component="WebPlayer"
 >
   <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
   <div class="wplayer__stage" onclick={onStageClick} ondblclick={onStageDbl}>
     <!-- svelte-ignore a11y_media_has_caption -->
-    <video class="wplayer__video" class:wplayer__video--dim={!!P.panel} playsinline preload="auto" disablepictureinpicture={pipOk && !pip} bind:this={video}></video>
+    <video class="wplayer__video" class:wplayer__video--dim={!!P.panel} class:wplayer__video--pip={pip} tabindex="-1" playsinline preload="auto" disablepictureinpicture={pipOk && !pip} bind:this={video}></video>
     <canvas class="vr-pgs" bind:this={canvas}></canvas>
     <div class="vr-subs-top" bind:this={subsTopEl}></div>
     <div class="vr-subs" class:vr-subs--raised={ctl} bind:this={subsEl}></div>
@@ -683,7 +972,7 @@
   {/if}
 
   <!-- ============ controls ============ -->
-  <div class="wplayer__chrome" class:wplayer__chrome--hidden={!ctl} aria-hidden={!ctl}>
+  <div class="wplayer__chrome" class:wplayer__chrome--hidden={!ctl} inert={chromeOff || undefined} bind:this={chromeEl} onfocusin={onChromeFocusIn} onfocusout={onChromeFocusOut}>
     <div class="player__scrim player__scrim--top"></div>
     <div class="player__scrim player__scrim--bottom"></div>
     <div class="wplayer__top" onpointerenter={() => (overControls = true)} onpointerleave={() => (overControls = false)} role="toolbar" tabindex="-1">
@@ -692,7 +981,7 @@
         {#if showLine}<p class="player__show">{showLine}</p>{/if}
         <p class="player__ep">{epLine}</p>
       </div>
-      <button class="iconbtn wkeysbtn" type="button" aria-label="Keyboard shortcuts" data-tip="Keyboard shortcuts (?)" onclick={() => (help = !help)}>?</button>
+      <button class="iconbtn wkeysbtn" type="button" aria-label="Keyboard shortcuts" data-tip="Keyboard shortcuts (?)" aria-haspopup="dialog" aria-expanded={help} onclick={() => (help ? closeHelp() : openHelp())}>?</button>
     </div>
 
     <!-- svelte-ignore a11y_no_static_element_interactions -->
@@ -708,7 +997,7 @@
       style:--hov={hover ? hover.f : 0}
     >
       {#if hover && !scrubbing}
-        <div class="trick wtrick" style="left: {Math.max(HW / 2 + 8, Math.min(hover.w - HW / 2 - 8, hover.x))}px">
+        <div class="trick wtrick" style="left: {hoverLeft}px" bind:offsetWidth={trickW}>
           {#if hoverChapter}<p class="trick__chapter">{hoverChapter.name}</p>{/if}
           {#if hoverTp && P.trick}
             <div
@@ -734,12 +1023,13 @@
             class="wvol__range"
             type="range"
             min="0"
-            max="1"
-            step="0.01"
+            max="100"
+            step="1"
             aria-label="Volume"
-            value={muted ? 0 : volume}
+            aria-valuetext={muted ? 'Muted' : Math.round(volume * 100) + ' %'}
+            value={muted ? 0 : Math.round(volume * 100)}
             style="--v: {muted ? 0 : volume}"
-            oninput={(e) => setVolume(Number(e.currentTarget.value))}
+            oninput={(e) => setVolume(Number(e.currentTarget.value) / 100)}
           />
         </div>
         <button class="wplayer__time" type="button" data-tip={remain ? 'Show time played' : 'Show time left'} onclick={() => (remain = !remain)}>
@@ -747,16 +1037,16 @@
         </button>
         <span class="player__spacer"></span>
         {#if P.chapters.length && !P.trailer}
-          <button class="pchip" class:pchip--on={P.panel === 'chapters'} type="button" data-ptoggle data-tip="Chapters" onclick={openChapters}><Icon name="chapters" />Chapters</button>
+          <button class="pchip" class:pchip--on={P.panel === 'chapters'} type="button" data-ptoggle data-tip="Chapters" aria-haspopup="dialog" aria-expanded={P.panel === 'chapters'} onclick={openChapters}><Icon name="chapters" />Chapters</button>
         {/if}
         {#if hasAudioChoice}
-          <button class="pchip" class:pchip--on={P.panel === 'tracks' && trackTab === 'audio'} type="button" data-ptoggle data-tip="Audio track" onclick={() => openTracks('audio')}><Icon name="audio" />{audioChip.main} {#if audioChip.dim}<span class="pchip__dim">{audioChip.dim}</span>{/if}</button>
+          <button class="pchip" class:pchip--on={P.panel === 'tracks' && trackTab === 'audio'} type="button" data-ptoggle data-tip="Audio track" aria-haspopup="dialog" aria-expanded={P.panel === 'tracks' && trackTab === 'audio'} onclick={() => openTracks('audio')}><Icon name="audio" />{audioChip.main} {#if audioChip.dim}<span class="pchip__dim">{audioChip.dim}</span>{/if}</button>
         {/if}
         {#if hasSubs}
-          <button class="pchip" class:pchip--on={P.panel === 'tracks' && trackTab === 'subs'} type="button" data-ptoggle data-tip="Subtitles (C on / off)" onclick={() => openTracks('subs')}><Icon name="subtitles" />{subChip.main} {#if subChip.dim}<span class="pchip__dim">{subChip.dim}</span>{/if}</button>
+          <button class="pchip" class:pchip--on={P.panel === 'tracks' && trackTab === 'subs'} type="button" data-ptoggle data-tip="Subtitles (C on / off)" aria-haspopup="dialog" aria-expanded={P.panel === 'tracks' && trackTab === 'subs'} onclick={() => openTracks('subs')}><Icon name="subtitles" />{subChip.main} {#if subChip.dim}<span class="pchip__dim">{subChip.dim}</span>{/if}</button>
         {/if}
         {#if quality}
-          <button class="pchip" class:pchip--on={P.panel === 'tracks' && trackTab === 'quality'} type="button" data-ptoggle data-tip="Streaming quality" aria-label="Streaming quality: {quality.label}" onclick={() => openTracks('quality')}><Icon name="settings" />{quality.reduced ? quality.res || 'Reduced' : 'Original'} <span class="pchip__dim">{quality.reduced ? quality.mbit + ' Mbit/s' : 'fits ' + quality.mbit + ' Mbit/s'}</span></button>
+          <button class="pchip" class:pchip--on={P.panel === 'tracks' && trackTab === 'quality'} type="button" data-ptoggle data-tip="Streaming quality" aria-haspopup="dialog" aria-expanded={P.panel === 'tracks' && trackTab === 'quality'} aria-label="Streaming quality: {quality.label}" onclick={() => openTracks('quality')}><Icon name="settings" />{quality.reduced ? quality.res || 'Reduced' : 'Original'} <span class="pchip__dim">{quality.reduced ? quality.mbit + ' Mbit/s' : 'fits ' + quality.mbit + ' Mbit/s'}</span></button>
         {/if}
         {#if P.next && !P.trailer}
           <button class="wpbtn" type="button" aria-label="Next episode" data-tip={nextTip} onclick={() => playNext(true)}><Icon name="skip" /></button>
@@ -781,6 +1071,16 @@
   </div>
 
   {#if upNext && !P.panel}<div class="wupnext"><UpNextCard /></div>{/if}
+
+  {#if pip && open}
+    <!-- the picture plays in its own window: say so here, where the browser
+         would draw its grey "Playing in picture-in-picture" under our title -->
+    <div class="wpip" role="status" data-component="PipCard">
+      <Icon name="pip" />
+      <p class="wpip__title">Playing in Picture in Picture</p>
+      <button class="btn btn--glass btn--sm" type="button" onclick={togglePip}><span>Back to this tab</span></button>
+    </div>
+  {/if}
 
   {#if P.spinner && !P.loading && !P.error}
     {#if bufLong}
@@ -813,11 +1113,13 @@
   {#if P.error}
     <div class="pcard" role="alert" data-component="PlayerStatusCard">
       <span class="pcard__icon"><Icon name="alert" /></span>
+      {#if errLine}<p class="pcard__eyebrow">{errLine}</p>{/if}
       <p class="pcard__title">{P.error.title}</p>
       {#if P.error.detail}<p class="pcard__text">{P.error.detail}</p>{/if}
       {#if P.error.tech}<p class="pcard__hint">{P.error.tech}</p>{/if}
       <div class="pcard__actions">
-        <button class="btn btn--primary btn--sm" type="button" onclick={retryPlayback}><Icon name="refresh" size="xs" /><span>Retry</span></button>
+        <button class="btn btn--primary btn--sm" type="button" data-retry onclick={retryPlayback}><Icon name="refresh" size="xs" /><span>Retry</span></button>
+        {#if ytHref}<a class="btn btn--glass btn--sm" href={ytHref} target="_blank" rel="noopener noreferrer"><span>Open on YouTube</span></a>{/if}
         <button class="btn btn--glass btn--sm" type="button" onclick={() => exitPlayer()}><span>Close</span></button>
       </div>
     </div>
@@ -837,14 +1139,14 @@
 
   {#if help}
     <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
-    <div class="wkeys" onclick={(e) => e.target === e.currentTarget && (help = false)} transition:fade={{ duration: 120 }}>
+    <div class="wkeys" onclick={(e) => e.target === e.currentTarget && closeHelp()} transition:fade={{ duration: 120 }}>
       <div class="wkeys__card" role="dialog" aria-modal="true" aria-labelledby="wkeys-title" data-component="ShortcutList">
         <div class="wkeys__head">
           <h2 class="wkeys__title" id="wkeys-title">Keyboard shortcuts</h2>
-          <button class="closebtn" type="button" aria-label="Close" onclick={() => (help = false)}><Icon name="x" size="sm" /></button>
+          <button class="closebtn" type="button" aria-label="Close" onclick={closeHelp}><Icon name="x" size="sm" /></button>
         </div>
         <dl class="wkeys__list">
-          {#each SHORTCUTS.filter(([k]) => pipOk || k[0] !== 'P') as [keys, what] (what)}
+          {#each keyRows as [keys, what] (what)}
             <div class="wkeys__row">
               <dt>
                 {#each keys as k, i (k)}{#if i}<span class="wkeys__or">/</span>{/if}{#each k.split('+') as part, j (j)}{#if j}<span class="wkeys__plus">+</span>{/if}<kbd>{part}</kbd>{/each}{/each}

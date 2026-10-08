@@ -103,7 +103,7 @@ export default defineConfig({
         'src/lib/news.svelte.js': { statements: 100, branches: 96.5, functions: 100, lines: 100 },
         'src/lib/pendingplay.js': { statements: 100, branches: 98, functions: 100, lines: 100 },
         'src/lib/played.js': { statements: 100, branches: 100, functions: 100, lines: 100 },
-        'src/lib/player.svelte.js': { statements: 99.7, branches: 97.5, functions: 99.3, lines: 100 },
+        'src/lib/player.svelte.js': { statements: 99.7, branches: 97.5, functions: 99.4, lines: 100 },
         'src/lib/reconnect.js': { statements: 100, branches: 100, functions: 100, lines: 100 },
         'src/lib/refresh60.js': { statements: 100, branches: 100, functions: 100, lines: 100 },
         'src/lib/searchrank.js': { statements: 100, branches: 100, functions: 100, lines: 100 },
@@ -113,8 +113,8 @@ export default defineConfig({
         'src/lib/toast.svelte.js': { statements: 100, branches: 100, functions: 100, lines: 100 },
         'src/lib/trackprefs.js': { statements: 100, branches: 98.8, functions: 100, lines: 100 },
         'src/lib/tracks.js': { statements: 100, branches: 99.7, functions: 100, lines: 100 },
-        'src/lib/trailer.js': { statements: 98.4, branches: 95.1, functions: 100, lines: 100 },
-        'src/lib/trailerstream.js': { statements: 97.9, branches: 96.2, functions: 100, lines: 100 },
+        'src/lib/trailer.js': { statements: 98.5, branches: 96, functions: 100, lines: 100 },
+        'src/lib/trailerstream.js': { statements: 100, branches: 100, functions: 100, lines: 100 },
 
         /* phone/src/lib — per file, raise-only like the rest. */
         // round 3, lane r3-phone-offline (test/phone/offline.*.test.js, swupdate.test.js)

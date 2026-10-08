@@ -68,9 +68,14 @@ const moduleRedirects = {
   }
 };
 
-/* libpgs: the same lazy wrapper as the TV and phone builds (copied, as the
- * phone config does): src/vendor/libpgs.js stays byte-identical to upstream and
- * runs on the first PGS attach. */
+/* libpgs: a chunk of its own, fetched on the first PGS attach. The TV and
+ * phone builds wrap the vendored module body in a synchronous loadPgs() (one
+ * app.js); here src/vendor/libpgs.js becomes a stub whose loadPgs() dynamically
+ * imports the untouched upstream file (`?libpgs-real`) and resolves to its
+ * PgsRenderer — ~61 KB (21 KB gzip) less to download and parse on every cold
+ * load (a failed fetch is asked again next time). src/lib/player.svelte.js awaits
+ * it in its `__WEB__` branch. The vendor file stays byte-identical to upstream. */
+const REAL = '?libpgs-real';
 const lazyLibpgs = {
   name: 'lazy-libpgs',
   /** @param {string} code @param {string} id */
@@ -78,9 +83,9 @@ const lazyLibpgs = {
     if (!/\/src\/vendor\/libpgs\.js(\?|$)/.test(id)) return null;
     const m = code.match(/export\s*\{\s*([\w$]+)\s+as\s+PgsRenderer\s*\};?\s*$/);
     if (!m) this.error('libpgs.js: unexpected export shape; update lazy-libpgs in web/vite.config.js');
+    if (id.endsWith(REAL)) return null; // the real module, as upstream wrote it
     return {
-      code: 'let _pgs;export function loadPgs(){return _pgs||(_pgs=(function(){' +
-        code.slice(0, m.index) + '\n;return ' + m[1] + '})())}',
+      code: 'let _pgs;export function loadPgs(){return _pgs||(_pgs=import(' + JSON.stringify(id.split('?')[0] + REAL) + ').then((m)=>m.PgsRenderer,(e)=>{_pgs=null;throw e}))}',
       map: null
     };
   }

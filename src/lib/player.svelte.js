@@ -492,9 +492,15 @@ function openJfFeed(createJfFeed, url, start) {
     hdr: webCaps().hdr,
     onFail: (e) => {
       if (jfFeed !== f || S.screen !== 'player' || P.error) return;
+      const st = /** @type {VR.ApiError} */ (e).status || 0;
       showPlayError(
-        e.code === 'unsupported' ? 'This browser can’t play this stream' : 'Lost the connection to the server',
-        e.message || '',
+        e.code === 'unsupported' ? 'This browser can’t play this stream'
+          : st === 404 || st === 410 ? 'The server ended this stream'
+          : st === 401 || st === 403 ? 'The server refused this stream'
+          : st >= 500 ? 'The server had a problem with this stream'
+          : 'Lost the connection to the server',
+        e.code === 'unsupported' || !st ? e.message || ''
+          : (st === 401 || st === 403 ? 'Signing in again may help.' : 'Retry asks it to start again from ' + fmtTime(lastPos) + '.') + '\n' + e.message,
         lastPos
       );
     }
@@ -678,6 +684,22 @@ function startTrailer(pos) {
     },
     onFail: (e) => {
       if (trailerRun !== run || !P.trailer) return;
+      if (__PHONE__ && __WEB__) {
+        // The desktop keeps the player up with the error card: Retry, Close and
+        // an "Open on YouTube" link (WebPlayer, trailerId()) — no tab opened
+        // out of the blue, never the app navigated away, and the raw yt-dlp
+        // message goes to the console, not into the card.
+        console.warn('Trailer failed:', e);
+        const m = String((e && e.message) || '');
+        showPlayError(
+          'This trailer can’t play here',
+          /confirm you.re not a bot|sign in/i.test(m)
+            ? 'YouTube is refusing the server’s download right now. You can watch it on YouTube instead.'
+            : 'The server couldn’t get it from YouTube. You can watch it on YouTube instead.',
+          0
+        );
+        return;
+      }
       const f = /** @type {NonNullable<typeof run>} */ (run).onFail;
       exitPlayer();
       if (f) f(e);
@@ -685,6 +707,11 @@ function startTrailer(pos) {
   });
   trailerSrc = src;
   startPlayback(src.url, 'Trailer', pos);
+}
+
+/* Desktop: the YouTube id of the trailer up (its error card links to it). */
+export function trailerId() {
+  return trailerRun ? trailerRun.id : null;
 }
 
 /* The trailer ended, failed or was left: stop feeding, put back what the page
@@ -1208,10 +1235,10 @@ function startStallWatch() {
         __PHONE__
           ? sn
             ? __WEB__
-              ? 'This stream needs about ' + sn.need + ' Mbit/s but this computer was only getting about ' + sn.got + ' Mbit/s, and then nothing for ' + dead + ' s. Check the connection or lower the streaming quality, then Retry from ' + fmtTime(lastPos) + '.'
+              ? 'This stream needs about ' + sn.need + '\u00a0Mbit/s but this computer was only getting about ' + sn.got + '\u00a0Mbit/s, and then nothing for ' + dead + '\u00a0s. Check the connection or lower the streaming quality, then Retry from ' + fmtTime(lastPos) + '.'
               : 'This stream needs about ' + sn.need + ' Mbit/s but the iPhone was only getting about ' + sn.got + ' Mbit/s, and then nothing for ' + dead + ' s. Check the connection or lower the streaming quality, then Retry from ' + fmtTime(lastPos) + '.'
             : __WEB__
-              ? 'No video has arrived from the server for ' + dead + ' s. Check this computer’s connection, then Retry from ' + fmtTime(lastPos) + '.'
+              ? 'No video has arrived from the server for ' + dead + '\u00a0s. Check this computer’s connection, then Retry from ' + fmtTime(lastPos) + '.'
               : 'No video has arrived from the server for ' + dead + ' s. Check the iPhone’s connection, then Retry from ' + fmtTime(lastPos) + '.'
           : sn
           ? 'This file needs about ' + sn.need + ' Mbit/s but the TV was only getting about ' + sn.got + ' Mbit/s, and then nothing for ' + dead + ' s. Check the TV’s connection — 5 GHz Wi-Fi or Ethernet — then Retry from ' + fmtTime(lastPos) + '.'
@@ -1482,6 +1509,31 @@ function attachPgs(src, stream) {
     : cfg.server +
       '/Videos/' + /** @type {NonNullable<typeof P.item>} */ (P.item).Id + '/' + src.Id + '/Subtitles/' + stream.Index + '/0/Stream.pgssub' +
       qs({ ApiKey: cfg.token });
+  if (__PHONE__ && __WEB__) {
+    // The desktop build loads libpgs as its own chunk on the first PGS track
+    // (web/vite.config.js lazy-libpgs: loadPgs() resolves to the class).
+    // A later attach — or none — by the time it arrives drops this one.
+    const req = subReq;
+    Promise.resolve()
+      .then(() => loadPgs())
+      .then(
+        (Renderer) => {
+          if (req !== subReq || !pgsCanvas) return;
+          pgsCanvas.style.display = 'block';
+          try {
+            pgsRenderer = new Renderer({ mode: 'mainThread', video: /** @type {HTMLVideoElement} set before any playback */ (video), canvas: pgsCanvas, subUrl: url, timeOffset: -(P.subOffset || 0) });
+          } catch (e) {
+            console.warn('libpgs init failed', e);
+            toast('Couldn’t show these subtitles');
+          }
+        },
+        (e) => {
+          console.warn('libpgs load failed', e);
+          if (req === subReq) toast('Couldn’t show these subtitles');
+        }
+      );
+    return;
+  }
   let PgsRenderer = null;
   try {
     PgsRenderer = loadPgs();

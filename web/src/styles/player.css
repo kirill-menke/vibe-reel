@@ -1,2 +1,80 @@
 /* VibeReel Web — lane "player": web/src/player/WebPlayer.svelte and its parts
    (overrides web.css sections 6 and "lane: player" where it says so). */
+
+/* ---- legibility over bright frames (C-09) ----
+   The title row and the clock sat on the thin end of the scrims: over a white
+   frame the eyebrow measured 2.3:1, the title 3.1:1, "/ 0:30" 3.6:1. The
+   scrims now hold ≥ 70 % black behind both rows (≥ 4.5:1 for the secondary
+   text colour below even over pure white), and the text carries a shadow. */
+.wplayer { --wp-text-2: rgba(243, 239, 230, 0.86); }
+.wplayer__chrome .player__scrim--top {
+  height: 180px;
+  background: linear-gradient(180deg, rgba(0, 0, 0, 0.8) 0, rgba(0, 0, 0, 0.7) 84px, rgba(0, 0, 0, 0.38) 128px, rgba(0, 0, 0, 0.12) 160px, rgba(0, 0, 0, 0) 180px);
+}
+.wplayer__chrome .player__scrim--bottom {
+  height: 230px;
+  background: linear-gradient(0deg, rgba(0, 0, 0, 0.8) 0, rgba(0, 0, 0, 0.7) 96px, rgba(0, 0, 0, 0.36) 160px, rgba(0, 0, 0, 0.1) 205px, rgba(0, 0, 0, 0) 230px);
+}
+.wplayer__top .player__show { color: var(--wp-text-2); }
+.wplayer__dur { color: var(--wp-text-2); }
+.wplayer__top .player__titles, .wplayer__time { text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8); }
+
+/* ---- the control row fits down to 800 px (G-05) ----
+   It needed ~960 px with three chips: below 1100 px the chips drop their dim
+   detail ("DD+ 5.1", "Forced"), below 900 px they are icons (the tooltip and
+   the accessible name keep the words); the round buttons never shrink. */
+.wplayer__row { min-width: 0; }
+.wplayer__row .pchip { flex: 0 1 auto; min-width: 0; overflow: hidden; }
+@media (max-width: 1100px) {
+  .wplayer__row .pchip__dim { display: none; }
+}
+@media (max-width: 900px) {
+  .wplayer__row { gap: 6px; }
+  .wplayer__row .pchip { font-size: 0; gap: 0; padding: 0 11px; }
+  .wplayer__row .pchip .i { flex: none; }
+  .wplayer__time { padding: 6px 4px; }
+}
+
+/* ---- tooltips (G-14, G-19) ----
+   The bottom row's tooltips opened over the scrubber line (y 705–730 over the
+   track at 715): they sit above the scrubber now. Keyboard focus shows a
+   tooltip only for a moment — a chip given focus back after its popover
+   closed kept it over the neighbouring buttons. */
+.wplayer__row [data-tip]::before { bottom: calc(100% + 52px); }
+.wplayer [data-tip]:focus-visible::before { animation: wtip-blink 2.4s linear both; }
+@keyframes wtip-blink { 0%, 80% { opacity: 1; transform: none; } 100% { opacity: 0; transform: none; } }
+@media (prefers-reduced-motion: reduce) {
+  .wplayer [data-tip]:focus-visible::before { animation-timing-function: steps(1, end); }
+}
+
+/* ---- the drag preview reads like the hover preview (G-09) ---- */
+.wplayer .vr-trick .trick__time, .wplayer .vr-trick .trick__chapter {
+  padding: 5px 9px; border-radius: 6px; background: rgba(18, 18, 22, 0.9); text-shadow: none;
+  max-width: 320px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.wplayer .vr-trick .trick__time { font-size: 14px; }
+
+/* ---- Picture in Picture (G-12) ----
+   The picture plays in its own window: the in-page <video> is hidden (no grey
+   browser placeholder under our title, no native cue under the controls) and
+   our own card says where it went. */
+.wplayer__video--pip { visibility: hidden; }
+.wpip {
+  position: absolute; z-index: 1; top: 50%; left: 50%; translate: -50% -50%;
+  display: flex; flex-direction: column; align-items: center; gap: var(--s-3);
+  padding: var(--s-5) var(--s-6); border-radius: var(--r-sheet); text-align: center;
+  background: rgba(18, 18, 22, 0.86); box-shadow: inset 0 0 0 1px var(--glass-line);
+}
+.wpip > .i { width: 40px; height: 40px; color: var(--text-dim); }
+.wpip__title { font: var(--t-headline); letter-spacing: var(--t-headline-ls); }
+
+/* ---- the error card says what failed (G-06) ---- */
+.wplayer .pcard__eyebrow {
+  max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  font: var(--t-micro); letter-spacing: var(--t-micro-ls); text-transform: uppercase; color: var(--text-dim);
+}
+.wplayer .pcard a.btn { text-decoration: none; }
+/* three actions (Retry · Open on YouTube · Close) fit, and wrap rather than
+   overflow the card in a narrow window */
+.wplayer .pcard:not(.pcard--bare) { width: min(440px, calc(100% - 2 * var(--gutter))); }
+.wplayer .pcard__actions { flex-wrap: wrap; justify-content: center; }

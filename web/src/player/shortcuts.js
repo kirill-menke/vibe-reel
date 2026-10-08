@@ -73,8 +73,38 @@ export const SHORTCUTS = [
   [['F'], 'Full screen (or double-click)'],
   [['P'], 'Picture in Picture'],
   [['?'], 'This list'],
-  [['Esc'], 'Close a panel, then the player']
+  [['Esc'], 'Close a panel or Up Next, then the player']
 ];
+
+/** The rows that apply right now: S only while a skip chip can show (never
+ * for a trailer), Shift+N only with a next episode, C only with subtitles to
+ * switch, P only where the browser has Picture in Picture.
+ * @param {{ pip?: boolean, skip?: boolean, next?: boolean, subs?: boolean }} [now]
+ * @returns {[string[], string][]} */
+export function shortcutRows({ pip = true, skip = true, next = true, subs = true } = {}) {
+  /** @type {Record<string, boolean>} */
+  const off = { P: !pip, S: !skip, 'Shift+N': !next, C: !subs };
+  return SHORTCUTS.filter(([keys]) => !off[keys[0]]);
+}
+
+/* Wheel and trackpad over the speaker: the volume follows the distance
+ * scrolled, not the number of events. A mouse wheel's notch (Chrome ~100 px,
+ * Firefox ~48 px or 3 lines) is one step; a trackpad's stream of small pixel
+ * deltas adds up, one step per WHEEL_PX — counted per event, a short two-finger
+ * swipe (dozens of 2–6 px events) slammed the volume to 0 or 100 %. */
+export const WHEEL_PX = 40;
+/** @param {number} acc the carried distance (px, from the last call) @param {number} deltaY
+ * @param {number} [deltaMode] 0 px, 1 lines, 2 pages
+ * @returns {{ steps: number, acc: number }} steps: + louder, − quieter */
+export function wheelSteps(acc, deltaY, deltaMode = 0) {
+  const px = deltaMode === 1 ? deltaY * WHEEL_PX : deltaMode === 2 ? deltaY * WHEEL_PX * 4 : deltaY;
+  if (!px || !Number.isFinite(px)) return { steps: 0, acc };
+  // turned round: start over; one event moves at most one notch
+  let a = acc && Math.sign(acc) !== Math.sign(px) ? 0 : acc;
+  a += Math.max(-WHEEL_PX, Math.min(WHEEL_PX, px));
+  const n = Math.trunc(a / WHEEL_PX);
+  return { steps: n ? -n : 0, acc: a - n * WHEEL_PX };
+}
 
 /** @param {number} v */
 export function clampVolume(v) {
