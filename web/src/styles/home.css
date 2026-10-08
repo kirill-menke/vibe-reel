@@ -63,7 +63,7 @@
 }
 .whero__btn .i { width: 18px; height: 18px; }
 .whero__pause .i { width: 14px; height: 14px; }
-@media (hover: hover) and (pointer: fine) { .whero__btn:hover { background: rgba(40, 40, 46, 0.9); } }
+/* (hover: the over-media tint, web.css §5) */
 /* one slide: nothing to page or pause */
 .homehero:not(:has(> .homehero__dots)) > .whero__ctl { display: none; }
 /* reduced motion: the hero never moves by itself — no Pause to offer */

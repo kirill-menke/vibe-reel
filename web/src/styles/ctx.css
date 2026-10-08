@@ -24,7 +24,7 @@
 /* the item under the pointer / with keyboard focus — one look for both (the
    pointer focuses the item it is over, so the keys continue from there). The
    ring sits inside the item: the menu clips its overflow. */
-.ctx .ctx__item:not(:disabled):is(:hover, :focus-visible) { background: rgba(255, 255, 255, 0.1); transition-duration: 0s; }
+.ctx .ctx__item:not(:disabled):is(:hover, :focus-visible) { background-image: linear-gradient(var(--hover-tint), var(--hover-tint)); transition-duration: 0s; }
 .ctx .ctx__item:focus-visible { outline-offset: -2px; border-radius: 6px; }
 
 /* ------------------------------------------------------------ the ⋯ */
@@ -69,9 +69,6 @@
 .detail__pills:has(> .ctxmore) > .pills { flex: 0 1 auto; min-width: 0; padding-right: var(--s-2); }
 .detail__pills > .ctxmore--season { margin-right: var(--gutter); color: var(--text-dim); background: var(--surface-2); }
 
-@media (hover: hover) and (pointer: fine) {
-  .ctxmore--tile:hover { background: var(--surface-3); }
-  .ctxmore--episode:hover, .ctxmore--season:hover { color: var(--text); background: var(--surface-3); }
-  .ctxmore--episode:hover { background: rgba(255, 255, 255, 0.12); }
-}
+/* hover: web.css §5 (a tile's glass ⋯ takes the over-media tint, the
+   others the plain one) */
 .ctxmore[aria-expanded="true"] { color: var(--text); }

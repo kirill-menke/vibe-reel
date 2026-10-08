@@ -72,12 +72,8 @@
 @container wtrail (max-width: 110px) { .wnav__backto { display: none; } .wnav__backword { display: inline; } }
 .wnav__end { flex: none; }
 
-@media (hover: hover) and (pointer: fine) {
-  .wnav__tab--on:hover { background: rgba(230, 180, 80, 0.22); color: var(--gold); }
-  .wnav__back:hover { background: rgba(255, 255, 255, 0.16); }
-  .wnav__crumb:hover { color: var(--text); background: rgba(255, 255, 255, 0.08); }
-  .wnav__menu:hover { background: rgba(255, 255, 255, 0.08); }
-}
+/* hover: web.css §5 (the back pill takes the over-media tint, crumbs and
+   the menu button the plain one; the current tab stays gold, look.css) */
 
 /* ---- narrower windows ---- */
 @media (max-width: 900px) {
