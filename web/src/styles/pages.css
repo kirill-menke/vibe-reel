@@ -76,3 +76,24 @@
 /* A person without a photo shows their initials, as the cast circles do —
    the empty Art's tonal placeholder painted over them (A-09) */
 .wapp .person__photo > .art:not(:has(img)) { background: none; }
+
+/* Loading skeletons in the desktop layout (A-14): the title page's
+   placeholders were the phone's — a 990-px block button, round actions on a
+   line of their own, overview lines across the whole column — so everything
+   jumped when the page landed. Title at the title's size, the 200-px Play
+   pill and two action pills on one row, the overview at its reading width. */
+.wapp .detail__skel-late .detail__head > .skel--line-lg { width: min(440px, 100%) !important; height: 47px !important; }
+.wapp .detail__skel-late .detail__head > .skel--line { height: 18px; }
+.wapp .detail__body > .skel--pill { flex: 0 0 200px; }
+.wapp .detail__skelaction { width: 124px; height: var(--btn-h); border-radius: var(--r-pill); background: var(--surface-2); opacity: 0.7; }
+.wapp .detail__skelaction:nth-child(2) { width: 144px; }
+.wapp .detail__skelaction:nth-child(3) { display: none; }
+.wapp .detail__skelaction > .skel { display: none; }
+.wapp .detail__body > .skel-stack { max-width: 75ch; }
+/* a person opened from a link has no name until the record lands: a name and
+   a facts line in the header's text column, beside the photo */
+.wapp .person__name:empty { width: min(320px, 100%); min-height: 47px; border-radius: var(--r-xs); background: var(--surface-2); opacity: 0.7; }
+.wapp .person__name:empty::after {
+  content: ""; display: block; position: relative; top: calc(47px + var(--s-2)); width: 55%; height: 16px;
+  border-radius: var(--r-pill); background: var(--surface-2);
+}
