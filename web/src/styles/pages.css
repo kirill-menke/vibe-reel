@@ -54,7 +54,12 @@
     min-width: 240px; max-height: min(420px, 60vh); padding: 6px; margin-top: 4px;
     border: 0; border-radius: 12px; background: var(--pages-menu-bg); color: var(--text);
     box-shadow: 0 16px 40px rgba(0, 0, 0, 0.55), inset 0 0 0 1px var(--line);
-    position-area: block-end span-inline-start; position-try-fallbacks: flip-block;
+    position-area: block-end span-inline-start;
+    /* never up over the navigation (S1-8): above the row only when the whole
+       list fits between the navigation and the row, else below it, shortened
+       to the room there (it scrolls). flip-block put a 414-px list over the
+       header's tabs at 1440 × 900. */
+    position-try-fallbacks: --pages-pick-above, --pages-pick-below-fit;
   }
   .wapp .setrow__select option {
     display: flex; align-items: center; gap: 10px; min-height: 36px; padding: 0 12px;
@@ -63,6 +68,15 @@
   .wapp .setrow__select option::checkmark { order: 1; margin-left: auto; color: var(--gold); content: "●"; font-size: 9px; }
   .wapp .setrow__select option:checked { background: transparent; color: var(--gold); }
   .wapp .setrow__select option:is(:hover, :focus-visible) { background: var(--surface-2); outline: none; }
+}
+@position-try --pages-pick-above {
+  position-area: block-start span-inline-start;
+  margin: calc(var(--wnav-h) + 8px) 0 4px;
+}
+@position-try --pages-pick-below-fit {
+  position-area: block-end span-inline-start;
+  margin: 4px 0 8px;
+  max-height: calc(100% - 12px);
 }
 
 /* A title page that failed in a way its phone markup has no card for (a
