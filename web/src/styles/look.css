@@ -2,3 +2,12 @@
    disabled / selected states, type scale, the web font, forced colors,
    reduced motion, tooltips outside the player. Loaded right after web.css,
    before every other lane file, so a feature lane can refine these. */
+
+/* ===================================================== progress rings (D-01) */
+/* `calc(100 - var(--p) * 100)` is a unitless calc in a length property:
+   Chrome takes it, Firefox drops it at computed-value time (it came through
+   var(), so not at parse time) and falls back to 0 — every ring drawn full,
+   a 3% download looking finished, Up Next's countdown never sweeping. A
+   length inside calc() means the same thing in both: pathLength="100" on the
+   circle makes 1px one percent of the ring. */
+.ring__value { stroke-dashoffset: calc((1 - var(--p, 0)) * 100px); }
