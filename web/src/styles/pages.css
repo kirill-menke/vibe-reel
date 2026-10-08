@@ -1,2 +1,30 @@
 /* VibeReel Web — lane "pages": title pages (Movie/Series/Lookup/Pending
    detail), Person, Settings, My library, Login. */
+
+/* My library's poster slot (A-02). The phone styles .dl__art in offline.css
+   (its Downloads list), which the web doesn't load: the slot was 0×0 and the
+   rows' hairlines, inset past a 44-px poster, started right of the titles. */
+.wapp .dl__art {
+  width: 44px; height: 66px; flex: none; border-radius: 6px; overflow: hidden;
+  background: var(--surface-3); display: grid; place-items: center; color: var(--text-faint);
+}
+.wapp .dl__art img { width: 100%; height: 100%; object-fit: cover; }
+.wapp .dl__art .art__label { left: 6%; right: 6%; bottom: 7%; font-size: calc(9 * var(--tu)); line-height: 1.1; }
+
+/* One unbreakable word (a long title without spaces) breaks instead of
+   spilling past the page edge or clipping mid-word without an ellipsis (A-05) */
+.wapp :is(.detail__title, .episode__title, .person__name, .mylib .row__title) { overflow-wrap: anywhere; }
+
+/* The season bar's glass on the bar itself (not a z-index −1 ::before), and
+   nearly opaque: episode text under the pinned bar must not read through even
+   where backdrop-filter doesn't render (Firefox's WebRender on some GPUs).
+   The blur stays on permanently — only the tint fades in at the pin point —
+   so the layer isn't created mid-scroll (the phone's MOT-09 reason). */
+.wapp .detail__pills::before { content: none; }
+.wapp .detail__pills {
+  --pages-bar-bg: rgba(18, 18, 22, 0.94);
+  background-color: rgba(18, 18, 22, 0);
+  -webkit-backdrop-filter: var(--glass-blur); backdrop-filter: var(--glass-blur);
+  transition: background-color var(--dur-fast) linear, box-shadow var(--dur-fast) linear;
+}
+.wapp .detail__pills.pills--sticky { background-color: var(--pages-bar-bg); box-shadow: inset 0 -1px 0 var(--line); }

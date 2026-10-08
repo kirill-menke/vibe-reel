@@ -230,8 +230,13 @@ html, body { overflow: hidden; }
 .action__icon { width: 34px; height: 34px; background: none; }
 .action--on { background: var(--gold-soft); color: var(--gold); }
 .action--on .action__icon { background: none; }
-.detail__title { max-width: 18ch; }
-.detail__title--long { font-size: clamp(36px, 2.6vw, 54px); max-width: 24ch; }
+/* a two- or three-word title on one line ("Spider-Man: Brand New Day"), a long
+   one at most three lines (the nav bar carries the whole title) */
+.detail__title { max-width: 22ch; }
+.detail__title--long {
+  font-size: clamp(36px, 2.6vw, 54px); max-width: 34ch;
+  display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 3; overflow: hidden;
+}
 .detail__body .overview-wrap, .detail__body > p { max-width: 75ch; }
 /* "more" ends the clamped third line (the wrap is the text column, not the
    page): a longer fade so no half-cut word peeks out before it */
