@@ -47,6 +47,11 @@ describe('posterThumb on the web', () => {
     expect(ml.posterThumb(TMDB)).toBe('https://image.tmdb.org/t/p/w780/abc.jpg');
   });
 
+  it('without a window width (a worker, a test) it assumes 1440', () => {
+    setWin(0, 2);
+    expect(ml.posterThumb(TMDB)).toBe('https://image.tmdb.org/t/p/w342/abc.jpg');
+  });
+
   it('anything else is still returned untouched', () => {
     setWin(2560, 2);
     for (const u of ['https://m.media-amazon.com/images/M/x.jpg', '', null, undefined]) expect(ml.posterThumb(u)).toBe(u);
@@ -74,6 +79,12 @@ describe('reel-api failures in words', () => {
     net.on('GET', ML + '/api/charts/top-movie', net.status(500, JSON.stringify({ error: 'upstream', detail: 'IMDb did not answer' }), { 'content-type': 'application/json' }));
     const err = await ml.mlChart('top-movie').catch((e) => e);
     expect(api.errText(err)).toBe('IMDb did not answer');
+  });
+
+  it("an error code alone is reel-api's reason too", async () => {
+    net.on('GET', ML + '/api/charts/top-movie', net.status(500, JSON.stringify({ error: 'imdb_down' }), { 'content-type': 'application/json' }));
+    const err = await ml.mlChart('top-movie').catch((e) => e);
+    expect(api.errText(err)).toBe('imdb_down');
   });
 
   it('unreachable / timed out', async () => {

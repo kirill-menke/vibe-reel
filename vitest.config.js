@@ -98,7 +98,7 @@ export default defineConfig({
         'src/lib/livefeed.js': { statements: 100, branches: 100, functions: 100, lines: 100 },
         'src/lib/lookup.svelte.js': { statements: 100, branches: 96.3, functions: 100, lines: 100 },
         'src/lib/me.svelte.js': { statements: 100, branches: 98.7, functions: 100, lines: 100 },
-        'src/lib/medialib.js': { statements: 97.4, branches: 98.3, functions: 96.6, lines: 98 },
+        'src/lib/medialib.js': { statements: 97.9, branches: 99, functions: 97.2, lines: 98.3 },
         'src/lib/nav.svelte.js': { statements: 100, branches: 100, functions: 100, lines: 100 },
         'src/lib/news.svelte.js': { statements: 100, branches: 96.5, functions: 100, lines: 100 },
         'src/lib/pendingplay.js': { statements: 100, branches: 98, functions: 100, lines: 100 },
