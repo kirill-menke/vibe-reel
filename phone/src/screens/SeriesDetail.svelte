@@ -32,7 +32,7 @@
   import { scrollPast } from '../lib/gestures.js';
   import { safeInsets, reducedMotion, DUR, EASE } from '../lib/safe.js';
   import { cfg } from '$lib/config.js';
-  import { api, errText, imgUrl, seasonsPath, nextUpPath, episodesPaths, startSeason, itemPath, prefetch } from '$lib/api.js';
+  import { api, errText, imgUrl, pickSize, seasonsPath, nextUpPath, episodesPaths, startSeason, itemPath, prefetch } from '$lib/api.js';
   import { yearOf } from '$lib/format.js';
   import { P, playEpisode, playItem } from '$lib/player.svelte.js';
   import { S } from '$lib/nav.svelte.js';
@@ -292,7 +292,8 @@
 
   /* ---------------------------------------------------------- the header */
   /* 1920 on a desktop window (up to 2560 px wide), as MovieDetail */
-  const bg = $derived(imgUrl(series, 'Backdrop', { w: __WEB__ ? 1920 : 1280 }) || imgUrl(series, 'Primary', { h: 1080 }));
+  /* web: by the window's width in device pixels (E-01) */
+  const bg = $derived(imgUrl(series, 'Backdrop', { w: __WEB__ ? pickSize(innerWidth, [1920, 2880, 3840]) : 1280 }) || imgUrl(series, 'Primary', { h: 1080 }));
   const trailer = $derived(pickTrailer(series));
   const genres = $derived((series.Genres || []).slice(0, 3).join(' · '));
   const yr = $derived(
@@ -554,7 +555,8 @@
   /* ------------------------------------------------------- row helpers */
   /** @param {Jf.BaseItemDto} e */
   function epImg(e) {
-    return imgUrl(e, 'Primary', { w: 320 }) || imgUrl(e, 'Thumb', { w: 320 });
+    /* web: a still is up to ~270 CSS px wide — 640 on a HiDPI screen (E-09) */
+    return imgUrl(e, 'Primary', { w: __WEB__ ? pickSize(270, [320, 640]) : 320 }) || imgUrl(e, 'Thumb', { w: __WEB__ ? pickSize(270, [320, 640]) : 320 });
   }
   /** @param {Jf.BaseItemDto} e */
   function epNum(e, withSeason = false) {

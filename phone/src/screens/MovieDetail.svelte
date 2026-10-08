@@ -22,7 +22,7 @@
   import { runtimeOf, leftOf, resumeSecOf, progressOf, techBadges, detailRows, slowLink, solidPoint, lateIn } from '../components/detail/detail.js';
   import { scrollPast } from '../lib/gestures.js';
   import { cfg } from '$lib/config.js';
-  import { api, qs, errText, imgUrl } from '$lib/api.js';
+  import { api, qs, errText, imgUrl, pickSize } from '$lib/api.js';
   import { yearOf } from '$lib/format.js';
   import { openItem } from '$lib/nav.svelte.js';
   import { P, playItem } from '$lib/player.svelte.js';
@@ -55,8 +55,9 @@
 
   const bg = $derived(
     /* an episode shows its own still (the series' backdrop said nothing about which episode);
-     * a desktop window spans up to 2560 px, where 1280 read soft (the web player's art is 1920 too) */
-    (isEp ? imgUrl(item, 'Primary', { w: 1280 }) : null) || imgUrl(item, 'Backdrop', { w: __WEB__ ? 1920 : 1280 }) || imgUrl(item, 'Primary', { h: 1080 })
+     * on the web the backdrop spans the window: 1920 / 2880 / 3840 by its width in device
+     * pixels (pickSize), so a HiDPI or 2560-px window isn't soft (E-01) */
+    (isEp ? imgUrl(item, 'Primary', { w: 1280 }) : null) || imgUrl(item, 'Backdrop', { w: __WEB__ ? pickSize(innerWidth, [1920, 2880, 3840]) : 1280 }) || imgUrl(item, 'Primary', { h: 1080 })
   );
   const badges = $derived(techBadges(item));
   const slow = $derived(slowLink(P.link, item));
