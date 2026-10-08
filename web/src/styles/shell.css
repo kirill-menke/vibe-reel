@@ -138,4 +138,17 @@
 .toast--off { visibility: visible; }
 .toast--off > * { visibility: hidden; }
 /* its Undo names the shortcut (App: Ctrl+Z, ⌘Z on a Mac) */
+.toast__action { white-space: nowrap; }
 .toast__action::after { content: var(--wundo-key, ""); font-weight: 400; color: var(--text-faint); }
+
+/* Person's profile head cleared the old second bar (photo at y 128): it now
+   starts where every other page head does, under the one bar */
+.wapp .person__head { padding-top: calc(var(--wnav-h) + var(--s-4)); }
+/* …and below ~560 px (400 % zoom) it stacks, as on the phone: the 168 px
+   photo beside the name ran 31 px past a 320 px window */
+@media (max-width: 560px) {
+  .wapp .person__head { grid-template-columns: minmax(0, 1fr); grid-template-rows: auto; justify-items: center; text-align: center; }
+  .wapp .person__photo, .wapp .person__name, .wapp .person__facts { grid-area: auto; grid-row: auto; }
+  .wapp .person__name { max-width: 100%; overflow-wrap: anywhere; }
+  .wapp .person__bio { padding-left: var(--gutter); }
+}
