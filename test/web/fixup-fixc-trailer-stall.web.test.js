@@ -162,6 +162,24 @@ describe('trailerstream: a deadline on every request', () => {
     expect(onFail.mock.calls[0][0]).toMatchObject({ name: 'TrailerStall', message: 'no answer from the server for 60 s (index.m3u8)' });
   });
 
+  it('status answers still read as before: the error field, or HTTP <status> for a body that isn’t JSON', async () => {
+    start({ status: [{ httpStatus: 500, body: { error: 'yt-dlp exploded' } }] });
+    await clock.tick(50);
+    expect(onFail.mock.calls[0][0].message).toBe('yt-dlp exploded');
+    src.stop();
+    onFail.mockClear();
+    start();
+    net.on(null, BASE, net.status(502, 'Bad Gateway'));
+    await clock.tick(50);
+    expect(onFail.mock.calls[0][0].message).toBe('HTTP 502');
+    src.stop();
+    onFail.mockClear();
+    start(); // an empty answer (no body to hand on)
+    net.on(null, BASE, net.status(204));
+    await clock.tick(50);
+    expect(onFail.mock.calls[0][0].message).toBe('HTTP 204');
+  });
+
   it('a playlist error still reads "playlist: HTTP <status>"', async () => {
     start();
     net.on('GET', BASE + '/index.m3u8', net.status(503));
