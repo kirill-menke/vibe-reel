@@ -215,3 +215,13 @@
    Firefox, which then kept the phone's `balance`: `wrap` first, so both
    browsers wrap the note normally and Chrome also evens its last line (D-07) */
 .wapp .detail__noteslot .detail__note { text-wrap: wrap; text-wrap: pretty; }
+
+/* The player's position slider takes keyboard focus on the web: ring its thumb
+   and raise the track as a drag does, not a box round the whole full-width hit
+   area (integration, after the player lane made it a Tab stop). */
+.wplayer .vr-scrub__hit:focus-visible { outline: none; }
+.wplayer .vr-scrub__hit:focus-visible .scrubber__track { height: var(--scrub-h-active); }
+.wplayer .vr-scrub__hit:focus-visible .scrubber__thumb { transform: scale(1.45); box-shadow: 0 0 0 var(--ring-gap) #000, 0 0 0 calc(var(--ring-gap) + var(--ring-w)) var(--ring); }
+@media (forced-colors: active) {
+  .wplayer .vr-scrub__hit:focus-visible { outline: 3px solid Highlight; outline-offset: 2px; }
+}
