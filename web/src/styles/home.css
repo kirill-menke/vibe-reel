@@ -1,2 +1,60 @@
 /* VibeReel Web — lane "home": the Home hero carousel (layout, alignment, the
    pause control), Home rails. */
+
+/* ---- hero: the text column ------------------------------------------------
+   The phone places .hero__body at one gutter (left/right: var(--gutter)); the
+   desktop only widens the type column, actions in a row. It used to add a
+   gutter of padding on top — the eyebrow and title sat a second gutter right
+   of the rails, the navigation and every title page, and the column lost
+   2 × gutter of width (632 px at 2560: a two-line title). */
+.hero__body { max-width: min(760px, 52vw); }
+.hero__meta { max-width: 640px; }
+.hero__scrim {
+  background:
+    linear-gradient(90deg, rgba(10, 10, 12, 0.78) 0%, rgba(10, 10, 12, 0.35) 38%, rgba(10, 10, 12, 0) 62%),
+    linear-gradient(180deg, rgba(10, 10, 12, 0.5) 0%, rgba(10, 10, 12, 0) 18%, rgba(10, 10, 12, 0) 55%, rgba(10, 10, 12, 0.85) 88%, #0a0a0c 100%);
+}
+
+/* ---- hero height ----------------------------------------------------------
+   --hero-h's 480-px floor (web.css tokens) is taller than a 450-px window
+   (1440 × 900 at 200 % zoom): the first screen was all hero. In a short window
+   the hero leaves about a fifth of it, so the first rail's head and the top of
+   its tiles show. Home is the token's only user (.hero). */
+.wapp .home { --hero-h: clamp(min(480px, 78vh), min(68vh, 40vw), 940px); }
+/* the phone's landscape rule (max-height 500) lifts the text block over its
+   floating tab bar; the desktop has none */
+@media (orientation: landscape) and (max-height: 500px) {
+  .wapp .home .hero__body { bottom: var(--s-5); }
+}
+
+/* ---- the pager row: dots on the text column, controls at the right --------
+   The dots were centred in the window, under nothing; they now start where
+   the eyebrow, title and buttons do. Right of them, Pause · Previous · Next
+   (lib/heroarrows.js), centred on the dots' line — always shown, like the
+   rails' ◀ ▶ in their heads. */
+.wapp .homehero__dots { justify-content: flex-start; right: auto; width: min(760px, 52vw, calc(100% - 2 * var(--gutter))); }
+.whero__ctl {
+  position: absolute; z-index: 5;
+  right: var(--gutter); bottom: calc(var(--s-5) + var(--dot) / 2 - 16px);
+  display: flex; gap: 8px;
+}
+.whero__btn {
+  display: grid; place-items: center; width: 32px; height: 32px; border-radius: var(--r-pill);
+  color: var(--text); background: var(--glass-bg-strong); box-shadow: inset 0 0 0 1px var(--glass-line);
+  transition: background-color var(--dur-fast) linear;
+}
+.whero__btn .i { width: 18px; height: 18px; }
+.whero__pause .i { width: 14px; height: 14px; }
+@media (hover: hover) and (pointer: fine) { .whero__btn:hover { background: rgba(40, 40, 46, 0.9); } }
+/* one slide: nothing to page or pause */
+.homehero:not(:has(> .homehero__dots)) > .whero__ctl { display: none; }
+/* reduced motion: the hero never moves by itself — no Pause to offer */
+@media (prefers-reduced-motion: reduce) { .whero__pause { display: none; } }
+
+/* ---- Home as a hidden route ------------------------------------------------
+   Home stays mounted under every other route (display: none) and its rails
+   fold in and out with Svelte's `slide`, which reads the rail's computed
+   height: 'auto' on a box-less node → `height: NaNpx` keyframes (38 console
+   warnings in Chrome per deep link). Under a hidden route the height computes
+   to 0 instead — nothing shows there either way. */
+[hidden] .home__rail { height: 0; }

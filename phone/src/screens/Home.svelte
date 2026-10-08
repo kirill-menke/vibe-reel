@@ -48,7 +48,7 @@
   import { HeroCarousel, heroArt } from '../lib/carousel.js';
   import { conn } from '../lib/conn.svelte.js';
   import { cfg } from '$lib/config.js';
-  import { api, qs, imgUrl, revalidate, cached, empty, errText, itemPath, ITEM_FIELDS } from '$lib/api.js';
+  import { api, qs, imgUrl, revalidate, cached, empty, errText, itemPath, ITEM_FIELDS, pickSize } from '$lib/api.js';
   import { ticksToSec, yearOf } from '$lib/format.js';
   import { S, openItem, openLogin, openSearch } from '$lib/nav.svelte.js';
   import { playItem, playFromHome, videoEl } from '$lib/player.svelte.js';
@@ -537,11 +537,11 @@
    * minute on Home, measured) for memory the rounds would claim back anyway. */
   const near = $derived.by(() => {
     const n = slides.length, k = new Set();
-    const all = cycling();
+    const all = !__WEB__ && cycling(); // web: ±1 always (a backdrop there is up to 3840 wide)
     for (let d = 0; d < n; d++) if (all || d <= 1 || d === n - 1) k.add(slides[(cur + d) % n]?.it.Id);
     return k;
   });
-  const heroBg = (/** @type {Jf.BaseItemDto} */ it) => imgUrl(it, 'Backdrop', { w: 1920 }) || imgUrl(it, 'Primary', { h: 1080 });
+  const heroBg = (/** @type {Jf.BaseItemDto} */ it) => imgUrl(it, 'Backdrop', { w: __WEB__ ? pickSize(innerWidth, [1920, 2880, 3840]) : 1920 }) || imgUrl(it, 'Primary', { h: 1080 });
   // the source of the slide's blurred copies (lib/carousel.js): 480 wide
   const heroBlur = (/** @type {Jf.BaseItemDto} */ it) => imgUrl(it, 'Backdrop', { w: 480 }) || imgUrl(it, 'Primary', { w: 480 });
 
@@ -800,7 +800,7 @@
     </section>
   {:else if failed}
     <LoadError
-      title={failed.status === 401 || failed.status === 403 ? 'Jellyfin didn’t accept this sign-in' : 'Couldn’t reach the server'}
+      title={failed.status === 401 || failed.status === 403 ? 'Jellyfin didn’t accept this sign-in' : __WEB__ && !failed.network && /** @type {number} */ (failed.status) < 502 ? 'Couldn’t load Home' : 'Couldn’t reach the server'}
       reason={failed.network || /** @type {number} */ (failed.status) >= 502
         ? new URL(cfg.server, location.href).host + (__WEB__ ? ' didn’t answer. Check your connection, then try again.' : ' didn’t answer. Check that Tailscale is on, then try again.')
         : ''}
