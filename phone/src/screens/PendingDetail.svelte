@@ -282,7 +282,7 @@
       <ActionBar
         actions={[
           trailer && { id: 'trailer', icon: 'trailer', label: 'Trailer', onclick: () => openTrailer(trailer, { title: g.title, art: bg }) },
-          !done && group?.mediaId && canCancelGroup(group) && { id: 'cancel', icon: 'x', label: 'Cancel', busy: groupCancelling, onclick: titleMenu }
+          !done && group?.mediaId && canCancelGroup(group) && { id: 'cancel', icon: 'x', label: __WEB__ ? 'Cancel download' : 'Cancel', busy: groupCancelling, onclick: titleMenu }
         ]}
       />
       <Overview text={meta?.overview || ''} />

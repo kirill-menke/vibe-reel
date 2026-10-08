@@ -14,7 +14,8 @@
   import LoadError from '../components/LoadError.svelte';
   import Overview from '../components/detail/Overview.svelte';
   import { initials } from '../components/detail/detail.js';
-  import { api, imgUrl, itemPath, itemsPath } from '$lib/api.js';
+  import { api, imgUrl, itemPath, itemsPath, pickSize } from '$lib/api.js';
+  import { pageError, visibleScreen } from '../components/detail/weberror.svelte.js';
   import { fmtDate } from '$lib/format.js';
   import { openItem } from '$lib/nav.svelte.js';
   import { scrollPast } from '../lib/gestures.js';
@@ -41,7 +42,9 @@
   });
 
   const name = $derived(person?.Name || untrack(() => params.name) || '');
-  const photo = $derived(person ? imgUrl(person, 'Primary', { h: 280 }) : null);
+  /* the photo fills a 168-px circle (web; cover-cropped from a 2:3 image, so
+   * 252 px tall): h560 on a HiDPI screen, else the cast strip's cached h280 */
+  const photo = $derived(person ? imgUrl(person, 'Primary', { h: __WEB__ ? pickSize(252, [280, 560]) : 280 }) : null);
 
   const facts = $derived.by(() => {
     const out = [];
@@ -107,6 +110,38 @@
       .catch((e) => !dead && (error = e));
   }
   load();
+
+  /* Web (A-09): when the person record failed as well as the filmography
+   * (both are /Items — a server error takes both), the page was a grey photo
+   * disc without a name over a card about "these titles". It is the
+   * full-page "Couldn’t load this person" then; Retry loads both again. */
+  if (__PHONE__ && __WEB__) {
+    /** @type {import('../components/detail/weberror.svelte.js').PageError | null} */
+    let card = null;
+    let opening = false;
+    const retry = () =>
+      load().then(() => {
+        if (error && !items) throw error;
+      });
+    $effect(() => {
+      const failed = !!error && !items && !person;
+      if (failed && !card && !opening) {
+        const screen = visibleScreen('.person__head');
+        if (!screen) return;
+        opening = true;
+        pageError(screen, { title: 'Couldn’t load this person', error, retry }).then((c) => {
+          opening = false;
+          if (dead || !(error && !items && !person)) c.close();
+          else card = c;
+        });
+      } else if (failed) card?.update(error);
+      else if (card) {
+        card.close();
+        card = null;
+      }
+    });
+    onDestroy(() => card?.close());
+  }
 
   let solid = $state(false);
 </script>

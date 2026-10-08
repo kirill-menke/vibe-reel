@@ -64,3 +64,15 @@
   .wapp .setrow__select option:checked { background: transparent; color: var(--gold); }
   .wapp .setrow__select option:is(:hover, :focus-visible) { background: var(--surface-2); outline: none; }
 }
+
+/* A title page that failed in a way its phone markup has no card for (a
+   deep-linked lookup without metadata, a person that didn't load): the
+   page's content steps aside for the full-page LoadError
+   (components/detail/weberror.svelte.js) */
+.wapp .screen.wpage--error > :not(.wpage__err) { display: none; }
+.wapp .wpage__err { min-height: 100%; display: flex; flex-direction: column; }
+.wapp .wpage__err > .state { flex: 1; }
+
+/* A person without a photo shows their initials, as the cast circles do —
+   the empty Art's tonal placeholder painted over them (A-09) */
+.wapp .person__photo > .art:not(:has(img)) { background: none; }

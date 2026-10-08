@@ -31,6 +31,42 @@
     return () => ro.disconnect();
   });
 
+  /* Web (C-12): the clamped paragraph was itself the button, named with the
+   * whole overview (a person's 1,800-character bio). The paragraph stays text
+   * and the visible "more" is the control (focusable, aria-expanded,
+   * aria-controls). Expanding removes it: focus moves to the paragraph
+   * (tabindex −1) instead of falling to <body>. */
+  if (__PHONE__ && __WEB__) {
+    let wasOpen = false;
+    $effect(() => {
+      const p = el;
+      const isOpen = open;
+      const tapNow = clipped && !open;
+      if (!p) return;
+      if (tapNow) {
+        p.removeAttribute('role');
+        p.removeAttribute('tabindex');
+        p.removeAttribute('aria-expanded');
+      }
+      if (!p.id) p.id = 'ov-' + Math.random().toString(36).slice(2, 9);
+      const more = p.parentElement?.querySelector('.overview__more');
+      if (more) {
+        more.removeAttribute('aria-hidden');
+        more.removeAttribute('tabindex');
+        more.setAttribute('aria-expanded', 'false');
+        more.setAttribute('aria-controls', p.id);
+      }
+      if (isOpen && !wasOpen) {
+        const ae = document.activeElement;
+        if (!ae || ae === document.body || !ae.isConnected) {
+          p.tabIndex = -1;
+          p.focus({ preventScroll: true });
+        }
+      }
+      wasOpen = isOpen;
+    });
+  }
+
   async function expand() {
     if (open || !clipped || !el) return;
     if (getSelection()?.toString()) return; // a selection gesture, not a tap
