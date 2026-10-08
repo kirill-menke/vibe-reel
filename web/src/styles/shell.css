@@ -122,7 +122,9 @@
    whole of it: there it scrolls with the page */
 .wapp .detail__pills { top: var(--wnav-h); }
 @media (max-height: 600px) {
-  .wapp .detail__pills { position: relative; }
+  /* top: auto — a relative box still moves by its top, and the sticky
+     offset pushed the bar 64 px down over the first episodes (S2-1) */
+  .wapp .detail__pills { position: relative; top: auto; }
   .wapp .screen:has(> * .detail__pills, > .detail__pills) { scroll-padding-top: calc(var(--wnav-h) + var(--s-3)); }
 }
 /* Library's compact band repeated "Movies · Recently added" under the
