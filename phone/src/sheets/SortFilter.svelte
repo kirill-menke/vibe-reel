@@ -99,6 +99,22 @@
   if (untrack(() => params.focus) === 'genre') {
     tick().then(() => {
       if (bodyEl && genreEl) bodyEl.scrollTop = Math.max(0, genreEl.offsetTop - 12);
+      if (__PHONE__ && __WEB__) {
+        // the desktop dialog takes keyboard focus: the Genre chip lands on the
+        // picked genre (else All), not on the dialog four Tabs away from it —
+        // once the chips are in (the skeleton pills come first on a cold list)
+        let tries = 60;
+        const land = () => {
+          if (dead || !genreEl?.isConnected) return;
+          const chip = /** @type {HTMLElement | null} */ (genreEl.querySelector('.chip.chip--on') || genreEl.querySelector('button.chip'));
+          const a = document.activeElement;
+          // (unless a key already moved focus inside the dialog meanwhile)
+          if (chip) {
+            if (!a || a === document.body || a.matches('[role="dialog"]') || !a.closest('[role="dialog"]')) chip.focus();
+          } else if (--tries > 0) requestAnimationFrame(land);
+        };
+        land();
+      }
     });
   }
 

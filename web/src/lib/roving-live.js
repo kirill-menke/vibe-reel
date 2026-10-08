@@ -14,7 +14,10 @@
  *            through the polite region instead, which exists from the start.
  *            While searching, the Search page has lost its "Search" title
  *            (the phone's search mode slides it away): a visually hidden h1
- *            stands in, and the result count is the results' heading (h2). */
+ *            stands in, and the result count is the results' heading (h2).
+ *   Home     the phone's hero has an h1 per slide — the page's only h1, and
+ *            a different one every few seconds. A visually hidden h1 "Home"
+ *            names the page for good, and the slide titles count as h2s. */
 
 /** @type {HTMLElement | null} */ let polite = null;
 /** @type {HTMLElement | null} */ let assertive = null;
@@ -63,6 +66,8 @@ export function syncLive() {
     say(assertive, cardText(card));
   }
 
+  syncHomeHeading();
+
   // Search
   const main = document.querySelector('.route[data-route="search"]:not([hidden]) > .srch, .route[data-route="search"]:not([hidden]) .screen.srch');
   if (!main) return;
@@ -87,5 +92,21 @@ export function syncLive() {
   if (msg !== lastSearch) {
     lastSearch = msg;
     if (msg) say(polite, msg);
+  }
+}
+
+/** @type {HTMLElement | null} */ let homeH1 = null;
+function syncHomeHeading() {
+  const home = document.querySelector('.route[data-route="home"] > .screen.home');
+  if (!home) return;
+  if (!homeH1 || homeH1.parentElement !== home) {
+    homeH1 = document.createElement('h1');
+    homeH1.className = 'sr-only';
+    homeH1.textContent = 'Home';
+    home.prepend(homeH1);
+  }
+  for (const t of home.querySelectorAll('h1.hero__title:not([aria-level])')) {
+    t.setAttribute('role', 'heading');
+    t.setAttribute('aria-level', '2');
   }
 }
