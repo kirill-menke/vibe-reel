@@ -337,7 +337,10 @@ html, body { overflow: hidden; }
 
 /* =============================================================== 6. player */
 .wplayer {
-  position: fixed; inset: 0; z-index: 65; background: #000; color: var(--text); overflow: hidden;
+  position: fixed; inset: 0; z-index: 65; background: #000; color: var(--text);
+  /* clip, not hidden: a hidden-overflow box is still a scroll container, and
+     ChapterPanel's scrollIntoView (or a focus) shifted the whole layer 20 px */
+  overflow: hidden; overflow: clip;
   --safe-top: 0px;
   cursor: none;
 }
@@ -368,12 +371,16 @@ html, body { overflow: hidden; }
 }
 .wplayer__row { display: flex; align-items: center; gap: var(--s-2); }
 .wpbtn {
-  display: grid; place-items: center; flex: none; width: 44px; height: 44px; border-radius: var(--r-pill);
+  position: relative; display: grid; place-items: center; flex: none; width: 44px; height: 44px; border-radius: var(--r-pill);
   color: #fff; transition: background-color var(--dur-fast) linear;
 }
 .wpbtn .i { width: 26px; height: 26px; }
 .wpbtn--on { color: var(--gold); }
-.wplayer__time { margin-left: var(--s-2); font: var(--t-num); font-size: 15px; font-variant-numeric: tabular-nums; color: var(--text); white-space: nowrap; }
+.wplayer__time {
+  position: relative; padding: 6px 8px; border-radius: 8px;
+  font: var(--t-num); font-size: 15px; font-variant-numeric: tabular-nums; color: var(--text); white-space: nowrap;
+  transition: background-color var(--dur-fast) linear;
+}
 .wplayer__dur { color: var(--text-dim); }
 .pchip--on { box-shadow: inset 0 0 0 1px var(--gold-line); background: var(--gold-soft); }
 
@@ -394,11 +401,13 @@ html, body { overflow: hidden; }
 /* scrubber and hover preview */
 .wplayer .scrubber__time { font-size: 14px; }
 .wplayer .vr-scrub__hit:hover .scrubber__track { height: var(--scrub-h-active); }
-.wtrick { bottom: calc(100% - 4px); transform: translateX(-50%); z-index: 3; }
+.wtrick { bottom: calc(100% - 4px); transform: translateX(-50%); z-index: 3; gap: 8px; }
 .wtrick .trick__frame { background-color: #111; background-repeat: no-repeat; }
 
-/* side panels (tracks, chapters) under the top bar, over the video */
-.wplayer .panel { top: calc(var(--player-pad) + 56px); bottom: 120px; right: var(--gutter); z-index: 7; }
+/* Audio / Subtitles / Quality and Chapters: a popover over the right end of
+   the bar, as tall as its lists (it scrolls past the top bar's line), not a
+   full-height side panel */
+.wplayer .panel { top: auto; bottom: 112px; right: var(--gutter); z-index: 7; max-height: calc(100% - 112px - var(--player-pad) - 64px); }
 .wplayer .panel .option { cursor: pointer; }
 
 /* skip chip and Up Next above the control bar */
@@ -446,21 +455,15 @@ html, body { overflow: hidden; }
   opacity: 0; transition: opacity var(--dur-fast) linear;
 }
 .wplayer__bar--hover .scrubber__track::before { opacity: 1; }
-.wtrick { gap: 8px; }
 .wtrick .trick__time, .wtrick .trick__chapter {
   padding: 5px 9px; border-radius: 6px; background: rgba(18, 18, 22, 0.9); text-shadow: none;
   max-width: 320px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
 }
 .wtrick .trick__time { font-size: 14px; }
-.wplayer__time {
-  position: relative; padding: 6px 8px; margin-left: 0; border-radius: 8px;
-  transition: background-color var(--dur-fast) linear;
-}
 .wkeysbtn { margin-left: auto; font: 700 18px/1 var(--font-ui); }
 
 /* tooltips with the key (data-tip): above the bottom row, below the top bar,
    edge-aligned at either end of a row so they stay inside the window */
-.wpbtn { position: relative; }
 .wplayer [data-tip]::before {
   content: attr(data-tip); position: absolute; z-index: 8; left: 50%; bottom: calc(100% + 10px); translate: -50% 0;
   padding: 6px 10px; border-radius: 8px; white-space: nowrap;
@@ -477,11 +480,6 @@ html, body { overflow: hidden; }
   .wplayer [data-tip]:hover::before { opacity: 1; transform: none; transition-delay: 400ms; }
   .wplayer__time:hover { background-color: rgba(255, 255, 255, 0.1); }
 }
-
-/* Audio / Subtitles / Quality and Chapters: a popover over the right end of
-   the bar, as tall as its lists (it scrolls past the top bar's line), not a
-   full-height side panel */
-.wplayer .panel { top: auto; bottom: 112px; max-height: calc(100% - 112px - var(--player-pad) - 64px); }
 
 /* feedback flashes (keys, a click on the picture, the wheel on the speaker) */
 .wflash {

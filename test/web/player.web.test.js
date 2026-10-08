@@ -126,14 +126,31 @@ describe('a remux plays through a MediaSource feed', () => {
 describe('feed failures', () => {
   beforeAll(warmPlayer, 120000);
 
-  it('a broken feed is the connection card; a codec the browser lacks says so', async () => {
+  /* the card names what happened by the HTTP status the feed gave up on (a
+   * 404 is the server ending the job, not a lost connection), with the feed's
+   * own message on a second line; no status = no answer at all */
+  it.each([
+    [500, 'The server had a problem with this stream', 'Retry asks it to start again from 0:00.'],
+    [404, 'The server ended this stream', 'Retry asks it to start again from 0:00.'],
+    [410, 'The server ended this stream', 'Retry asks it to start again from 0:00.'],
+    [401, 'The server refused this stream', 'Signing in again may help.'],
+    [403, 'The server refused this stream', 'Signing in again may help.']
+  ])('a feed that gave up on HTTP %i: %s', async (status, title, first) => {
+    const h = await startWeb();
+    const msg = 'Jellyfin stopped sending the video (segment 4: HTTP ' + status + ')';
+    H.feeds[0].opts.onFail(Object.assign(new Error(msg), { status }));
+    expect(h.P.error).toMatchObject({ title, detail: first + '\n' + msg });
+    h.player.exitPlayer();
+  });
+
+  it('no answer at all is the connection card; a codec the browser lacks says so', async () => {
     let h = await startWeb();
-    H.feeds[0].opts.onFail(Object.assign(new Error('Jellyfin stopped sending the video (segment 4: HTTP 500)'), { status: 500 }));
-    expect(h.P.error).toMatchObject({ title: 'Lost the connection to the server', detail: 'Jellyfin stopped sending the video (segment 4: HTTP 500)' });
+    H.feeds[0].opts.onFail(new Error('Jellyfin stopped sending the video (segment 4: no answer)'));
+    expect(h.P.error).toMatchObject({ title: 'Lost the connection to the server', detail: 'Jellyfin stopped sending the video (segment 4: no answer)' });
     h.player.exitPlayer();
     H.feeds.length = 0;
     h = await startWeb();
-    H.feeds[0].opts.onFail(Object.assign(new Error(''), { code: 'unsupported' }));
+    H.feeds[0].opts.onFail(Object.assign(new Error(''), { code: 'unsupported', status: 415 }));
     expect(h.P.error).toMatchObject({ title: 'This browser can’t play this stream', detail: '' });
   });
 
@@ -332,14 +349,15 @@ describe('error wording names the browser', () => {
     await h.clock.tick(500);
     await h.clock.tick(30000);
     expect(h.P.error.title).toBe('Playback stalled');
-    expect(h.P.error.detail).toBe('No video has arrived from the server for 30 s. Check this computer’s connection, then Retry from 0:42.');
+    // a no-break space between the number and its unit: "30" never ends a line
+    expect(h.P.error.detail).toBe('No video has arrived from the server for 30\u00a0s. Check this computer’s connection, then Retry from 0:42.');
     h.player.exitPlayer();
     h = await startWeb();
     h.video.advance(42);
     await h.clock.tick(5000);
     h.P.slowNet = { need: 25, got: 6 };
     await h.clock.tick(26000);
-    expect(h.P.error.detail).toMatch(/^This stream needs about 25 Mbit\/s but this computer was only getting about 6 Mbit\/s, and then nothing for 3\d s\./);
+    expect(h.P.error.detail).toMatch(/^This stream needs about 25\u00a0Mbit\/s but this computer was only getting about 6\u00a0Mbit\/s, and then nothing for 3\d\u00a0s\./);
   });
 });
 
