@@ -15,8 +15,8 @@ const BOX = '.actsheet:not([inert]) .actsheet__box';
 /** The dialog's answers as drawn: Cancel first, then the rest in DOM order.
  * @param {ParentNode} box @returns {HTMLButtonElement[]} */
 export function drawnOrder(box) {
-  /** @type {HTMLButtonElement[]} */
-  const all = [...box.querySelectorAll('button.actsheet__btn')].filter((b) => !(/** @type {HTMLButtonElement} */ (b).disabled));
+  const btns = /** @type {NodeListOf<HTMLButtonElement>} */ (box.querySelectorAll('button.actsheet__btn'));
+  const all = [...btns].filter((b) => !b.disabled);
   return [...all.filter((b) => b.classList.contains('actsheet__btn--cancel')), ...all.filter((b) => !b.classList.contains('actsheet__btn--cancel'))];
 }
 
