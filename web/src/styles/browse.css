@@ -1,2 +1,44 @@
 /* VibeReel Web — lane "browse": Library grids and their bar, Search, Chart,
    rails and grids under the keyboard, empty / error states of those pages. */
+
+/* Empty and error states in the page's flow (A-01). The phone's `.state--fill`
+   is an absolute layer over the whole screen, centred in it: on the Library
+   that layer lay over the sort / filter chips and swallowed every click on
+   them ("Unwatched" couldn't be switched off again from "No unwatched
+   movies"), and at 200 % zoom its icon sat on the Genre chip. Here the state
+   starts below the bar (chips, the chart's head, the search field) and only
+   pads down to roughly where the centred one sat. */
+.wapp :is(.lib, .lib__emptywrap, .chart, .srch) > .state--fill {
+  position: static; inset: auto;
+  justify-content: flex-start;
+  padding-top: clamp(var(--s-8), 12vh, 160px);
+  padding-bottom: var(--s-8);
+}
+
+/* Grid captions get two lines (A-12): one line cut "The Shawshank
+   Redemption" and made the three Lord of the Rings films the same "The Lord
+   of the Rings: The…". The year follows the title directly; the grid's rows
+   still line up (a row is as tall as its tallest caption), so the posters of
+   a row share their top. Reserving two lines for every title instead left a
+   blank line between most titles and their year. */
+.wapp .grid > .tile .tile__title {
+  white-space: normal; overflow-wrap: break-word;
+  display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-clamp: 2;
+}
+
+/* One head height for every rail and section (F-13): a rail's head is 34 px
+   with its ◀ ▶ and 28 px without, so the gap from a title to its posters
+   alternated 17 / 14 px down Home; the section heads (Cast, Details,
+   Filmography) follow the same measure. */
+.wapp .rail__head { min-height: 34px; }
+.wapp .section__head { min-height: 34px; padding-bottom: var(--s-3); }
+
+/* A tile reached by the grid's arrow keys (lib/gridkeys.js) — or by Tab —
+   scrolls in clear of the navigation and a page's sticky bar above it. */
+.wapp .grid > .tile { scroll-margin-top: calc(var(--wnav-h) + 72px); scroll-margin-bottom: var(--s-6); }
+
+/* Search: no "Cancel" beside the field (B-09). It is the iOS keyboard's way
+   out of search mode; here Esc in the field does that (lib/searchurl.js),
+   and as a Tab stop it unmounted under the focus — Tab from an empty field
+   landed on it, the field's blur ended search mode and focus fell to <body>. */
+.wapp .search__cancel { display: none; }
