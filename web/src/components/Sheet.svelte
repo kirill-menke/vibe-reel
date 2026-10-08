@@ -17,8 +17,9 @@
    * buttons in the top navigation) or a dialog (Sort & filter) — App.svelte's
    * host decides where, from the sheet's name. Escape and a click outside
    * close it (the host); no drag. `large` only makes it taller. */
+  import { untrack } from 'svelte';
   import Icon from '$p/components/Icon.svelte';
-  import { closeSheet } from '$p/lib/router.svelte.js';
+  import { R, top, closeSheet } from '$p/lib/router.svelte.js';
 
   /** @type {{ title?: string, large?: boolean, onclose?: (() => unknown) | null, headAction?: VR.Snip, head?: VR.Snip, foot?: VR.Snip, bodyEl?: HTMLElement | null, class?: string, children?: VR.Snip }} */
   let { title = '', large = false, onclose = null, headAction, head, foot, bodyEl = $bindable(null), class: cls = '', children } = $props();
@@ -30,17 +31,21 @@
   /* keyboard users land in the popover, and go back to what opened it. The
    * page under a sheet is `inert` (App) until the same update that removes
    * the sheet, so the hand-back waits a task — and leaves focus alone if
-   * something (a pushed page, a confirm) has taken it meanwhile. */
+   * something (a pushed page, a confirm) has taken it meanwhile, or if the
+   * sheet closed because one of its rows navigated (a notification → the
+   * show): then the new page takes focus (App), not the bell. */
   $effect(() => {
     const n = el;
     if (!n) return;
     const prev = /** @type {HTMLElement | null} */ (document.activeElement);
+    const at = untrack(() => R.tab + ' ' + top().key);
     requestAnimationFrame(() => {
       if (!n.contains(document.activeElement)) n.focus({ preventScroll: true });
     });
     return () => {
       setTimeout(() => {
         const a = document.activeElement;
+        if (R.tab + ' ' + top().key !== at) return;
         if (prev && prev.isConnected && !n.isConnected && (!a || a === document.body)) prev.focus?.({ preventScroll: true });
       });
     };
