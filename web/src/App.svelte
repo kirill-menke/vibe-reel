@@ -29,6 +29,7 @@
   import '$lib/landed.svelte.js'; // registers its activity-feed listener (the bell's "Ready to watch")
   import { rememberCurrent } from '$lib/account.svelte.js';
   import { meAtBoot } from '$p/lib/mylib.js';
+  import { MODAL } from './lib/modal.svelte.js';
 
   /* ------------------------------------------------------------ polling ---- */
   /* activity (download badges) and the bell's feed: only while the tab is
@@ -255,8 +256,9 @@
 <svelte:window onkeydowncapture={onKey} onkeydown={onSlash} />
 
 <!-- a sheet (popover or dialog) is modal: its scrim already takes every click
-     outside it, and `inert` keeps Tab / the screen reader in it too -->
-<div class="wapp" class:wapp--player={R.modal === 'player'} inert={(!!R.sheet && !!SheetComp) || undefined}>
+     outside it, and `inert` keeps Tab / the screen reader in it too — as for
+     every other modal that holds a key in MODAL (lib/modal.svelte.js) -->
+<div class="wapp" class:wapp--player={R.modal === 'player'} inert={(!!R.sheet && !!SheetComp) || MODAL.holds.length > 0 || undefined}>
   {#if shell}<WebNav {solid} />{/if}
 
   <div class="stage wstage" bind:this={stage} onscrollcapture={onScroll}>

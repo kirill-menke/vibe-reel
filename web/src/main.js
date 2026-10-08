@@ -10,6 +10,14 @@ import '$p/styles/player.css';
 import '$p/styles/mylibrary.css';
 import '$p/styles/zoom.css';
 import './web.css';
+// one stylesheet per owner, in cascade order (generic look first)
+import './styles/look.css';
+import './styles/shell.css';
+import './styles/ctx.css';
+import './styles/home.css';
+import './styles/pages.css';
+import './styles/browse.css';
+import './styles/player.css';
 import App from './App.svelte';
 import { initLifecycle } from './lib/lifecycle.js';
 import { initUrl } from './lib/urlsync.svelte.js';

@@ -417,6 +417,20 @@ export function imgUrl(item, type, opts = {}) {
   return cfg.server + '/Items/' + id + '/Images/' + type + qs(p);
 }
 
+/* Web build only (called from `__WEB__` branches, so the TV and phone bundles
+ * drop it): the image size to ask for, for a box `px` CSS pixels wide (or
+ * tall) on this screen — the smallest of `steps` that covers it at the
+ * window's devicePixelRatio, else the largest. A step within 10 % below the
+ * need still counts (90 % density doesn't read as soft). Few, fixed steps:
+ * each new size misses Jellyfin's resize cache once (pre-render after a
+ * change). Backdrops use [1920, 2880, 3840] (3840 is most TMDB originals). */
+/** @param {number} px @param {number[]} steps ascending @returns {number} */
+export function pickSize(px, steps) {
+  const need = px * (globalThis.devicePixelRatio || 1) * 0.9;
+  for (const s of steps) if (s >= need) return s;
+  return steps[steps.length - 1];
+}
+
 /** @param {Jf.BaseItemPerson} p @returns {string | null} */
 export function personImg(p) {
   if (!p.PrimaryImageTag) return null;

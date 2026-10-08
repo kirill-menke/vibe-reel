@@ -1,0 +1,4 @@
+/* VibeReel Web — lane "look": design tokens, focus rings, hover / active /
+   disabled / selected states, type scale, the web font, forced colors,
+   reduced motion, tooltips outside the player. Loaded right after web.css,
+   before every other lane file, so a feature lane can refine these. */
