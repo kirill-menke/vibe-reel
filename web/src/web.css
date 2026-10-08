@@ -47,13 +47,37 @@
   --trick-h: 135px;
   --skip-raise: 132px;
   --player-pad: 20px;
+  /* control sizes (F-10): pills 36 (chips, season pills, tabs), segmented 44,
+     round icon buttons 36 in the page and 44 in the chrome */
+  --seg-h: 44px;
+  --disabled-opacity: 0.4;   /* SPEC: one value for every disabled control */
 
-  /* type, a step up for a screen at arm's length */
+  /* type, a step up for a screen at arm's length. One role set, six UI
+     sizes — 12 · 13 · 14 · 16 · 20 · 24 — and nothing between them (the
+     phone's 11 / 13 / 17 / 19 near-twins read as mistakes side by side):
+       12 micro, badge     eyebrows, group labels, badges on art
+       13 caption          tile subs, cast names, captions
+       14 tile, callout,   tile titles, meta lines, chips, pills, segmented
+          button-sm, num   options, small buttons, timecodes
+       16 body, button     text, rows, buttons, action pills, nav tabs
+       20 headline         rail and section titles
+       24 heading          popover / dialog titles, empty states
+     All UI sizes are calc(N * var(--tu)), so they grow with the window
+     (--tu 1.08 from 2200 px) like the display type does. */
   --t-hero:   400 clamp(48px, 3.6vw, 76px)/1.0 var(--font-display);
   --t-title:  400 clamp(44px, 3.2vw, 68px)/1.02 var(--font-display);
   --t-large:  400 clamp(36px, 2.4vw, 48px)/1.05 var(--font-display);
-  --t-headline: 600 calc(19 * var(--tu))/1.25 var(--font-ui);
-  --t-body:   400 calc(16 * var(--tu))/1.5 var(--font-ui);
+  --t-heading:   600 calc(24 * var(--tu))/1.2 var(--font-ui);
+  --t-headline:  600 calc(20 * var(--tu))/1.25 var(--font-ui);
+  --t-body:      400 calc(16 * var(--tu))/1.5 var(--font-ui);
+  --t-button:    600 calc(16 * var(--tu))/1 var(--font-ui);
+  --t-button-sm: 600 calc(14 * var(--tu))/1 var(--font-ui);
+  --t-callout:   500 calc(14 * var(--tu))/1.4 var(--font-ui);
+  --t-tile:      500 calc(14 * var(--tu))/1.25 var(--font-ui);
+  --t-num:       600 calc(14 * var(--tu))/1 var(--font-ui);
+  --t-caption:   500 calc(13 * var(--tu))/1.3 var(--font-ui);
+  --t-micro:     700 calc(12 * var(--tu))/1 var(--font-ui);
+  --t-badge:     600 calc(12 * var(--tu))/1 var(--font-ui);
 }
 @media (min-width: 1100px) { :root { --wgrid-cols: 7; } }
 @media (min-width: 1440px) { :root { --wgrid-cols: 8; } }
@@ -277,9 +301,33 @@ html, body { overflow: hidden; }
 @keyframes wfade { from { opacity: 0; } to { opacity: 1; } }
 @media (prefers-reduced-motion: reduce) { .wsheet, .wscrim--dialog { animation: none; } }
 
-/* the confirm (ActionSheet) reads as a centred dialog */
+/* the confirm (ActionSheet) is a desktop dialog, not an iOS action sheet
+   (F-08): one card, the question as a title on the left, the message under
+   it, and the two answers as pills in a row at the end — the safe one
+   first, the action last (red when it destroys something, gold otherwise).
+   The two groups unbox (display: contents) so both buttons share a row;
+   the markup is the phone's. */
 .actsheet { position: fixed; }
-.actsheet__box { top: 50%; bottom: auto; max-width: 400px; translate: 0 -50%; }
+.actsheet__box {
+  top: 50%; bottom: auto; translate: 0 -50%;
+  width: min(460px, calc(100vw - 2 * var(--gutter))); max-width: none;
+  display: flex; flex-flow: row wrap; justify-content: flex-end; align-items: center; gap: var(--s-3);
+  padding: var(--s-6); border-radius: var(--r-sheet);
+  background: var(--surface-1);
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.6), inset 0 0 0 1px var(--line);
+}
+.actsheet__group { display: contents; }
+.actsheet__head { flex: 1 1 100%; order: 0; padding: 0 0 var(--s-3); text-align: left; gap: var(--s-2); }
+.actsheet__title { font: var(--t-headline); letter-spacing: var(--t-headline-ls); color: var(--text); overflow-wrap: anywhere; }
+.actsheet__msg { font: var(--t-body); color: var(--text-dim); }
+.actsheet__btn {
+  order: 2; width: auto; min-width: 112px; min-height: 0; height: 44px; padding: 0 var(--s-5);
+  border-radius: var(--r-pill); font: var(--t-button); letter-spacing: var(--t-button-ls);
+  background: var(--gold); color: var(--text-on-gold);
+}
+.actsheet__btn::before { display: none; }
+.actsheet__btn--danger { background: var(--danger-soft); color: var(--danger); }
+.actsheet__btn--cancel { order: 1; background: var(--surface-2); color: var(--text); }
 
 /* Login: a card centred in the window instead of a phone screen at the top
    of an empty page — a faint gold glow behind it, as the hero art would be */
@@ -299,25 +347,35 @@ html, body { overflow: hidden; }
 .wloginhost .login .list { background: var(--surface-2); }
 
 /* ================================================================ 5. hover */
+/* Pointer affordances, two kinds (F-05):
+   - surface controls (chips, pills, segmented options, action pills, round
+     icon buttons, nav tabs, rows, menu items, glass / surface buttons) lay
+     one white tint over whatever they are filled with — a background-image,
+     so glass stays glass and a selected (gold-soft) one stays gold;
+   - artwork (tiles, cast photos, category cards) gets the gold-line ring.
+   Only the gold primary button brightens. Pressed, selected and disabled
+   looks: styles/look.css. */
+:root { --hover-tint: rgba(255, 255, 255, 0.08); }
 @media (hover: hover) and (pointer: fine) {
-  a, button, [role="button"], .tile, .row, .chip, .option, select, label:has(> input[type="checkbox"]) { cursor: pointer; }
+  a, button, [role="button"], .tile, .row, .chip, .option, select { cursor: pointer; }
   button:disabled, [aria-disabled="true"], .row[disabled] { cursor: default; }
-  .wnav__tab:hover { color: var(--text); background: rgba(255, 255, 255, 0.06); }
-  .wnav__tab--on:hover { background: rgba(255, 255, 255, 0.12); }
-  .wnav .iconbtn:hover, .wnav .avatarbtn:hover { background: rgba(255, 255, 255, 0.08); border-radius: var(--r-pill); }
+
+  :is(.chip, .pill:not(.pill--active), .seg__opt:not(.seg__opt--active), .action, .wrail__btn, .iconbtn, .avatarbtn,
+    .closebtn, .wnav__tab, .row, .notif, .ctx__item, .option, .btn--glass, .btn--surface, .btn--danger):not(:disabled, .wplayer *):hover {
+    background-image: linear-gradient(var(--hover-tint), var(--hover-tint));
+  }
+  /* over the moving picture the player's controls light up more */
+  .wplayer :is(.pchip, .wpbtn, .iconbtn, .closebtn):hover { background-color: rgba(255, 255, 255, 0.16); }
+  .wplayer .option:hover { background-color: var(--hover-tint); }
+  :is(.pill:not(.pill--active), .seg__opt, .wnav__tab, .chip:not(.chip--on)):not(:disabled):hover { color: var(--text); }
+  .btn--primary { transition: filter var(--dur-fast) linear, transform var(--dur-release) var(--spring-snappy); }
+  .btn--primary:not(:disabled):hover { filter: brightness(1.12); }
+  .switch:not([disabled]):hover { filter: brightness(1.15); }
+  .skipchip:hover { background: #fff; }
 
   .tile .tile__frame { transition: transform var(--dur-base) var(--ease-out), box-shadow var(--dur-base) var(--ease-out); }
   .tile:hover .tile__frame { transform: translateY(-3px); box-shadow: 0 0 0 2px var(--gold-line), var(--shadow-float); }
   .tile:hover .tile__title { color: var(--gold); }
-
-  .btn { transition: filter var(--dur-fast) linear, background-color var(--dur-fast) linear; }
-  .btn:hover { filter: brightness(1.12); }
-  .row:hover, .option:hover, .episode:hover, .eprow:hover { background-color: rgba(255, 255, 255, 0.05); }
-  .chip:hover { filter: brightness(1.2); }
-  .pchip:hover, .wpbtn:hover, .iconbtn:hover, .closebtn:hover { background-color: rgba(255, 255, 255, 0.16); }
-  .wrail__btn:not(:disabled):hover { background: var(--surface-3); }
-  .skipchip:hover { background: #fff; }
-  .catcard:hover, .card:hover { filter: brightness(1.1); }
 }
 /* keyboard focus: one ring language — styles/look.css */
 

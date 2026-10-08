@@ -21,7 +21,7 @@
      wear a light ring instead — a gold ring round a gold fill read as a
      slightly bigger button.
    - list items (settings rows, popover rows, context-menu items, the
-     confirm's buttons) ring *inside* their edge: their list clips with
+     player's options) ring *inside* their edge: their list clips with
      overflow: hidden, which cut an outside ring away completely. The first
      and last row take the list's corners so the ring follows the card.
    - fields ring their box (the input itself has none).
@@ -37,12 +37,12 @@
   .option, .episode, .tile__add, .notif, .ctx__item, .actsheet__btn):focus-visible {
   outline: var(--ring-w) solid var(--ring); outline-offset: var(--ring-gap);
 }
-:is(.btn--primary, .switch--on, .wnav__skip):focus-visible { outline-color: var(--ring-on-gold); }
-:is(.row, .notif, .ctx__item, .actsheet__btn, .option):focus-visible { outline-offset: calc(-1 * var(--ring-w)); }
-:is(.list, .ctx__menu, .actsheet__group) > :is(.row, .ctx__item, .actsheet__btn):first-child, .list > :first-child > .row {
+:is(.btn--primary, .switch--on, .wnav__skip, .actsheet__btn:not(.actsheet__btn--danger, .actsheet__btn--cancel)):focus-visible { outline-color: var(--ring-on-gold); }
+:is(.row, .notif, .ctx__item, .option):focus-visible { outline-offset: calc(-1 * var(--ring-w)); }
+:is(.list, .ctx__menu) > :is(.row, .ctx__item):first-child, .list > :first-child > .row {
   border-top-left-radius: inherit; border-top-right-radius: inherit;
 }
-:is(.list, .ctx__menu, .actsheet__group) > :is(.row, .ctx__item, .actsheet__btn):last-child, .list > :last-child > .row {
+:is(.list, .ctx__menu) > :is(.row, .ctx__item):last-child, .list > :last-child > .row {
   border-bottom-left-radius: inherit; border-bottom-right-radius: inherit;
 }
 /* a row that is a native <select> laid invisibly over it (Settings): the
@@ -116,3 +116,93 @@
   unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C4, U+2113, U+2C60-2C7F, U+A720-A7FF;
 }
 :root { --font-ui: -apple-system, BlinkMacSystemFont, 'Inter VR', system-ui, sans-serif; }
+
+/* ============================================================ type scale */
+/* The roles are the tokens in web.css §1 (F-07). These put the phone's
+   hard-coded in-between sizes on them: the 15s go to 16 (buttons, rows,
+   episode and category titles) or 14 (the pill family), the 13 of the
+   segmented options to 14 with the other pills, the 17 of Search's Cancel to
+   16. Then the web layer's own px, which never grew with --tu. */
+.seg__opt, .chip { font: var(--t-button-sm); letter-spacing: -0.005em; }
+.row__value { font-size: calc(16 * var(--tu)); }
+.episode__title, .catcard__title { font-size: calc(16 * var(--tu)); }
+.search__cancel { font-size: calc(16 * var(--tu)); }
+/* the navigation and the action pills are buttons (16), not a 15 between */
+.wnav__tab, .action { font: var(--t-button); }
+.wnav__tab .i { width: var(--icon-xs); height: var(--icon-xs); }
+.wnav__skip { font: var(--t-button); }
+.wnav__name { font-size: calc(26 * var(--tu)); }
+/* the player's own px (sizes kept, now scaled by --tu) */
+.wplayer__time { font-size: calc(15 * var(--tu)); }
+.wplayer .scrubber__time, .wtrick .trick__time { font-size: calc(14 * var(--tu)); }
+.wplayer [data-tip]::before { font-size: calc(13 * var(--tu)); }
+.wflash { font-size: calc(17 * var(--tu)); }
+.wkeysbtn { font-size: calc(18 * var(--tu)); }
+.wkeys__row dd { font-size: calc(14 * var(--tu)); }
+.wkeys kbd { font-size: calc(13 * var(--tu)); }
+.wkeys__or, .wkeys__plus { font-size: calc(12 * var(--tu)); }
+
+/* ========================================================= control sizes */
+/* Two pill heights (F-10): 36 for chips, season pills and nav tabs (the chip
+   was 34), 44 for segmented options (--seg-h, web.css §1). Round icon buttons
+   are 36 in the page (the rail paddles were 34) and 44 in the chrome (nav,
+   back). Primary buttons have one shape on Home's hero and the title pages:
+   32 px sides, at least 200 px wide (the hero's Resume was 24 px / 147 px). */
+.chip { height: var(--btn-h-sm); }
+.wrail__btn { width: 36px; height: 36px; }
+.hero__actions > .btn { padding: 0 var(--s-8); }
+.hero__actions > .btn--primary { min-width: 200px; }
+
+/* ================================================================ states */
+/* Pressed (F-06): every button-like control gives under the mouse, as the
+   detail page's pills and buttons already did — one scale for all. */
+:is(.btn, .chip, .pill, .seg__opt, .wnav__tab, .iconbtn, .avatarbtn, .closebtn, .wrail__btn, .catcard, .action):not(:disabled, [aria-disabled="true"], .btn--status):active {
+  transform: scale(0.97);
+}
+:is(.wnav__tab, .avatarbtn, .wrail__btn) { transition-property: background-color, color, opacity, transform; transition-duration: var(--dur-fast); }
+
+/* rows and switches: the phone's touch-press looks, for the mouse */
+:is(.row, .notif, .ctx__item):not(:disabled, [disabled]):active { background-color: var(--surface-press); background-image: none; }
+.switch:not([disabled]):active::after { width: calc(var(--switch-h) - 4px + 7px); }
+.switch--on:not([disabled]):active::after { transform: translateX(calc(var(--switch-w) - var(--switch-h) - 7px)); }
+
+/* Selected / current (F-09): gold on --gold-soft, as SPEC has it ("gold
+   marks the active tab, selection") and as chips, the open bell / avatar
+   and action pills already were. A season pill was a solid white fill — the
+   brightest thing on the page for "this one is showing". The segmented
+   control keeps its neutral thumb: it is a switch between views, its labels
+   are on the thumb. (The current nav tab is the shell's: see its notes.) */
+.pill--active { background: var(--gold-soft); color: var(--gold); box-shadow: inset 0 0 0 1px var(--gold-line); }
+@media (hover: hover) and (pointer: fine) {
+  :is(.pill--active, .chip--on, .action--on, .wnav__btn--on):not(:disabled):hover {
+    background-color: rgba(230, 180, 80, 0.22); background-image: none;
+  }
+}
+
+/* the title pages' action pills (their hover lives in web.css "lane: detail"
+   as a solid #303038 / gold .24): the same tint and gold as everything else */
+@media (hover: hover) and (pointer: fine) {
+  .wapp .action:not(:disabled):hover { background-color: var(--surface-2); background-image: linear-gradient(var(--hover-tint), var(--hover-tint)); }
+  .wapp .action--on:not(:disabled):hover { background-color: rgba(230, 180, 80, 0.22); background-image: none; }
+}
+
+/* Disabled (F-17): one opacity, SPEC's 40 % (the rail paddle's 30 % all but
+   vanished on its dark disc; the action pills had 50 %). */
+.wrail__btn:disabled, .wapp .action:disabled, .btn[disabled], .switch[disabled], .ctx__item:disabled { opacity: var(--disabled-opacity); }
+
+/* Artwork hover (F-05): the gold-line ring, like tiles and cast photos — the
+   category cards brightened and drew an inset hairline instead. */
+@media (hover: hover) and (pointer: fine) {
+  .catcard:hover { filter: none; box-shadow: inset 0 0 0 1px var(--line), 0 0 0 2px var(--gold-line); }
+}
+
+/* While a scroller moves (tiletips.js sets html.wscrolling until 150 ms after
+   the last scroll event), posters sliding under a still pointer don't lift:
+   each one started a 260 ms transition and a style pass mid-scroll (E-07). */
+.wscrolling .tile:hover .tile__frame { transform: none; transition: none; }
+
+/* Reduced motion (C-18): the hover ring stays, the lift goes. */
+@media (prefers-reduced-motion: reduce) {
+  .tile .tile__frame { transition: box-shadow var(--dur-base) var(--ease-out); }
+  .tile:hover .tile__frame { transform: none; }
+}
