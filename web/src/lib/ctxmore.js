@@ -100,9 +100,11 @@ function makeButton(kind, tabbable) {
   b.setAttribute('aria-haspopup', 'menu');
   b.setAttribute('aria-expanded', 'false');
   b.innerHTML = DOTS;
-  // not a press on the tile/row under it: no hold, no row/tile click
+  /* not a press on the tile/row under it: no hold, no row/tile click. A
+   * mouse click focuses the button itself (no ring), so the menu it opens
+   * starts in pointer mode in Firefox too (a click that left focus alone made
+   * the first item's focus ring show) */
   b.addEventListener('pointerdown', (e) => e.stopPropagation());
-  if (!tabbable) b.addEventListener('mousedown', (e) => e.preventDefault()); // focus stays where it was
   return b;
 }
 
