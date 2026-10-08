@@ -97,3 +97,24 @@
   content: ""; display: block; position: relative; top: calc(47px + var(--s-2)); width: 55%; height: 16px;
   border-radius: var(--r-pill); background: var(--surface-2);
 }
+
+/* A very short window (320 × 200 = 400 % zoom): the title column rides
+   2.6 × 64 px up over the backdrop's foot, and the landscape hero is only
+   66 % of the window — 132 px there, so the column started 34 px above the
+   window and its h1 could not be seen or scrolled to (S1-4). It now rides up
+   no further than the navigation's foot; wherever the hero has the room
+   (any window over ~280 px tall) that is the full 2.6 × 64 as before. */
+@media (orientation: landscape) and (max-height: 500px) {
+  .wapp .detail__hero:not(.detail__hero--empty) + .detail__body {
+    margin-top: calc(-1 * clamp(0px, min(var(--backdrop-h), 66dvh) - var(--wnav-h) - var(--s-2), var(--s-16) * 2.6));
+  }
+}
+
+/* A narrow window: the live download state keeps to the column (S1-5). Its
+   360-px floor — room for the longest line, so the actions beside it hold
+   still between polls — ran 74 px past a 320-px window; there the actions
+   wrap under it anyway, and a line that doesn't fit ends in an ellipsis. */
+@media (max-width: 639.98px) {
+  .wapp .detail__morph, .wapp .detail__morph:has(.btn__pct) { flex: 0 1 auto; min-width: 0; max-width: 100%; }
+  .wapp .detail__morph .btn { padding: 0 var(--s-4); }
+}
