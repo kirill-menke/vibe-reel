@@ -1,7 +1,7 @@
 import { defineConfig, loadEnv } from 'vite';
 import { svelte } from '@sveltejs/vite-plugin-svelte';
 import { fileURLToPath } from 'node:url';
-import { rmSync } from 'node:fs';
+import { readFileSync, rmSync } from 'node:fs';
 import path from 'node:path';
 import { webDev } from './dev/plugin.js';
 import { licenses } from '../vite.licenses.js';
@@ -101,6 +101,25 @@ const prunePublic = {
   }
 };
 
+/* The UI font (Inter, web/src/fonts, @font-face in styles/look.css) ships in
+ * this build only: its SIL OFL goes into LICENSES.txt after the notices the
+ * shared `licenses` plugin wrote (generateBundle runs in plugin order). */
+const fontLicense = {
+  name: 'font-license',
+  apply: /** @type {const} */ ('build'),
+  /**
+   * @param {import('vite').Rollup.NormalizedOutputOptions} _
+   * @param {import('vite').Rollup.OutputBundle} bundle
+   */
+  generateBundle(_, bundle) {
+    const out = bundle['LICENSES.txt'];
+    if (!out || out.type !== 'asset') throw new Error('font-license: no LICENSES.txt to add the Inter licence to');
+    const rule = '='.repeat(72);
+    const text = readFileSync(path.join(web, 'fonts/Inter-LICENSE.txt'), 'utf8').trim();
+    out.source = String(out.source) + `\n${rule}\nInter 4.001 (web/src/fonts: the web build's UI font)\n${rule}\n\n${text}\n`;
+  }
+};
+
 const strip = (/** @type {string} */ prefix) => (/** @type {string} */ p) => p.slice(prefix.length) || '/';
 const env = loadEnv('development', repo, 'VITE_');
 const JF = env.VITE_JELLYFIN_URL || 'http://127.0.0.1:8096';
@@ -111,7 +130,7 @@ export default defineConfig({
   envDir: repo,
   base: '/',
   publicDir: path.join(repo, 'phone/public'),
-  plugins: [moduleRedirects, svelteConsts({ __WEB__: true }), svelte({ configFile: false }), lazyLibpgs, webDev(), licenses, prunePublic],
+  plugins: [moduleRedirects, svelteConsts({ __WEB__: true }), svelte({ configFile: false }), lazyLibpgs, webDev(), licenses, fontLicense, prunePublic],
   define: { __PHONE__: true, __WEB__: true },
   resolve: {
     alias: {
