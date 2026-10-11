@@ -4,6 +4,7 @@
     cd backend && uv run --frozen --group dev python tests/specs/record_upstreams.py imdb
     cd backend && uv run --frozen --group dev python tests/specs/record_upstreams.py ytdlp [ID ...]
     cd backend && uv run --frozen --group dev python tests/specs/record_upstreams.py ytdlp-repick  # offline
+    cd backend && uv run --frozen --group dev python tests/specs/record_upstreams.py ytsearch [NAME ...]
 
 Opt-in and networked (the tests never are): writes trimmed recordings into
 tests/recorded/, stripped of anything session- or person-bound (no stream
@@ -27,6 +28,13 @@ ytdlp  Runs the real `yt-dlp -j` with trailers.py's own argv and format spec
        height trailers.py may ask for. Those picks are the oracle the fake's
        selector and `mse_video_codec` are tested against
        (tests/recorded/ytdlp/<id>.json).
+
+ytsearch  Runs showtrailers.py's own YouTube search (`search_argv`, the real
+       yt-dlp, flat: no per-video request) for a few show names and keeps
+       each result's fields minus thumbnails and description
+       (tests/recorded/ytsearch/<name>.json). test_showtrailers.py checks the
+       fake's search_entry() has exactly their keys and what the product
+       picks from the real lists.
 
 Re-record when a query or the format spec changes: the replay tests fail
 with a pointer here when the product no longer sends what was recorded.
@@ -266,6 +274,45 @@ def record_ytdlp(ids: list[str]) -> None:
         print(f"ytdlp {yt_id}: {len(formats)} formats, picks {picks}")
 
 
+# Show searches: a show with a verified official trailer, and a name a 2024
+# remake shares (with the original's premiere year, the remake's trailer must
+# not be taken).
+SEARCHES = {
+    "succession": "Succession",
+    "avatar-the-last-airbender": "Avatar: The Last Airbender",
+}
+SEARCH_KEYS = (
+    "_type", "ie_key", "id", "url", "title", "duration", "channel_id", "channel", "channel_url",
+    "uploader", "uploader_id", "uploader_url", "timestamp", "release_timestamp", "availability",
+    "view_count", "live_status", "channel_is_verified",
+)
+PLAYLIST_KEYS = ("id", "title", "_type", "webpage_url", "extractor", "extractor_key", "playlist_count")
+
+
+def record_ytsearch(names: list[str]) -> None:
+    from reel_api import showtrailers as st
+
+    exe = _ytdlp()
+    version = subprocess.run([exe, "--version"], capture_output=True, text=True, check=True).stdout.strip()
+    d = ROOT / "ytsearch"
+    d.mkdir(parents=True, exist_ok=True)
+    for name in names:
+        show = SEARCHES[name]
+        query = show + " official trailer"
+        out = json.loads(subprocess.run(st.search_argv(exe, query), capture_output=True, text=True,
+                                        check=True, timeout=120).stdout)
+        rec = {k: out.get(k) for k in PLAYLIST_KEYS}
+        missing = sorted({k for e in out["entries"] for k in SEARCH_KEYS if k not in e})
+        assert not missing, f"yt-dlp's search entries lost {missing}: showtrailers.py reads them"
+        rec["entries"] = [{k: e.get(k) for k in SEARCH_KEYS} for e in out["entries"]]
+        rec["show"] = show
+        rec["query"] = query
+        rec["recorded"] = dt.date.today().isoformat()
+        rec["yt_dlp"] = version
+        (d / f"{name}.json").write_text(json.dumps(rec, indent=1, ensure_ascii=False) + "\n")
+        print(f"ytsearch {name}: {len(rec['entries'])} results")
+
+
 if __name__ == "__main__":
     what, *rest = sys.argv[1:] or ["?"]
     if what == "imdb":
@@ -274,5 +321,7 @@ if __name__ == "__main__":
         repick_ytdlp()
     elif what == "ytdlp":
         record_ytdlp(rest or list(TRAILERS))
+    elif what == "ytsearch":
+        record_ytsearch(rest or list(SEARCHES))
     else:
         sys.exit(__doc__)

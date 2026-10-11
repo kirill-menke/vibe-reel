@@ -106,6 +106,13 @@ class TitleMetadata(BaseModel):
     digital_release: str | None = None  # ISO date of Radarr's digital release (movies only)
 
 
+class TitleTrailer(BaseModel):
+    """A title's YouTube trailer: Radarr's for a movie; for a show the one
+    showtrailers.py found on YouTube — null when nothing passed its checks."""
+
+    trailer: str | None  # YouTube video id (POST /api/trailers/{id} plays it)
+
+
 class CollectionMovie(LookupResult):
     """One film of a collection, lookup-shaped (id = tmdb id)."""
 

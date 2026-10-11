@@ -10,8 +10,10 @@
  * The YouTube-app path:
  *
  * Every trailer this app knows about is a YouTube video: Jellyfin's
- * `RemoteTrailers` (TMDB's list, on a library movie or series) and Radarr's
- * `youTubeTrailerId` (mlMetadata's `trailer`, for a title not in the library).
+ * `RemoteTrailers` (TMDB's list, on a library movie or series), Radarr's
+ * `youTubeTrailerId` (mlMetadata's `trailer`, for a movie not in the library)
+ * and, for a show neither has one for, reel-api's YouTube search
+ * (findShowTrailer below).
  * There are no local trailer files on the NAS (LocalTrailerCount 0 everywhere,
  * measured 2026-09-28), and an embedded player is no option from a file://
  * origin, so the trailer opens in `youtube.leanback.v4` through the
@@ -23,6 +25,7 @@
 
 import { playTrailerStream } from './player.svelte.js';
 import { toast } from './toast.svelte.js';
+import { mlTrailer } from './medialib.js';
 
 const YT_APP = 'youtube.leanback.v4';
 
@@ -83,6 +86,31 @@ export function pickTrailer(item) {
     }
   }
   return best;
+}
+
+/* A show's trailer where Jellyfin's TMDB list has none: a show not in the
+ * library (LookupDetail — Sonarr's metadata has no trailers), or one TMDB lists
+ * no YouTube trailer for (SeriesDetail). reel-api searches YouTube for it and
+ * answers only a result that is certainly this show's official trailer
+ * (mlTrailer; backend showtrailers.py), else null — then there is no button.
+ * Asked in idle time: a fetch costs the TV 3–9 ms of main thread, unwanted on
+ * the navigation task. `onFound(id)` runs only with an id, and never after the
+ * returned cancel (a screen's onMount teardown): a late answer writes nothing. */
+/** @param {string | null | undefined} tvdbId @param {(id: string) => void} onFound @returns {() => void} cancel */
+export function findShowTrailer(tvdbId, onFound) {
+  if (!tvdbId) return () => {};
+  let live = true;
+  const ask = () => mlTrailer('tv', tvdbId).then((t) => live && t && onFound(t));
+  let idleId = 0;
+  /** @type {ReturnType<typeof setTimeout> | undefined} */
+  let timer;
+  if (typeof requestIdleCallback === 'function') idleId = requestIdleCallback(ask, { timeout: 1000 });
+  else timer = setTimeout(ask, 0);
+  return () => {
+    live = false;
+    if (idleId) cancelIdleCallback(idleId);
+    clearTimeout(timer);
+  };
 }
 
 /* Open the trailer in YouTube. Resolves true once the launch was accepted. */

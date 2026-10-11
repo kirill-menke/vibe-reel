@@ -285,6 +285,11 @@ null` = none). `srv.world.ml.trailerFiles` lists every file served, in order
 Keys parse like trailers.py `parse_key`: `<id>@<height>` (the phone's `@1080`)
 is its own job (started per canonical key, listed in the entry's `keys`) served
 from the same fixture, and `trailerFiles` entries carry that key (`59-phone-trailer`).
+Which trailer a title *has* is its catalog entry's `trailer`
+(`srv.world.ml.lookup(type, id).trailer`): `/api/metadata/{type}/{id}` carries
+it for a movie only (Radarr's), `/api/metadata/{type}/{id}/trailer` for both —
+for a show that is what reel-api's YouTube search found (seeded on Electric
+Orchard and Golden Frontier; `47-tv-show-trailer`).
 Cancels (`DELETE /api/activity/…`) follow undo.py: one row of a torrent takes
 the whole torrent, importing torrents are kept (all importing → 409), and
 `srv.world.ml.cancels` records `{ type, id, season, episode, removed }`.

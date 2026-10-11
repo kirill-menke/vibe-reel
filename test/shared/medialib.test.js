@@ -266,6 +266,50 @@ describe('exact URLs, methods and bodies', () => {
   });
 });
 
+describe('mlTrailer (GET /api/metadata/{type}/{id}/trailer)', () => {
+  const PATH = '/api/metadata/tv/305288/trailer';
+
+  it('asks the trailer route with the token and resolves the YouTube id', async () => {
+    net.on('GET', PATH, { trailer: 'b9EkMc79ZSU' });
+    expect(await ml.mlTrailer('tv', '305288')).toBe('b9EkMc79ZSU');
+    expect(net.calls[0].url).toBe(ML + PATH);
+    expect(net.calls[0].headers).toEqual({ Authorization: AUTH });
+    net.on('GET', '/api/metadata/movie/a%2Fb/trailer', { trailer: null });
+    expect(await ml.mlTrailer('movie', 'a/b')).toBe(null);
+    expect(net.calls[1].url).toBe(ML + '/api/metadata/movie/a%2Fb/trailer');
+  });
+
+  it('a found trailer is kept for the session; a null is asked again (the server caches it)', async () => {
+    net.on('GET', PATH, { trailer: 'b9EkMc79ZSU' });
+    await ml.mlTrailer('tv', '305288');
+    expect(await ml.mlTrailer('tv', '305288')).toBe('b9EkMc79ZSU');
+    expect(net.calls).toHaveLength(1);
+    net.on('GET', '/api/metadata/tv/1/trailer', { trailer: null });
+    expect(await ml.mlTrailer('tv', '1')).toBe(null);
+    expect(await ml.mlTrailer('tv', '1')).toBe(null);
+    expect(net.calls).toHaveLength(3);
+    // keyed by type too
+    net.on('GET', '/api/metadata/movie/305288/trailer', { trailer: 'n9xhJrPXop4' });
+    expect(await ml.mlTrailer('movie', '305288')).toBe('n9xhJrPXop4');
+  });
+
+  it('any failure resolves null — no button is all it can mean — and is retried next time', async () => {
+    net.once('GET', PATH, net.status(503, { error: 'temporarily_unavailable', detail: 'x' }));
+    expect(await ml.mlTrailer('tv', '305288')).toBe(null);
+    net.once('GET', PATH, net.networkError());
+    expect(await ml.mlTrailer('tv', '305288')).toBe(null);
+    net.on('GET', PATH, { trailer: '' });   // an empty id is none
+    expect(await ml.mlTrailer('tv', '305288')).toBe(null);
+    expect(net.calls).toHaveLength(3);
+  });
+
+  it('signed out: nothing is sent, null', async () => {
+    cfg.token = '';
+    expect(await ml.mlTrailer('tv', '305288')).toBe(null);
+    expect(net.calls).toHaveLength(0);
+  });
+});
+
 describe('signed out: no token anywhere', () => {
   beforeEach(async () => {
     const m = await freshImport({ storage: { 'reel.token': '' }, modules: { ml: 'src/lib/medialib.js', config: 'src/lib/config.js' } });

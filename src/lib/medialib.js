@@ -359,6 +359,33 @@ export function mlMetadata(type, id) {
 /* Forget one answer — a series added this session gains its episode list. */
 mlMetadata.evict = (/** @type {Reel.MediaType} */ type, /** @type {string} */ id) => metaCache.delete(type + ':' + id);
 
+/* GET /api/metadata/{type}/{id}/trailer — { trailer }: the title's YouTube
+ * trailer id or null. For a show that is the one reel-api found on YouTube
+ * under strict checks (backend/src/reel_api/showtrailers.py — Sonarr has no
+ * trailers, Jellyfin's TMDB list only covers some library shows); for a movie
+ * Radarr's, as in mlMetadata(). Its own call because a cold search takes a
+ * few seconds and the metadata must not wait for it. Found trailers are kept
+ * for the session; a null is asked again next time (the server caches it —
+ * a day, or minutes after a failed search — so a show whose search failed
+ * once isn't without a button until the app restarts). Resolves null on any
+ * failure: a missing button is all a failure can mean here. */
+/** @type {Map<string, string>} */
+const trailerHits = new Map();
+/** @param {Reel.MediaType} type @param {string} id tvdb id (tv) / tmdb id (movie) @returns {Promise<string | null>} */
+export async function mlTrailer(type, id) {
+  const k = type + ':' + id;
+  const hit = trailerHits.get(k);
+  if (hit) return hit;
+  try {
+    const r = /** @type {Reel.TitleTrailer} */ (await mlFetch('/api/metadata/' + type + '/' + encodeURIComponent(id) + '/trailer'));
+    const t = r.trailer || null;
+    if (t) trailerHits.set(k, t);
+    return t;
+  } catch {
+    return null;
+  }
+}
+
 /* GET /api/segments/{imdb}/{season}/{episode} — IntroDB's crowdsourced skip
  * windows for one episode (reel-api proxies and caches it): { intro, recap,
  * outro }, each { start, end, submissions } in seconds, or null. Keyed by the

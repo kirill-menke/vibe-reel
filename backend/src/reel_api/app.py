@@ -19,6 +19,7 @@ from .charts import Charts, ChartsError, NoSuchChart
 from .collections import Collections, CollectionsError, NoSuchCollection
 from .introdb import IntroDB
 from .trailers import FILE as TRAILER_FILE, Trailers, parse_key as trailer_key
+from .showtrailers import ShowTrailers
 from .arr import AlreadyAdded, ArrError, ArrNotConfigured, NoSuchTitle, NotAired, _poster, _when, make_arr_clients
 from .undo import NothingToCancel, Refused, Undo, UndoGone, log as action_log
 from .ownership import Listings, NotOwner, Owners, Quota, QuotaExceeded, exists, limits_from_env
@@ -40,6 +41,7 @@ from .models import (
     SeasonSearchResult,
     SeasonSearchUndoResult,
     TitleMetadata,
+    TitleTrailer,
     TrendingResponse,
 )
 
@@ -63,6 +65,7 @@ charts: Charts | None = None
 collections: Collections | None = None
 introdb = IntroDB()
 trailers = Trailers()
+show_trailers: ShowTrailers | None = None
 undo: Undo | None = None
 owners: Owners | None = None  # who added which title (ownership.py)
 listings: Listings | None = None
@@ -71,13 +74,14 @@ quota: Quota | None = None
 
 @asynccontextmanager
 async def lifespan(app):
-    global downloader, arr_clients, trending, charts, collections, undo, owners, listings, quota
+    global downloader, arr_clients, trending, charts, collections, show_trailers, undo, owners, listings, quota
     downloader = qbit.make_download_client()
     arr_clients = make_arr_clients()
     push_mod.start(arr_clients)  # Web Push watcher (push.py)
     trending = Trending(arr_clients)
     charts = Charts(arr_clients)
     collections = Collections(arr_clients["movie"]) if "movie" in arr_clients else None
+    show_trailers = ShowTrailers(arr_clients)
     undo = Undo(arr_clients, downloader)
     owners = Owners()
     listings = Listings(arr_clients)
@@ -454,6 +458,23 @@ async def title_metadata(media_type: str, media_id: str):
             content={"error": "bad_type", "detail": "type must be tv or movie"},
         )
     return await require_arr(media_type).metadata(media_id)
+
+
+# A title's YouTube trailer (null: none): Radarr's for a movie (as in
+# /api/metadata/movie), for a show a strictly checked YouTube search — see
+# showtrailers.py. Its own route, not a metadata field: a cold search takes
+# seconds, and the metadata answer (episode list, artwork) must not wait.
+@app.get("/api/metadata/{media_type}/{media_id}/trailer", response_model=TitleTrailer)
+async def title_trailer(media_type: str, media_id: str = Path(pattern=r"^\d{1,10}$")):
+    if media_type not in MEDIA_TYPES:
+        return JSONResponse(
+            status_code=400,
+            content={"error": "bad_type", "detail": "type must be tv or movie"},
+        )
+    client = require_arr(media_type)
+    if media_type == "movie":
+        return {"trailer": (await client.metadata(media_id))["trailer"]}
+    return {"trailer": await show_trailers.get(media_id)}
 
 
 # Add a title. A normal user's add is checked against the quota and runs under

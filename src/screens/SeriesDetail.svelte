@@ -4,7 +4,7 @@
   import Loading from '../components/Loading.svelte';
   import LoadError from '../components/LoadError.svelte';
   import Icon from '../components/Icon.svelte';
-  import { pickTrailer, openTrailer as playInApp } from '../lib/trailer.js';
+  import { pickTrailer, findShowTrailer, openTrailer as playInApp } from '../lib/trailer.js';
   import { cfg } from '../lib/config.js';
   import { episodesPaths, startSeason, api, qs, imgUrl, errText, seasonsPath, prefetch, itemPath } from '../lib/api.js';
   import { fmtDate, fmtRuntime, fmtTime, ticksToSec, timeLeft, yearOf } from '../lib/format.js';
@@ -25,8 +25,13 @@
   /** @type {{ series: Jf.BaseItemDto }} */
   let { series } = $props();
 
-  /* Trailer: TMDB's YouTube list from Jellyfin, opened in the YouTube app. */
-  const trailer = $derived(pickTrailer(series));
+  /* Trailer: TMDB's YouTube list from Jellyfin — or, for a show TMDB lists no
+     YouTube trailer for, the one reel-api finds on YouTube (findShowTrailer:
+     the button appears when it lands, and not at all when nothing certain is
+     found). Played in our own player (openTrailer). */
+  let foundTrailer = $state(/** @type {string | null} */ (null));
+  const trailer = $derived(pickTrailer(series) || foundTrailer);
+  onMount(() => (pickTrailer(series) ? undefined : findShowTrailer(series.ProviderIds?.Tvdb, (t) => (foundTrailer = t))));
   function openTrailer() {
     playInApp(trailer, { title: series.Name, art: bg });
   }

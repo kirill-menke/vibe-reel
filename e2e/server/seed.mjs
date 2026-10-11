@@ -320,8 +320,11 @@ function createMl(world, { now, iso, date, bigCharts }) {
   const extraMovies = ['Glass Meridian Rising', 'Iron Tide', 'Quiet Summit', 'Wild Atlas', 'Pale Comet', 'Secret Canyon', 'Burning Mirror', 'Harbor Lights', 'Harbor Nights'];
   extraMovies.forEach((t, i) => add({ id: 900001 + i, type: 'movie', title: t, year: 2024 - i, votes: 150000 - i * 9000, rating: 8.4 - i * 0.1, trailer: i === 0 ? 'ytFixture01' : null, collection: t.startsWith('Harbor') ? { id: '7001', title: 'Harbor Collection' } : null }));
   const extraShows = ['Paper Lanterns', 'Golden Frontier', 'Hidden Station', 'Distant River', 'Last Engine'];
-  extraShows.forEach((t, i) => add({ id: 400001 + i, type: 'tv', title: t, year: 2025 - i, votes: 90000 - i * 5000, seasons: [8, 8].slice(0, 1 + (i % 2)) }));
+  // Golden Frontier: a show reel-api's YouTube search found a trailer for (GET /api/metadata/tv/{id}/trailer)
+  extraShows.forEach((t, i) => add({ id: 400001 + i, type: 'tv', title: t, year: 2025 - i, votes: 90000 - i * 5000, seasons: [8, 8].slice(0, 1 + (i % 2)), trailer: i === 1 ? 'ytFixtureS1' : null }));
   const lk = (type, id) => catalog.get(type + ':' + id);
+  // Electric Orchard: in the library without RemoteTrailers, but the search found one
+  lk('tv', world.byName('Series', 'Electric Orchard').ProviderIds.Tvdb).trailer = 'ytFixtureS2';
 
   const nl = world.byName('Series', 'Northern Line');
   const hs = world.byName('Series', 'The Hollow Signal');

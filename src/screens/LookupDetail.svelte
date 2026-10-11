@@ -18,7 +18,7 @@
   import Icon from '../components/Icon.svelte';
   import CollectionRail from '../components/CollectionRail.svelte';
   import { S, openPending, takeDetailFocus } from '../lib/nav.svelte.js';
-  import { openTrailer as playInApp } from '../lib/trailer.js';
+  import { findShowTrailer, openTrailer as playInApp } from '../lib/trailer.js';
   import { TICKS } from '../lib/api.js';
   import { fmtDate, fmtRuntime } from '../lib/format.js';
   import { mlMetadata } from '../lib/medialib.js';
@@ -51,8 +51,13 @@
     }
   }
 
-  /* Radarr's trailer (movies only — Sonarr has none), in the YouTube app. */
-  const trailer = $derived(meta?.trailer || null);
+  /* The trailer: Radarr's for a movie (in the metadata). Sonarr has none, so a
+     show's is the one reel-api finds on YouTube (findShowTrailer), asked
+     alongside the metadata: the button appears when it lands, and not at all
+     when nothing certain is found. Played in our own player (openTrailer). */
+  let showTrailer = $state(/** @type {string | null} */ (null));
+  const trailer = $derived(meta?.trailer || showTrailer);
+  onMount(() => (tv ? findShowTrailer(item.id, (t) => (showTrailer = t)) : undefined));
   function openTrailer() {
     playInApp(trailer, { title: title, art: bg });
   }
@@ -244,9 +249,9 @@
       if (collId) await collP;
       if (!alive) return;
       // Only if the D-pad hasn't moved on from the button focused above.
-      const a = document.activeElement;
       // Instant, like every return to a remembered spot: a glide from the
       // top down to the rail only showed the page being rebuilt.
+      const a = document.activeElement;
       if (!a || a === document.body || a.closest('.hero .actions')) await focusKeyInstant(back);
     }
     if (!document.activeElement || document.activeElement === document.body) focusFirst();

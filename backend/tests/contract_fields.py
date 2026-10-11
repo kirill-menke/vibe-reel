@@ -196,6 +196,9 @@ READS: list[Read] = [
     Read("metadata-movie", "collection.id", LDETAIL, "meta.collection.id"),
     Read("metadata-movie", "digital_release", P_LDETAIL, "(meta)?.digital_release"),  # was F15
 
+    # GET /api/metadata/{type}/{id}/trailer — a show's Trailer button (SeriesDetail, LookupDetail)
+    Read("metadata-trailer", "trailer", ML, "r.trailer"),
+
     # GET /api/segments/{imdb}/{season}/{episode} — skip chips (segments.js)
     Read("segments", "intro", SEGS, "r.intro"),
     Read("segments", "recap", SEGS, "r.recap"),

@@ -38,6 +38,7 @@ const MODELS = {
   EpisodeMetadata: 'EpisodeMetadata',
   CollectionRef: 'CollectionRef',
   TitleMetadata: 'Metadata',
+  TitleTrailer: 'TitleTrailer',
   CollectionMovie: 'CollectionMovie',
   Collection: 'CollectionResponse',
   NewsItem: 'NewsItem',

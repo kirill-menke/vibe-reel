@@ -12,8 +12,9 @@
  * playTrailerStream, tested with the player. */
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import path from 'node:path';
-import { freshImport } from '../helpers/modules.js';
+import { freshImport, TEST_MEDIALIB } from '../helpers/modules.js';
 import { useClock, flushPromises } from '../helpers/time.js';
+import { mockFetch } from '../helpers/fetch.js';
 
 const PHONE = __PHONE__;
 const PLAYER = path.resolve(import.meta.dirname, '../../src/lib/player.svelte.js');
@@ -215,4 +216,93 @@ describe('playTrailer — ' + (PHONE ? 'iPhone: the YouTube web page' : 'TV: the
       expect(await m.tr.playTrailer(ID)).toBe(false);
     });
   }
+});
+
+/* A show's trailer where Jellyfin has none: reel-api's strictly checked YouTube
+ * search (GET /api/metadata/tv/{id}/trailer), asked in idle time — CLAUDE.md
+ * engine costs: "Each fetch() call costs 3–9 ms of main thread synchronously.
+ * Don't fire requests from a navigation task that don't need to go out then."
+ * The screens hand the returned cancel to onMount, so a late answer after the
+ * screen is gone writes nothing ("Every await can land on a different screen"). */
+describe('findShowTrailer', () => {
+  const PATH = '/api/metadata/tv/305288/trailer';
+  let net, idle;
+
+  beforeEach(() => {
+    net = mockFetch();
+    idle = [];
+    vi.stubGlobal('requestIdleCallback', (fn, opts) => idle.push({ fn, opts }) && idle.length);
+    vi.stubGlobal('cancelIdleCallback', (id) => idle[id - 1] && (idle[id - 1].cancelled = true));
+  });
+  afterEach(() => vi.unstubAllGlobals());
+  const runIdle = () =>
+    idle.filter((x) => !x.cancelled && !x.ran).forEach((x) => {
+      x.ran = true;
+      x.fn();
+    });
+
+  it('asks in idle time (1 s at most), then hands over the YouTube id', async () => {
+    net.on('GET', PATH, { trailer: ID });
+    const found = vi.fn();
+    m.tr.findShowTrailer('305288', found);
+    expect(net.calls).toHaveLength(0);   // not on the navigation task
+    expect(idle).toHaveLength(1);
+    expect(idle[0].opts).toEqual({ timeout: 1000 });
+    runIdle();
+    await flushPromises();
+    expect(net.calls.map((c) => c.url)).toEqual([TEST_MEDIALIB + PATH]);
+    expect(found).toHaveBeenCalledExactlyOnceWith(ID);
+  });
+
+  it('nothing found (or the call failed): onFound never runs', async () => {
+    net.once('GET', PATH, { trailer: null });
+    const found = vi.fn();
+    m.tr.findShowTrailer('305288', found);
+    runIdle();
+    await flushPromises();
+    net.once('GET', PATH, net.status(503));
+    m.tr.findShowTrailer('305288', found);
+    runIdle();
+    await flushPromises();
+    expect(net.calls).toHaveLength(2);
+    expect(found).not.toHaveBeenCalled();
+  });
+
+  it('no tvdb id: no request at all', async () => {
+    const found = vi.fn();
+    for (const id of [undefined, null, '']) m.tr.findShowTrailer(id, found)();
+    expect(idle).toHaveLength(0);
+    expect(net.calls).toHaveLength(0);
+  });
+
+  it('cancelled before idle time: no request; after it: the late answer is dropped', async () => {
+    net.on('GET', PATH, { trailer: ID });
+    const found = vi.fn();
+    m.tr.findShowTrailer('305288', found)();
+    runIdle();
+    await flushPromises();
+    expect(net.calls).toHaveLength(0);
+    const cancel = m.tr.findShowTrailer('305288', found);
+    runIdle();
+    cancel();   // the screen went away while the answer was on its way
+    await flushPromises();
+    expect(net.calls).toHaveLength(1);
+    expect(found).not.toHaveBeenCalled();
+  });
+
+  it('without requestIdleCallback it asks on the next task', async () => {
+    vi.stubGlobal('requestIdleCallback', undefined);
+    const clock = useClock();
+    net.on('GET', PATH, { trailer: ID });
+    const found = vi.fn();
+    const cancel = m.tr.findShowTrailer('305288', found);
+    expect(net.calls).toHaveLength(0);
+    await clock.tick(0);
+    await flushPromises();
+    expect(found).toHaveBeenCalledExactlyOnceWith(ID);
+    cancel();
+    m.tr.findShowTrailer('305288', found)();   // cancelled: the timer never fires
+    await clock.tick(10);
+    expect(net.calls).toHaveLength(1);
+  });
 });

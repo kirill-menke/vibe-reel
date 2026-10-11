@@ -15,11 +15,19 @@ The script answers exactly the two calls trailers.py makes:
 * ``yt-dlp … --load-info-json PATH -f FORMAT_ID -o -`` streams the file the
   config maps to FORMAT_ID to stdout, in chunks.
 
+and the one showtrailers.py makes:
+
+* ``yt-dlp … --flat-playlist -J ytsearchN:QUERY`` prints a search playlist
+  whose ``entries`` are what ``search(query, entries)`` set (the first N;
+  none set: YouTube found nothing). ``search_entry()`` builds an entry with
+  the keys a real one has (tests/recorded/ytsearch/, checked in
+  test_showtrailers.py); ``searched()`` lists the queries asked.
+
 Faults and timing, all per call kind:
 
-* ``fail(kind, stderr=, rc=, after=)`` — ``kind`` is ``"resolve:<id>"`` or
-  ``"download:<id>:<format_id>"``: print stderr, exit rc (with ``after``, a
-  download streams its whole file first).
+* ``fail(kind, stderr=, rc=, after=)`` — ``kind`` is ``"resolve:<id>"``,
+  ``"download:<id>:<format_id>"`` or ``"search:<query>"``: print stderr,
+  exit rc (with ``after``, a download streams its whole file first).
 * ``gate(kind, at=)`` — the call waits (after streaming the fraction ``at``
   of its file, for a download; ``at=0`` waits before even its fault) until
   ``release(kind)``; an unreleased gate
@@ -96,6 +104,23 @@ def public(fmt):
 def arg(name):
     return argv[argv.index(name) + 1]
 
+
+if "--flat-playlist" in argv and "-J" in argv:
+    m = re.fullmatch(r"ytsearch(\d+):(.+)", argv[-1], re.S)
+    if not m:
+        sys.stderr.write("fake yt-dlp: unexpected flat playlist %r\n" % argv[-1])
+        sys.exit(2)
+    n, query = int(m.group(1)), m.group(2)
+    kind = "search:" + query
+    log(kind)
+    wait_gate(kind)
+    fault(kind)
+    entries = cfg.get("searches", {}).get(query, [])  # YouTube found nothing: an empty list
+    sys.stdout.write(json.dumps({
+        "id": query, "title": query, "_type": "playlist", "entries": entries[:n],
+        "webpage_url": argv[-1], "extractor": "youtube:search", "extractor_key": "YoutubeSearch",
+        "playlist_count": len(entries[:n])}))
+    sys.exit(0)
 
 if "-j" in argv:
     url = argv[-1]
@@ -200,11 +225,32 @@ def fake_ffmpeg(directory: Path, mode: str, monkeypatch) -> str:
 
 
 RECORDED = Path(__file__).resolve().parent.parent / "recorded" / "ytdlp"
+RECORDED_SEARCH = RECORDED.parent / "ytsearch"
 
 
 def recorded(yt_id: str) -> dict:
     """A recorded real `yt-dlp -j` (trimmed): formats, picks, title, duration."""
     return json.loads((RECORDED / f"{yt_id}.json").read_text())
+
+
+def recorded_search(name: str) -> dict:
+    """A recorded real flat YouTube search (trimmed; tests/recorded/ytsearch)."""
+    return json.loads((RECORDED_SEARCH / f"{name}.json").read_text())
+
+
+def search_entry(yt_id: str, title: str, *, duration: float | None = 120, channel: str = "HBO",
+                 verified: bool | None = True, views: int = 1_000_000) -> dict:
+    """One flat search result with every key a real one has (minus
+    thumbnails/description, as recorded)."""
+    return {
+        "_type": "url", "ie_key": "Youtube", "id": yt_id,
+        "url": f"https://www.youtube.com/watch?v={yt_id}", "title": title, "duration": duration,
+        "channel_id": "UC" + channel.encode().hex()[:22].ljust(22, "0"), "channel": channel,
+        "channel_url": "https://www.youtube.com/channel/UC0", "uploader": channel,
+        "uploader_id": "@" + channel.replace(" ", ""), "uploader_url": "https://www.youtube.com/@x",
+        "timestamp": None, "release_timestamp": None, "availability": None, "view_count": views,
+        "live_status": None, "channel_is_verified": verified,
+    }
 
 
 def video_fmt(format_id: str, file: Path | None, *, width: int, height: int, vcodec: str,
@@ -339,6 +385,15 @@ class FakeYtDlp:
         self.add(yt_id, fmts, title=rec["title"], duration=rec["duration"],
                  language=rec.get("language"), **info)
         return rec
+
+    def search(self, query: str, entries: list[dict]) -> None:
+        """What a YouTube search for exactly `query` finds (search_entry()s)."""
+        self.config.setdefault("searches", {})[query] = entries
+        self.save()
+
+    def searched(self) -> list[str]:
+        """The queries searched so far, in order."""
+        return [c["kind"].split(":", 1)[1] for c in self.calls("search:")]
 
     def update(self, yt_id: str, **info) -> None:
         self.config["videos"][yt_id].update(info)

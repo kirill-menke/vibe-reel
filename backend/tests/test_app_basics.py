@@ -27,6 +27,7 @@ def test_openapi_lists_every_contract_route(app_module):
         "/api/trailers/{key}": {"get", "post"},
         "/api/trailers/{key}/{name}": {"get"},
         "/api/metadata/{media_type}/{media_id}": {"get"},
+        "/api/metadata/{media_type}/{media_id}/trailer": {"get"},
         "/api/news": {"get"},
         "/api/news/search": {"post"},
         "/api/news/search/{token}": {"delete"},

@@ -322,7 +322,19 @@ export function createReelApi(srv) {
         for (let i = 1; i <= n; i++) episodes.push({ season: k + 1, episode: i, title: `Episode ${i}`, overview: `S${k + 1}E${i} of ${e.title}.`, air_date: ML().date(srv.world.now - (400 - k * 100 - i * 7) * 86_400_000), still: { __img: `still-${id}-${k + 1}-${i}` }, has_file: false });
       });
     }
-    return urls({ id: e.id, type, title: e.title, year: e.year, overview: e.overview, poster: e.poster, fanart: { __img: `fanart-${type}-${id}` }, runtime_min: e.runtime_min, genres: e.genres, rating: e.rating, certification: e.certification, status: e.status, episodes, trailer: e.trailer, collection: e.collection });
+    // a show's `trailer` is what /trailer below finds — Sonarr's metadata has none
+    return urls({ id: e.id, type, title: e.title, year: e.year, overview: e.overview, poster: e.poster, fanart: { __img: `fanart-${type}-${id}` }, runtime_min: e.runtime_min, genres: e.genres, rating: e.rating, certification: e.certification, status: e.status, episodes, trailer: type === 'movie' ? e.trailer : null, collection: e.collection });
+  });
+
+  /* A title's trailer (showtrailers.py): Radarr's for a movie; for a show the
+   * one the real reel-api's YouTube search would accept — the entry's
+   * `trailer`, set by the seed on a show like on a movie. */
+  r.add('GET', '/api/metadata/{type}/{id}/trailer', (ctx) => {
+    const { type, id } = ctx.params;
+    if (type !== 'tv' && type !== 'movie') return err(ctx, 400, 'bad_type');
+    const e = ML().lookup(type, id);
+    if (!e) return err(ctx, 404, 'not_found');
+    return { trailer: e.trailer ?? null };
   });
 
   r.add('GET', '/api/trending', (ctx) => {

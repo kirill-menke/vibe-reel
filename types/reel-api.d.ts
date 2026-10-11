@@ -409,12 +409,20 @@ declare namespace Reel {
     status: string | null;
     /** tv only; empty for movies and for a series not yet added. */
     episodes: EpisodeMetadata[];
-    /** YouTube video id (Radarr's youTubeTrailerId; movies only). */
+    /** YouTube video id (Radarr's youTubeTrailerId; movies only — a show's is `TitleTrailer`). */
     trailer?: string | null;
     /** The TMDB collection a movie belongs to. */
     collection?: CollectionRef | null;
     /** ISO date (YYYY-MM-DD) of Radarr's digital release; movies only, null for tv. */
     digital_release?: string | null;
+  }
+
+  /** `GET /api/metadata/{type}/{id}/trailer` — models.py `TitleTrailer`: Radarr's trailer for a
+   * movie; for a show the one showtrailers.py found on YouTube under strict checks (title, premiere
+   * year, verified channel, no other title of that name). medialib.js `mlTrailer()`. */
+  interface TitleTrailer {
+    /** YouTube video id, or null: none passed the checks. */
+    trailer: string | null;
   }
 
   /* ================= news bell (T04) ================= */

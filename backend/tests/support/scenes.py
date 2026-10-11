@@ -452,6 +452,20 @@ async def _metadata_movie(w):
         return await api.get("/api/metadata/movie/438631")
 
 
+@scene("metadata-trailer", "GET", "/api/metadata/{media_type}/{media_id}/trailer", 200)
+async def _metadata_trailer(w):
+    from tests.support.fake_ytdlp import FakeYtDlp, search_entry
+
+    w.sonarr.add_catalog(series_obj(305288, "Stranger Things", year=2016))
+    yt = FakeYtDlp(w.tmp_path / "fake-ytdlp-search", w.monkeypatch, opaque=True)
+    yt.search("Stranger Things official trailer", [
+        search_entry("recapxxxxxx", "Stranger Things Recap in 3 Minutes"),
+        search_entry("b9EkMc79ZSU", "Stranger Things | Official Trailer | Netflix", channel="Netflix"),
+    ])
+    async with w.make_api() as api:
+        return await api.get("/api/metadata/tv/305288/trailer")
+
+
 @scene("segments", "GET", "/api/segments/{imdb_id}/{season}/{episode}", 200)
 async def _segments(w):
     from reel_api import introdb

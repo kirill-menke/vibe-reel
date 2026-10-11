@@ -217,6 +217,9 @@ test('oracle: reel-api contract — every fake route answers per models.py; drif
   await clean('GET', '/api/lookup?q=paper&type=tv');
   await clean('GET', '/api/metadata/movie/900001');
   await clean('GET', '/api/metadata/tv/400002');
+  await clean('GET', '/api/metadata/tv/400002/trailer');   // a show's YouTube-search find
+  await clean('GET', '/api/metadata/tv/400003/trailer');   // …and none
+  await clean('GET', '/api/metadata/movie/900001/trailer');
   await clean('GET', '/api/trending?type=movie');
   await clean('GET', '/api/trending?type=tv');
   await clean('GET', '/api/charts');

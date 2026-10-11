@@ -57,7 +57,7 @@ sequential download for the arrs' torrents, the watch-while-downloading streams 
 torrent is addressed by its info-hash, whatever its category), and removing a cancelled
 grab with its partial data. **Jellyfin** checks every request's token. Trending, charts,
 collections and community segments read public metadata services (IMDb, Radarr's
-metadata service, IntroDB).
+metadata service, IntroDB); a show's trailer is a YouTube search through `yt-dlp`.
 
 Removed in 2026-10, because no client called them (the apps only use the downloads'
 `/stream`, `/probe` and `/hls`): `GET /api/search`, `GET /api/torrents/{id}/magnet`,
@@ -371,6 +371,7 @@ presents failures as its own. Real causes are written to the server log.
 | Status | body.error | Meaning |
 |---|---|---|
 | 400 | `bad_id` | malformed YouTube id (`/api/trailers/…`) |
+| 400 | `bad_type` | `/api/metadata/{type}/…` with a type other than `tv` / `movie` |
 | 400 | `bad_request` | `DELETE /api/library/…` without exactly one of `undo` / `delete_files=true` (and other malformed requests) |
 | 401 | `unauthorized` | no Jellyfin token, or Jellyfin rejected it |
 | 403 | `bad_host` / `bad_origin` | Host or browser Origin is not this server |
@@ -395,7 +396,7 @@ presents failures as its own. Real causes are written to the server log.
 - `src/reel_api/streaming.py` / `livehls.py` — watch while downloading (Range stream,
   probe; the phone's HLS remux)
 - `src/reel_api/trending.py`, `charts.py`, `collections.py`, `introdb.py`,
-  `trailers.py`, `push.py` — the other routes' sources
+  `trailers.py`, `showtrailers.py`, `push.py` — the other routes' sources
 - `src/reel_api/ownership.py` — who added which title (`owners.json`), the
   quota and the per-user rights; `statefile.py` — the state directory and atomic
   JSON writes (`push.json`, `owners.json`)
@@ -578,6 +579,30 @@ and `released`. Source: Radarr's metadata service
 `collection` (`{ id, title }` or null) and `digital_release` (Radarr's digital
 release day, `YYYY-MM-DD`, or null; always null for tv), which phone LookupDetail
 shows for a title not out to download yet. `src/reel_api/collections.py`.
+
+### `GET /api/metadata/{type}/{id}/trailer` — a title's YouTube trailer
+
+`{ trailer }`: a YouTube id (play it with `/api/trailers/{id}`) or `null`. A movie's
+is Radarr's (`youTubeTrailerId`, the same as `/api/metadata/movie/{id}`'s `trailer`).
+A show has none in Sonarr's metadata, so reel-api searches YouTube for it —
+`yt-dlp --flat-playlist -J "ytsearch10:<name> official trailer"`, one request — and
+answers a result only when everything says it is *this* show's trailer, because a wrong
+one (another show of the name, a remake, the film, a fan edit, a reaction video) is worse
+than none: a verified channel (not one country's dub channel), 20 s – 6 min, a title
+that starts with the show's name (articles included) followed only by words like
+official / season 2 / seasons 1-5 before "trailer"/"teaser", nothing like reaction / review /
+recap / fan / movie / game / a dub after it, every year in it the premiere year ±1, and
+— when Sonarr or Radarr know another show or film of that name (≥ 100 votes, or any
+from the last year) — the premiere year in the title and none of the other's. A
+final/last-season trailer is never taken (it shows the ending). A first-season (or
+season-less) trailer beats a numbered later season's, a trailer a teaser. Measured on
+247 shows (IMDb Top 250 + trending, 2026-10-10): 109 got one, all of them right, before
+final-season trailers were dropped (Breaking Bad's had been Netflix's final-season
+teaser; it now gets Sony's "Seasons 1-5 Trailer"); the rest get `null`. `{id}` is the tvdb id for a show, the tmdb id for a
+movie (`^\d{1,10}$`, else 422); unknown → 404 `not_found`; a Sonarr/Radarr outage →
+503 (nothing cached); a failed search (yt-dlp broken, YouTube refusing) → `null`,
+retried after 10 min. Answers are cached 7 days (found) / 1 day (none). Kept out of
+`/api/metadata` because a cold search takes seconds. `src/reel_api/showtrailers.py`.
 
 ### `POST|GET /api/trailers/{youtube_id}` — trailers as HLS for VibeReel's player
 

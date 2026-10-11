@@ -206,6 +206,19 @@ class ArrClient:
         raw = await self._get(self.spec["lookup"], {"term": term})
         return [s for s in (self._shape(i) for i in raw) if s["id"]]
 
+    async def title_lookup(self, term: str) -> list[dict]:
+        """One lookup, lookup-shaped, without lookup()'s half-typed-word
+        second call: every title the arr's metadata source finds for `term`."""
+        return await self._lookup(term)
+
+    async def lookup_record(self, media_id: str) -> dict:
+        """The arr's own lookup record for one title id (tvdbId/tmdbId), as it
+        sends it; NoSuchTitle if its metadata source doesn't know the id."""
+        matches = await self._get(self.spec["lookup"], {"term": self._term(media_id)})
+        if not matches:
+            raise NoSuchTitle(media_id)
+        return matches[0]
+
     async def lookup(self, term: str) -> list[dict]:
         """Title search, with a fallback for a half-typed last word.
 
@@ -395,12 +408,7 @@ class ArrClient:
         title/overview/air date plus a TVDB still via includeImages. This is
         what lets a client render a not-yet-downloaded title exactly like a
         downloaded one."""
-        matches = await self._get(
-            self.spec["lookup"], {"term": self._term(media_id)}
-        )
-        if not matches:
-            raise NoSuchTitle(media_id)
-        obj = matches[0]
+        obj = await self.lookup_record(media_id)
         out = {
             "id": media_id,
             "type": self.kind,
@@ -415,7 +423,8 @@ class ArrClient:
             "certification": obj.get("certification") or None,
             "status": obj.get("status") or None,
             "episodes": [],
-            # Radarr only: Sonarr's lookup carries neither.
+            # Radarr only: Sonarr's lookup carries neither (a show's comes
+            # from GET /api/metadata/tv/{id}/trailer, showtrailers.py).
             "trailer": obj.get("youTubeTrailerId") or None,
             "collection": (
                 {"id": str(c["tmdbId"]), "title": c.get("title") or ""}
