@@ -148,7 +148,7 @@ test('tv library: sort + genre + Unwatched are server-side, dropdowns are modal,
   assert.equal(watched.length, 4);
   const dom = await gridKeys(page);
   assert(watched.every((k) => !dom.includes(k)), 'no watched movie in the grid');
-  assert.match(await page.eval(() => document.querySelector('.screen .libhead').textContent), /^136 movies · Unwatched/, 'summary');
+  assert.equal(await page.eval(() => !!document.querySelector('.screen .libhead')), false, 'no count line above the grid (removed 2026-10-10)');
   assert.equal(await focused(page), 'lv-unseen', 'focus stays on the toggle');
   await page.key('OK', { settle: 200 }); // off again
   await gridSettled(page, expected(w, uid, { sort: 'title' }).slice(0, PAGE), 'all movies again');

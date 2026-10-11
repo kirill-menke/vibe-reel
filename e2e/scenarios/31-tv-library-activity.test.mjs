@@ -62,7 +62,7 @@ test('tv library activity: the downloading movie leads Movies as a PendingTile; 
   assert.equal(info.title, 'Glass Meridian Rising');
   assert.equal(info.cap, 'Downloading 43% · 2024', 'status leads the caption, then the year');
   assert.equal(info.ring, 'downloading', '.dlring.downloading');
-  assert.equal(info.badge, '4K', 'Bluray-2160p → the same 4K techbadge a downloaded tile wears');
+  assert.equal(info.badge, null, 'no resolution badge: tiles wear none since 2026-10-10 (a Bluray-2160p grab used to say 4K)');
   // no real movie tile carries a ring: nothing else of the feed is a movie
   const rings = await page.eval(() => document.querySelectorAll('.screen .grid .tile[data-focus^="tile-"] .dlring').length);
   assert.equal(rings, 0, 'no library movie has a ring');
