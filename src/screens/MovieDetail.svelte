@@ -12,7 +12,7 @@
   import { pickSource, describeTracks, heroBadges } from '../lib/tracks.js';
   import { openItem, openPerson, takeDetailFocus } from '../lib/nav.svelte.js';
   import { P, playItem } from '../lib/player.svelte.js';
-  import { focusEl, focusKey, scrollElTo } from '../lib/focus.js';
+  import { focusEl, focusKey, focusKeyInstant, scrollElTo } from '../lib/focus.js';
   import { setPlayed } from '../lib/played.js';
   import { toast } from '../lib/toast.svelte.js';
 
@@ -199,7 +199,9 @@
 
     /* Back along the detail trail (nav.svelte.js) lands on the element this
        page was left from — a cast member, a More Like This tile, "Seasons ›".
-       The tiles only exist once /Similar has answered. */
+       The tiles only exist once /Similar has answered. focusKeyInstant: the
+       remounted page starts at the top, and a glide down to a rail (0 → 1375 px
+       for More Like This, measured on the TV) only showed the page being rebuilt. */
     const back = takeDetailFocus();
     let similarDone;
     const similarP = new Promise((r) => (similarDone = r));
@@ -207,7 +209,7 @@
        yet — those restores wait for their rail below. */
     /** @param {string | null} k */
     const lateTile = (k) => k && (k.startsWith('tile-') || k.startsWith('lk-'));
-    if (!back || !(await focusKey(back))) {
+    if (!back || !(await focusKeyInstant(back))) {
       if (!lateTile(back)) await focusKey('play');
     }
     if (!collId) collDone();
@@ -229,10 +231,10 @@
 
     if (back && back.startsWith('tile-')) {
       await similarP;
-      if (!(await focusKey(back))) await focusKey('play');
+      if (!(await focusKeyInstant(back))) await focusKey('play');
     } else if (back && back.startsWith('lk-')) {
       await collP;
-      if (!(await focusKey(back))) await focusKey('play');
+      if (!(await focusKeyInstant(back))) await focusKey('play');
     }
   });
 </script>

@@ -9,7 +9,7 @@
   import LoadError from '../components/LoadError.svelte';
   import { api, imgUrl, GRID_FIELDS, itemPath, itemsPath } from '../lib/api.js';
   import { S, takeDetailFocus, onBack } from '../lib/nav.svelte.js';
-  import { focusKey, focusFirst } from '../lib/focus.js';
+  import { focusKeyInstant, focusFirst } from '../lib/focus.js';
 
   let items = $state(/** @type {Jf.BaseItemDto[] | null} */ (null));
   let person = $state(/** @type {Jf.BaseItemDto | null} */ (null));
@@ -52,7 +52,8 @@
       error = /** @type {VR.ApiError} */ (e);
       return;
     }
-    if (!(back && (await focusKey(back)))) await focusFirst();
+    // a Back onto a tile deep in the grid jumps there (no glide from the top)
+    if (!(back && (await focusKeyInstant(back)))) await focusFirst();
   }
 
   onMount(load);

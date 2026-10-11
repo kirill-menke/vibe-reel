@@ -6,7 +6,7 @@ import { describe, it, expect, beforeEach } from 'vitest';
 import {
   pickSource, videoStream, streamByIndex, isAtmos, isCommentary, isSdh, needsBurnIn, isBurnCodec,
   codecPretty, chLayout, usefulTitle, audioLabel, subFmt, langName, langKey,
-  resTier, resShort, resLabel, hdrLabel, audioBadge, heroBadges, tileTechBadge, describeTracks, groupSubs
+  resTier, resShort, resLabel, hdrLabel, audioBadge, heroBadges, describeTracks, groupSubs
 } from '../../src/lib/tracks.js';
 import { SET, DEFAULTS } from '../../src/lib/settings.svelte.js';
 import { source, video, audio, sub, tracks, movie, episode, series, resetIds } from '../helpers/media.js';
@@ -170,7 +170,7 @@ describe('resolution and HDR', () => {
   });
 });
 
-describe('audioBadge / heroBadges / tileTechBadge', () => {
+describe('audioBadge / heroBadges', () => {
   it('audioBadge: DD+ / DD / DTS, + Atmos', () => {
     expect(audioBadge(tracks.eac3Atmos())).toBe('DD+ Atmos');
     expect(audioBadge(tracks.eac3())).toBe('DD+');
@@ -217,18 +217,6 @@ describe('audioBadge / heroBadges / tileTechBadge', () => {
     expect(heroBadges(movie({ MediaSources: [source([tracks.eac3()])] }))).toEqual(['DD+']);
     expect(heroBadges(movie({ MediaSources: [] }))).toEqual([]);
     expect(heroBadges({})).toEqual([]);
-  });
-
-  it('tileTechBadge: resolution · DV / HDR10 (HLG and SDR show the resolution only)', () => {
-    const t = (v) => tileTechBadge(movie({ MediaSources: [source([v, tracks.eac3()])] }));
-    expect(t(v4kDv())).toBe('4K · DV');
-    expect(t(v4kHdr10())).toBe('4K · HDR10');
-    expect(t(v1080Hdr10Plus())).toBe('1080p · HDR10');
-    expect(t(vHlg())).toBe('4K');
-    expect(t(v1080Sdr())).toBe('1080p');
-    expect(t(video({ Width: 0, Height: 0, VideoRangeType: 'DOVI' }))).toBe('DV');
-    expect(tileTechBadge(movie({ MediaSources: [] }))).toBe('');
-    expect(tileTechBadge(movie({ MediaSources: [source([tracks.eac3()])] }))).toBe('');
   });
 
   it("describeTracks' video line: codec · display title or height · range", () => {

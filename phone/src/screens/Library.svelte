@@ -69,8 +69,8 @@
    * (UserData — also gridSig and the watched toggle) and ProviderIds (the
    * download activity merge). Id/Name/Type/ImageTags come back unasked.
    * Not the TV's GRID_FIELDS: its MediaSources (the TV tile's resolution/HDR
-   * badge, which the phone tile doesn't have) were ~10 KB of every movie's
-   * ~11 KB, and only the Primary image (no backdrop/logo tags and their
+   * badge until 2026-10-10, which the phone tile never had) were ~10 KB of
+   * every movie's ~11 KB, and only the Primary image (no backdrop/logo tags and their
    * blurhashes) is asked for. Measured against the live server 2026-10-01:
    * 12 movies 120 KB → 10.9 KB, 7 shows 9.2 KB → 6.2 KB, so a 126-title page
    * of movies ~1.3 MB → ~0.11 MB. */

@@ -15,14 +15,14 @@ export const ITEM_FIELDS =
   'CommunityRating,OfficialRating,SeriesName,IndexNumber,ParentIndexNumber';
 
 /* The library grid renders far less than a detail page does: a poster, the
- * title, the year and the resolution/HDR badge. The old ITEM_FIELDS dragged Overview,
+ * title, the year and the watched state. The old ITEM_FIELDS dragged Overview,
  * People, Studios, Taglines and a duplicate MediaStreams along for the ride —
  * measured against the live server that is 79 KB vs 32 KB for the same query,
- * and the gap scales linearly with the library (Fields=MediaSources alone is
- * ~12 KB per movie). MediaSources has to stay: tileTechBadge() reads
- * MediaSources[0].MediaStreams. ImageTags/BackdropImageTags/Name/Type come
- * back whether you ask for them or not. */
-export const GRID_FIELDS = 'UserData,ProductionYear,PremiereDate,MediaSources';
+ * and the gap scales linearly with the library. MediaSources went too once the
+ * tiles stopped wearing a resolution/HDR badge (2026-10-10): 16 movies 149 KB →
+ * 21 KB, i.e. ~9.3 → ~1.3 KB per movie, measured against the live server.
+ * ImageTags/BackdropImageTags/Name/Type come back whether you ask for them or not. */
+export const GRID_FIELDS = 'UserData,ProductionYear,PremiereDate';
 
 
 /** @returns {string} */
@@ -113,17 +113,16 @@ export function revalidate(path, opts) {
   return /** @type {Promise<T>} */ (api(path, opts)).then((d) => {
     /* LRU-bounded: the library grid keys by its exact query (tab, sort, genre,
      * unwatched and the loaded count), so every paging depth and filter combo
-     * left a whole grid answer — MediaSources included, ~12 KB per movie —
-     * in memory for the session. Re-inserting moves a path to the young end. */
+     * left a whole grid answer in memory for the session. Re-inserting moves a path to the young end. */
     store.delete(path);
     store.set(path, { at: Date.now(), data: d });
     while (store.size > STORE_MAX) store.delete(/** @type {string} */ (store.keys().next().value));
     /* ...and item-bounded: 24 entries is harmless for Home's ~20-item rails but
      * not for a deep grid. Back from a detail page re-reads the grid at its
      * loaded depth, so every depth scrolled to (126, 252, 378, …) is its own
-     * key, each superseding the last — measured ~11 KB of JSON per movie with
-     * GRID_FIELDS, so a 500-title library scrolled through once is ~5.5 MB per
-     * entry. Oldest go first; the newest entry always stays. */
+     * key, each superseding the last — ~1.3 KB of JSON per movie with
+     * GRID_FIELDS (~9–11 KB while it still carried MediaSources), so a
+     * 500-title library scrolled through once is ~0.7 MB per entry. Oldest go first; the newest entry always stays. */
     let items = 0;
     const n = (/** @type {any} */ d) => (Array.isArray(d) ? d.length : d?.Items?.length || 0);
     for (const e of store.values()) items += n(e.data);

@@ -167,14 +167,6 @@
    * library tiles behind them are offset by however many there are. */
   const EAGER_ROWS = 2 * 7;
 
-  /* "7 movies", "3 movies · Drama · Unwatched", "… · 2 on the way" */
-  const summary = $derived.by(() => {
-    const parts = [total + ' ' + noun[total === 1 ? 0 : 1]];
-    if (view.genre) parts.push(view.genre);
-    if (view.unwatched) parts.push('Unwatched');
-    if (fresh.length) parts.push(fresh.length + ' on the way');
-    return parts.join(' · ');
-  });
   const emptyText = $derived(
     'No ' + (view.unwatched ? 'unwatched ' : '') + (view.genre ? view.genre + ' ' : '') + noun[1]
   );
@@ -225,7 +217,7 @@
    * remounts this screen on every tab switch (deliberately — see S.epoch), and
    * Jellyfin makes the query uncacheable, so without the cache every switch to
    * Movies/Shows costs a round trip behind the loading indicator. A grid tile
-   * renders only the poster, title, year and tech badge — nothing the user can
+   * renders only the poster, title, year and watched state — nothing the user can
    * change from here — so last session's answer is safe to paint immediately
    * while the refetch runs behind it.
    *
@@ -427,7 +419,7 @@
 
 <div class="screen">
   <div class="page">
-    <TopNav active={tab}>
+    <TopNav active={tab} solid>
       <LibraryBar {tab} {genres} onchange={requery} />
     </TopNav>
     <div class="grid-wrap">
@@ -452,7 +444,6 @@
           {/if}
         </div>
       {:else}
-        <div class="libhead">{summary}</div>
         <div class="grid" class:dim={refreshing}>
           {#each fresh as g, i (g.key)}
             <PendingTile group={g} eager={i < EAGER_ROWS} />

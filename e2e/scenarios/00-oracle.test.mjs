@@ -94,7 +94,7 @@ test('oracle: the requests the apps make validate cleanly', { app: 'none', fast:
     `/Users/${u}`,
     `/UserItems/Resume?userId=${u}&Limit=16&MediaTypes=Video&Fields=Overview,Genres,MediaSources,UserData,PremiereDate,ProductionYear,RunTimeTicks,CommunityRating,OfficialRating,SeriesName,IndexNumber,ParentIndexNumber&EnableImageTypes=Primary,Backdrop,Thumb`,
     `/Shows/NextUp?UserId=${u}&Limit=16&EnableResumable=false&EnableRewatching=false`,
-    `/Items?userId=${u}&IncludeItemTypes=Movie&Recursive=true&SortBy=DateCreated,SortName&SortOrder=Descending,Ascending&Fields=UserData,ProductionYear,PremiereDate,MediaSources,ProviderIds&StartIndex=0&Limit=126`,
+    `/Items?userId=${u}&IncludeItemTypes=Movie&Recursive=true&SortBy=DateCreated,SortName&SortOrder=Descending,Ascending&Fields=UserData,ProductionYear,PremiereDate,ProviderIds&StartIndex=0&Limit=126`,
     `/Items?userId=${u}&IncludeItemTypes=Movie&Recursive=true&Genres=Drama&Filters=IsUnplayed`,
     `/Items/${movie.Id}?userId=${u}`,
     `/Shows/${series.Id}/Seasons?UserId=${u}&Fields=UserData,ChildCount`,

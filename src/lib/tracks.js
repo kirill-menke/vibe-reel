@@ -450,19 +450,6 @@ export function heroBadges(item, ctx = item) {
   return out;
 }
 
-/** @param {Pick<Jf.BaseItemDto, 'MediaSources'>} item @returns {string} */
-export function tileTechBadge(item) {
-  const v = videoStream(pickSource(item));
-  if (!v) return '';
-  const parts = [];
-  const rs = resShort(v.Width, v.Height);
-  if (rs) parts.push(rs);
-  const vr = (v.VideoRangeType || v.VideoRange || '').toUpperCase();
-  if (vr.includes('DOVI')) parts.push('DV');
-  else if (vr.includes('HDR10')) parts.push('HDR10');
-  return parts.join(' · ');
-}
-
 /* ================= device profile =================
  * TranscodingProfiles is deliberately EMPTY so Jellyfin has no choice but to
  * DirectPlay. The single exception is burn === true: VobSub/DVB have no

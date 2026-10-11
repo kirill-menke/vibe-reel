@@ -44,8 +44,6 @@
     };
   }
 
-  const subHint = $derived((SUB_MODES.find(([v]) => v === SET.subMode) || SUB_MODES[0])[2]);
-
   /** @param {FocusEvent} e */
   function keepInView(e) {
     /** @type {Element | null} */ (e.target)?.scrollIntoView?.({ block: 'nearest' });
@@ -77,11 +75,9 @@
   {@render choice('audioLang', 'Audio language')}
   {@render choice('subLang', 'Subtitle language')}
   {@render choice('subMode', 'Subtitles')}
-  <div class="msg sethint">{subHint}</div>
   {@render toggle('autoplayNext', 'Autoplay next episode')}
   {@render toggle('autoSkipIntro', 'Skip intros automatically')}
   {@render toggle('autoSkipRecap', 'Skip recaps automatically')}
-  <div class="msg sethint">Choices you make in the player’s Audio/Subtitles menu are remembered per series and win over these.</div>
 
   <div class="acsep"></div>
   <div class="lvcap">About</div>

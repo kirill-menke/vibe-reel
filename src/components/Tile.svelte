@@ -2,7 +2,6 @@
   import { onDestroy } from 'svelte';
   import { imgUrl, prefetch, seasonsPath, itemPath } from '../lib/api.js';
   import { fmtRuntime, timeLeft, yearOf } from '../lib/format.js';
-  import { tileTechBadge } from '../lib/tracks.js';
   import { openItem } from '../lib/nav.svelte.js';
   import { tileStatus, ringClass } from '../lib/activity.svelte.js';
   import Icon from './Icon.svelte';
@@ -79,7 +78,6 @@
       ? 'S' + (item.ParentIndexNumber ?? 0) + ':E' + (item.IndexNumber ?? 0)
       : ''
   );
-  const techBadge = $derived(kind === 'added' ? tileTechBadge(item) : '');
 
   /** @param {Jf.BaseItemDto} it */
   function seriesSub(it) {
@@ -111,7 +109,6 @@
     {:else if kind === 'nextup'}
       {#if fmtRuntime(item.RunTimeTicks)}<div class="runbadge">{fmtRuntime(item.RunTimeTicks)}</div>{/if}
     {:else}
-      {#if techBadge}<div class="techbadge">{techBadge}</div>{/if}
       {#if unplayed}
         <div class="cntbadge">{unplayed > 99 ? '99+' : unplayed}</div>
       {:else if watched}

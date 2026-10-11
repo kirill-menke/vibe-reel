@@ -16,7 +16,7 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import {
   chLayout, usefulTitle, audioLabel, langName, langKey, needsBurnIn, preferredAudioLang, describeTracks,
-  pickDefaultSub, resTier, hdrLabel, heroBadges, audioBadge, tileTechBadge, groupSubs
+  pickDefaultSub, resTier, hdrLabel, heroBadges, audioBadge, groupSubs
 } from '../../src/lib/tracks.js';
 import { SET, DEFAULTS } from '../../src/lib/settings.svelte.js';
 import { source, video, audio, sub, tracks as T, movie, series, resetIds } from '../helpers/media.js';
@@ -236,7 +236,7 @@ describe('badges', () => {
   it('codec-less audio and range-less video badge as nothing', () => {
     expect(audioBadge({ Type: 'Audio' })).toBe('');
     const m = movie({ MediaSources: [source([{ Type: 'Video', Width: 1920, Height: 1080 }])] });
-    expect(tileTechBadge(m)).toBe('1080p');
+    expect(heroBadges(m)).toStrictEqual(['1080p']);
   });
 });
 

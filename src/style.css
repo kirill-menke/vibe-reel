@@ -169,6 +169,15 @@ button { font: inherit; color: inherit; background: none; border: none; text-ali
   background: rgba(5,5,6,.45); border: 1px solid rgba(255,255,255,.09);
   backdrop-filter: blur(14px) saturate(1.1); -webkit-backdrop-filter: blur(14px) saturate(1.1); }
 .top-extra + .hbar { margin-left: -24px; }
+/* TopNav `solid` (Library): the grid scrolls under the tab row, and posters
+   showing through the glass made the tabs hard to read. An opaque --bg band
+   down to just under the capsules (36px gutter + the 66px bell/avatar bar),
+   fading out by 116px — the top of a focused tile's ring once ensureVisible()
+   has parked its row at 150px and the 1.07 focus scale has grown it upwards.
+   Over a flat colour the capsules' blur would blur nothing, so it goes: one
+   blurred region less to re-render on every scroll frame. */
+.top.solid { background: linear-gradient(to bottom, var(--bg) 104px, rgba(11,11,13,0) 116px); }
+.top.solid .tabs, .top.solid .lvbar, .top.solid .hbar { backdrop-filter: none; -webkit-backdrop-filter: none; }
 .hbtn { position: relative; display: flex; align-items: center; justify-content: center; width: 52px; height: 52px;
   border-radius: 50%; border: 1px solid transparent; color: var(--t2);
   transition: background-color .14s ease, color .14s ease, border-color .14s ease; }
@@ -233,7 +242,6 @@ button { font: inherit; color: inherit; background: none; border: none; text-ali
   background: rgba(255,255,255,.85); transition: transform .16s ease, background-color .16s ease; }
 .setrow.on .sw { background: var(--accent); }
 .setrow.on .sw b { transform: translateX(22px); background: var(--accent-ink); }
-.lvmenu .msg.sethint { flex: none; padding: 0 18px 8px; font-size: 20px; }
 .setabout { flex: none; display: grid; grid-template-columns: 150px 1fr; gap: 8px 16px; padding: 4px 18px 12px;
   font-size: 20px; color: var(--t1); }
 .setabout dt { color: var(--t3); }
@@ -696,9 +704,11 @@ body.search-on .screen { opacity: 0; visibility: hidden; pointer-events: none;
 /* Offscreen grid rows skip layout, paint and image decode — a paged-in library
    runs to hundreds of tiles whose decoded posters alone would blow the TV's
    96 MB budget.
-   Width comes from the grid track, so only the height estimate (150% of a
-   ~239px column + the ~63px caption under it) matters, and `auto` pins the
-   real size after first render.
+   Width comes from the tile, so only the height estimate matters: 419px, a
+   tile as the TV lays it out (the 2:3 poster of a 236px tile + the caption).
+   `auto` pins the real size after first render, and every row above a Back
+   target that is still an estimate shifts the page once it renders — 422px
+   (3px too tall) moved a return to the grid's last rows 8px a frame later.
    Every tile, focused or not: switching content-visibility off on an element
    (it used to be `:not(:focus)`) makes Chromium 120 keep that element — and
    with it the whole detached Library screen — alive for the rest of the
@@ -713,7 +723,7 @@ body.search-on .screen { opacity: 0; visibility: hidden; pointer-events: none;
    (that was with the TV stuck at 50 Hz, see refresh60.js). Library grids at 60 Hz
    (2026-09-29, 2 runs each): Movies 3.3–4.4% → 0–0.4%, Shows 4.6–5.1% → 0.5%
    dropped, ~750 → ~270 raster flushes. */
-.grid .tile { content-visibility: auto; contain-intrinsic-size: auto 239px auto 422px; overflow-clip-margin: 100px;
+.grid .tile { content-visibility: auto; contain-intrinsic-size: auto 239px auto 419px; overflow-clip-margin: 100px;
   will-change: transform; }
 /* refresh60.js: the 1 s clip that puts the TV back to 60 Hz after a 50/48 Hz
    video. It must be on screen to count, so it plays under all page content. */

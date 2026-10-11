@@ -13,9 +13,10 @@
   import { act, tileStatus, ringClass } from '../lib/activity.svelte.js';
 
   /* `rank`: a chart position (Search's browse categories), shown top-right.
-   * `hidden`: laid out of the way by Browse's windowing, still mounted. */
-  /** @type {{ item: VR.LookupTileItem, eager?: boolean, rank?: number, hidden?: boolean, onopen: (item: Reel.LookupResult) => void }} */
-  let { item, eager = false, rank = 0, hidden = false, onopen } = $props();
+   * `hidden`: laid out of the way by Browse's windowing, still mounted.
+   * `showYear`: false on Home's Trending rails, where every title is this year's. */
+  /** @type {{ item: VR.LookupTileItem, eager?: boolean, rank?: number, hidden?: boolean, showYear?: boolean, onopen: (item: Reel.LookupResult) => void }} */
+  let { item, eager = false, rank = 0, hidden = false, showYear = true, onopen } = $props();
 
   const art = $derived(posterThumb(item.poster));
 
@@ -28,14 +29,15 @@
     !pend ? '' : act.stale ? '' : pend.status === 'downloading' ? Math.round((pend.progress || 0) * 100) + '%' : pend.status === 'warning' ? 'Problem' : tileStatus(pend)
   );
   /* Library grids are one kind per tab; search mixes both, so the caption names
-   * it. A trending result (Home) sits on a one-kind rail of this year's titles,
-   * so it shows its IMDb rating and vote count instead — and, for a movie still
-   * in cinemas, when it comes out digitally (a line of its own: with the votes
-   * it no longer fits beside them). Until then there is nothing to download. */
+   * it. A trending or chart result sits on a one-kind rail/section, so it shows
+   * its IMDb rating and vote count instead, after the year (so an ellipsis only
+   * ever eats the votes) — and, for a movie still in cinemas, when it
+   * comes out digitally (a line of its own: with the votes it no longer fits
+   * beside them). Until then there is nothing to download. */
   const star = $derived(item.rating ? '★ ' + item.rating.toFixed(1) : '');
   const sub = $derived(
     item.rating_votes
-      ? star + ' (' + fmtVotes(item.rating_votes) + ')'
+      ? [showYear && item.year, star + ' (' + fmtVotes(item.rating_votes) + ')'].filter(Boolean).join(' · ')
       : [item.year, item.type === 'movie' ? 'Movie' : 'Show', star].filter(Boolean).join(' · ')
   );
   const digital = $derived.by(() => {

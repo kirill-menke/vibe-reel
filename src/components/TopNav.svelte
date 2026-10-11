@@ -40,9 +40,11 @@
   import { ME, MY, refreshMe, quotaSummary } from '../lib/me.svelte.js';
 
   /* children: an optional cluster on the same row, between the tabs and the
-   * bell — the Movies/Shows sort & filter bar (LibraryBar.svelte). */
-  /** @type {{ active: string, children?: import('svelte').Snippet }} */
-  let { active, children } = $props();
+   * bell — the Movies/Shows sort & filter bar (LibraryBar.svelte).
+   * solid: an opaque band behind the row, for a screen whose content scrolls
+   * under it (the Library grid; Home's hero art wants the glass). */
+  /** @type {{ active: string, children?: import('svelte').Snippet, solid?: boolean }} */
+  let { active, children, solid = false } = $props();
 
   /* A dropdown must not outlive its screen. The menus are pointer-transparent
    * (.menuscrim), so a Magic Remote click on a tab navigates with one still
@@ -155,7 +157,7 @@
   }
 </script>
 
-<div class="top">
+<div class="top" class:solid>
   {#if HM.open || LV.open}<div class="menuscrim"></div>{/if}
   <div class="tabs">
     {#each TABS as [id, label, icon] (id)}

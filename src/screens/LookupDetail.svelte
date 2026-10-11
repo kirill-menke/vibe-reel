@@ -25,7 +25,7 @@
   import { statLabel } from '../lib/activity.svelte.js';
   import { fanartUrl, addState, addToLibrary, lookupGroup } from '../lib/lookup.svelte.js';
   import { toast } from '../lib/toast.svelte.js';
-  import { focusKey, focusFirst, scrollElTo } from '../lib/focus.js';
+  import { focusKey, focusKeyInstant, focusFirst, scrollElTo } from '../lib/focus.js';
   import { canStream, playPending } from '../lib/pendingplay.js';
   import { refreshMe, quotaFull, quotaLine, quotaWords } from '../lib/me.svelte.js';
 
@@ -245,7 +245,9 @@
       if (!alive) return;
       // Only if the D-pad hasn't moved on from the button focused above.
       const a = document.activeElement;
-      if (!a || a === document.body || a.closest('.hero .actions')) await focusKey(back);
+      // Instant, like every return to a remembered spot: a glide from the
+      // top down to the rail only showed the page being rebuilt.
+      if (!a || a === document.body || a.closest('.hero .actions')) await focusKeyInstant(back);
     }
     if (!document.activeElement || document.activeElement === document.body) focusFirst();
   });

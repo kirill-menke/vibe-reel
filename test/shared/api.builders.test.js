@@ -50,8 +50,8 @@ describe('constants', () => {
     expect(TICKS).toBe(10000000);
   });
 
-  it('GRID_FIELDS keeps MediaSources (tileTechBadge reads it) and nothing heavy', () => {
-    expect(GRID_FIELDS).toBe('UserData,ProductionYear,PremiereDate,MediaSources');
+  it('GRID_FIELDS is what a grid tile renders and nothing heavy (no MediaSources: tiles wear no tech badge)', () => {
+    expect(GRID_FIELDS).toBe('UserData,ProductionYear,PremiereDate');
   });
 
   it('ITEM_FIELDS carries MediaSources but not the top-level MediaStreams duplicate or People/Studios', () => {

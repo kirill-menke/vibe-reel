@@ -663,7 +663,7 @@
     <h2>{title}</h2>
     <div class="strip">
       {#each items as item (item.type + item.id)}
-        <LookupTile {item} onopen={openTrending} />
+        <LookupTile {item} showYear={false} onopen={openTrending} />
       {/each}
     </div>
   </div>

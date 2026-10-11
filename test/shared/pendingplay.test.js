@@ -136,7 +136,6 @@ describe('sourceFromProbe', () => {
   it('gives the real file badges: 4K · Dolby Vision · DD+ Atmos', () => {
     const item = { Type: 'Movie', MediaSources: [m.pp.sourceFromProbe(PROBE)] };
     expect(m.tracks.heroBadges(item)).toEqual(['4K', 'Dolby Vision', 'DD+ Atmos']);
-    expect(m.tracks.tileTechBadge(item)).toBe('4K · DV');
   });
 
   it('HDR10 / HLG pass through, no HDR is an empty range', () => {

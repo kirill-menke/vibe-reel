@@ -2,8 +2,7 @@
   /* A grid tile for a title that is still downloading/importing and therefore
    * has no Jellyfin item yet. Same .tile.v shell as Tile.svelte so it sits in
    * the grid indistinguishably: the poster comes from Sonarr/Radarr via the
-   * activity payload (or a placeholder against an older backend), the release
-   * resolution wears the same top-left .techbadge a downloaded tile does, the
+   * activity payload (or a placeholder against an older backend), the
    * in-flight state is carried entirely by the pulsing .dlring, and OK opens
    * PendingDetail. */
   import { openPending } from '../lib/nav.svelte.js';
@@ -43,7 +42,6 @@
       <img loading={eager ? 'eager' : 'lazy'} decoding="async" src={poster} alt="" onerror={() => (broken = poster)} />
     {:else}<div class="ph">{group.type === 'tv' ? 'show' : 'movie'}</div>{/if}
 
-    {#if group.res}<div class="techbadge">{group.res}</div>{/if}
     <i class="dlring {ringClass(group)}"></i>
   </div>
 

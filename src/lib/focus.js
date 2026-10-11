@@ -187,7 +187,8 @@ function scrollTick() {
   scrollFrame(performance.now());
 }
 
-/* Restoring focus after a remount (Back to Home or a grid) jumps the scrollers
+/* Restoring focus after a remount (Back to Home, a grid, or along the detail
+ * trail onto a rail of a detail/person page) jumps the scrollers
  * straight to the target instead of gliding there from 0: the glide painted —
  * and fetched posters for — every row it passed, ~330 ms of motion that only
  * showed the page rebuilding. Armed by focusKeyInstant() for the rest of the
