@@ -289,7 +289,8 @@ Which trailer a title *has* is its catalog entry's `trailer`
 (`srv.world.ml.lookup(type, id).trailer`): `/api/metadata/{type}/{id}` carries
 it for a movie only (Radarr's), `/api/metadata/{type}/{id}/trailer` for both —
 for a show that is what reel-api's YouTube search found (seeded on Electric
-Orchard and Golden Frontier; `47-tv-show-trailer`).
+Orchard and Golden Frontier; `47-tv-show-trailer`, and `5b-phone-show-trailer`
+for the phone/web screens, which also sets one on the queued Paper Lanterns).
 Cancels (`DELETE /api/activity/…`) follow undo.py: one row of a torrent takes
 the whole torrent, importing torrents are kept (all importing → 409), and
 `srv.world.ml.cancels` records `{ type, id, season, episode, removed }`.

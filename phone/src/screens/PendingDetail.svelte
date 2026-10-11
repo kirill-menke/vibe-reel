@@ -48,7 +48,7 @@
   import { canWatchPending, canStream, playPending } from '$lib/pendingplay.js';
   import { api, itemsPath } from '$lib/api.js';
   import { replace } from '../lib/router.svelte.js'; // "Open": the detail page takes this page's place
-  import { openTrailer } from '$lib/trailer.js';
+  import { findShowTrailer, openTrailer } from '$lib/trailer.js';
   import { fmtDate } from '$lib/format.js';
 
   let { params = {}, active = false } = $props();
@@ -83,11 +83,17 @@
   let metaDone = $state(false);
   const metaWait = setTimeout(() => (metaDone = true), 1200);
   let metaAsked = false;
+  /* a show's trailer: Sonarr's metadata has none, so the one reel-api finds on
+   * YouTube (findShowTrailer) — asked once, with the metadata */
+  let showTrailer = $state(/** @type {string | null} */ (null));
+  let stopTrailer = () => {};
+  onDestroy(() => stopTrailer());
   $effect(() => {
     const g0 = g;
     if (!g0 || metaAsked) return;
     metaAsked = true;
     untrack(() => loadMeta(g0));
+    if (g0.type === 'tv' && g0.mediaId) stopTrailer = untrack(() => findShowTrailer(g0.mediaId, (t) => (showTrailer = t)));
   });
   /** @param {VR.ActivityGroup} g0 */
   async function loadMeta(g0) {
@@ -121,7 +127,7 @@
   const year = $derived(meta?.year || g?.year || '');
   const runtime = $derived(!tv && meta?.runtime_min ? hmin(meta.runtime_min * 60) : '');
   const genres = $derived(meta?.genres?.length ? meta.genres.slice(0, 3).join(' · ') : '');
-  const trailer = $derived(meta?.trailer || null);
+  const trailer = $derived(meta?.trailer || showTrailer);
   const qualities = $derived(g ? [...new Set(g.items.map((i) => i.quality).filter(Boolean))] : []);
   const badges = $derived(releaseBadges(qualities, g?.size));
 

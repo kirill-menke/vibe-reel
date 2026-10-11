@@ -37,7 +37,7 @@
   import { P, playEpisode, playItem } from '$lib/player.svelte.js';
   import { S } from '$lib/nav.svelte.js';
   import { setPlayed } from '$lib/played.js';
-  import { pickTrailer, openTrailer } from '$lib/trailer.js';
+  import { pickTrailer, findShowTrailer, openTrailer } from '$lib/trailer.js';
   import { toast } from '$lib/toast.svelte.js';
   import { act, pendingGroups, matchGroup } from '$lib/activity.svelte.js';
   import { isCancelling, packOf, cancelWhat, confirmItems, cancelItem, canCancelPack } from '$lib/cancel.svelte.js';
@@ -294,7 +294,16 @@
   /* 1920 on a desktop window (up to 2560 px wide), as MovieDetail */
   /* web: by the window's width in device pixels (E-01) */
   const bg = $derived(imgUrl(series, 'Backdrop', { w: __WEB__ ? pickSize(innerWidth, [1920, 2880, 3840]) : 1280 }) || imgUrl(series, 'Primary', { h: 1080 }));
-  const trailer = $derived(pickTrailer(series));
+  /* Jellyfin's TMDB trailer list — or, for a show TMDB lists no YouTube
+   * trailer for, the one reel-api finds on YouTube (findShowTrailer: the action
+   * appears when it lands, and not at all when nothing certain is found). */
+  let foundTrailer = $state(/** @type {string | null} */ (null));
+  const trailer = $derived(pickTrailer(series) || foundTrailer);
+  $effect(() => {
+    const tvdb = series.ProviderIds?.Tvdb;
+    if (pickTrailer(series) || !tvdb) return;
+    return untrack(() => findShowTrailer(tvdb, (t) => (foundTrailer = t)));
+  });
   const genres = $derived((series.Genres || []).slice(0, 3).join(' · '));
   const yr = $derived(
     yearOf(series) + (series.Status === 'Continuing' ? '–' : series.EndDate && series.EndDate.slice(0, 4) != yearOf(series) ? '–' + series.EndDate.slice(0, 4) : '')

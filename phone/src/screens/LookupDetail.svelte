@@ -29,7 +29,7 @@
   import { scrollPast } from '../lib/gestures.js';
   import { mlMetadata } from '$lib/medialib.js';
   import { fanartUrl, addState, addToLibrary, lookupGroup } from '$lib/lookup.svelte.js';
-  import { openTrailer } from '$lib/trailer.js';
+  import { findShowTrailer, openTrailer } from '$lib/trailer.js';
   import { fmtDate } from '$lib/format.js';
   import { quotaFull, quotaLine, quotaWords, refreshMe } from '$lib/me.svelte.js';
   import { push } from '../lib/router.svelte.js';
@@ -81,7 +81,12 @@
   const overview = $derived(meta?.overview || item.overview || '');
   const runtime = $derived(!tv && meta?.runtime_min ? hmin(meta.runtime_min * 60) : '');
   const genres = $derived(meta?.genres?.length ? meta.genres.slice(0, 3).join(' · ') : '');
-  const trailer = $derived(meta?.trailer || null);
+  /* Radarr's trailer for a movie (in the metadata). Sonarr has none, so a
+   * show's is the one reel-api finds on YouTube (findShowTrailer): the action
+   * appears when it lands, and not at all when nothing certain is found. */
+  let showTrailer = $state(/** @type {string | null} */ (null));
+  const trailer = $derived(meta?.trailer || showTrailer);
+  onMount(() => (tv ? findShowTrailer(item.id, (t) => (showTrailer = t)) : undefined));
   const collId = $derived(!tv && meta?.collection ? meta.collection.id : '');
 
   /* ---- tv: seasons + episodes (only once Sonarr has the show) ---- */
