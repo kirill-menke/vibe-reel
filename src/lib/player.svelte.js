@@ -778,6 +778,10 @@ function startPlayback(url, method, resumeSec) {
   // A ManagedMediaSource (iOS trailers) refuses to attach unless remote
   // playback is off; every other stream keeps AirPlay.
   if (__PHONE__) video.disableRemotePlayback = !!((method === 'Trailer' && trailerSrc && trailerSrc.managed) || (method === 'Feed' && feedRun && feedRun.feeder && feedRun.feeder.managed));
+  // Web: on an iPhone Jellyfin's own stream comes through a ManagedMediaSource
+  // too (jfhls.js). WebKit left it closed without an error, so the server was
+  // never asked for anything and the 60 s card blamed it (2026-11-11).
+  if (__PHONE__ && __WEB__ && jfFeed && jfFeed.managed && url === jfFeed.url) video.disableRemotePlayback = true;
   if (!__PHONE__) cancelRefreshReset();   // TV-only (refresh60.js)
   video.src = url;
   video.load();

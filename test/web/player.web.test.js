@@ -18,10 +18,10 @@ import { startPlayer, warmPlayer } from '../helpers/player.js';
 import { movie, episode, source, video as vstream, audio, sub, playbackInfo } from '../helpers/media.js';
 
 const H = vi.hoisted(() => {
-  const H = { feeds: [], loaded: false };
+  const H = { feeds: [], loaded: false, managed: false };
   H.stub = () => ({
     createJfFeed: (opts) => {
-      const f = { url: 'blob:jf-' + (H.feeds.length + 1), managed: false, stop: vi.fn(), opts };
+      const f = { url: 'blob:jf-' + (H.feeds.length + 1), managed: H.managed, stop: vi.fn(), opts };
       H.feeds.push(f);
       return f;
     }
@@ -36,6 +36,7 @@ const TICKS = 10000000;
 beforeEach(() => {
   H.feeds = [];
   H.loaded = false;
+  H.managed = false;
   vi.stubGlobal('matchMedia', () => ({ matches: false }));
 });
 
@@ -120,6 +121,23 @@ describe('a remux plays through a MediaSource feed', () => {
     vi.stubGlobal('matchMedia', (q) => ({ matches: /video-dynamic-range: high/.test(q) }));
     await startWeb();
     expect(H.feeds[0].opts.hdr).toBe(true);
+  });
+
+  /* An iPhone that opens the desktop build has no MediaSource, only a
+   * ManagedMediaSource, and WebKit leaves that one closed (no sourceopen, no
+   * error) until remote playback is off on the <video>. Left on, the feed
+   * asked Jellyfin for nothing and the 60 s "never started" card blamed the
+   * server (2026-11-11). A desktop MediaSource keeps remote playback. */
+  it('a managed feed (an iPhone): remote playback is off on <video>; a desktop feed keeps it', async () => {
+    H.managed = true;
+    let h = await startWeb({ reach: 'src' });
+    expect(h.video.src).toBe('blob:jf-1');
+    expect(h.video.disableRemotePlayback).toBe(true);
+    h.player.exitPlayer();
+    H.managed = false;
+    h = await startWeb({ reach: 'src' });
+    expect(h.video.src).toBe('blob:jf-2');
+    expect(h.video.disableRemotePlayback).toBe(false);
   });
 });
 

@@ -367,6 +367,13 @@ it differs in two places:
    trickplay, Up Next and text/PGS subtitles all run as for any Jellyfin stream. Only the
    `<video>` src is the feed's blob URL.
 
+   An iPhone has no `MediaSource`, only `ManagedMediaSource`, and WebKit keeps that one
+   closed (no `sourceopen`, no error) until remote playback is off on the `<video>`. So
+   for a managed feed `startPlayback()` sets `disableRemotePlayback`, as it does for
+   trailers and pending streams on the phone. Without it the feed asks Jellyfin for
+   nothing and the "never started" card comes up after 60 s. The price is AirPlay: an
+   iPhone on this build has none for library titles.
+
 Watch-while-downloading uses reel-api's live HLS (`livehls.py`) with `codec=aac` on every
 call. Desktop browsers decode no AC-3/E-AC-3, so the server copies AAC and encodes the
 rest to AAC.
